@@ -1,0 +1,70 @@
+<script setup lang="ts">
+import type { Strategy } from '../../../shared/types/demo'
+
+defineProps<{
+  strategies: Strategy[]
+  loading?: boolean
+}>()
+
+const STATUS_LABELS: Record<Strategy['status'], string> = {
+  active: '运行中',
+  paused: '已暂停',
+  completed: '已完成',
+}
+
+const STATUS_TONE: Record<Strategy['status'], 'active' | 'paused' | 'neutral'> = {
+  active: 'active',
+  paused: 'paused',
+  completed: 'neutral',
+}
+
+const NETWORK_LABELS: Record<Strategy['network'], string> = {
+  'base-sepolia': 'Base Sepolia',
+  'arbitrum-sepolia': 'Arbitrum Sepolia',
+}
+
+function goToPact(pactId: string) {
+  navigateTo(`/pacts?id=${pactId}`)
+}
+</script>
+
+<template>
+  <section aria-labelledby="strategies-heading">
+    <h2 id="strategies-heading" class="text-base font-semibold text-on-dark">策略</h2>
+
+    <div v-if="loading && strategies.length === 0" class="mt-4 space-y-3">
+      <div v-for="i in 2" :key="i" class="h-20 animate-pulse rounded-lg bg-surface" />
+    </div>
+
+    <div
+      v-else-if="strategies.length === 0"
+      class="mt-4 rounded-lg border border-dashed border-hairline px-5 py-8 text-center"
+    >
+      <p class="text-sm text-muted">尚无策略。创建第一条受 Pact 约束的策略。</p>
+      <NuxtLink
+        to="/create-strategy"
+        class="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-on-primary no-underline hover:bg-primary-active"
+      >
+        创建策略
+      </NuxtLink>
+    </div>
+
+    <ul v-else class="mt-4 space-y-3">
+      <li v-for="s in strategies" :key="s.id">
+        <button
+          type="button"
+          class="w-full rounded-lg border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-muted/50"
+          @click="goToPact(s.pactId)"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <span class="text-sm font-medium text-on-dark">{{ s.name }}</span>
+            <UiStatusChip :label="STATUS_LABELS[s.status]" :tone="STATUS_TONE[s.status]" />
+          </div>
+          <p class="mt-2 font-mono text-xs text-muted">
+            {{ NETWORK_LABELS[s.network] }} · 上限 {{ s.maxSpend }} {{ s.asset }}
+          </p>
+        </button>
+      </li>
+    </ul>
+  </section>
+</template>

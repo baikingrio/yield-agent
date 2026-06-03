@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-03T12:00:00.000Z",
+  "title": "Design System: YieldAgent Collective",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Agent Yellow",
+        "canonical": "oklch(88% 0.19 95)",
+        "cssVar": "--color-primary",
+        "tonalRamp": [
+          "oklch(22% 0.04 95)",
+          "oklch(35% 0.08 95)",
+          "oklch(48% 0.12 95)",
+          "oklch(62% 0.16 95)",
+          "oklch(75% 0.18 95)",
+          "oklch(88% 0.19 95)",
+          "oklch(92% 0.14 95)",
+          "oklch(96% 0.06 95)"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Console Void",
+        "canonical": "oklch(14% 0.01 260)",
+        "cssVar": "--color-canvas",
+        "tonalRamp": [
+          "oklch(8% 0.01 260)",
+          "oklch(12% 0.01 260)",
+          "oklch(14% 0.01 260)",
+          "oklch(18% 0.01 260)",
+          "oklch(22% 0.01 255)",
+          "oklch(28% 0.01 255)",
+          "oklch(40% 0.015 250)",
+          "oklch(55% 0.02 250)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Panel Slate",
+        "canonical": "oklch(22% 0.01 255)",
+        "cssVar": "--color-surface",
+        "tonalRamp": [
+          "oklch(10% 0.01 255)",
+          "oklch(14% 0.01 260)",
+          "oklch(18% 0.01 255)",
+          "oklch(22% 0.01 255)",
+          "oklch(28% 0.01 255)",
+          "oklch(35% 0.015 250)",
+          "oklch(50% 0.02 250)",
+          "oklch(70% 0.02 250)"
+        ]
+      },
+      "body": {
+        "role": "neutral",
+        "displayName": "Running Text",
+        "canonical": "oklch(93% 0.005 250)",
+        "cssVar": "--color-body",
+        "tonalRamp": [
+          "oklch(25% 0.01 250)",
+          "oklch(40% 0.015 250)",
+          "oklch(55% 0.02 250)",
+          "oklch(70% 0.02 250)",
+          "oklch(82% 0.008 250)",
+          "oklch(90% 0.006 250)",
+          "oklch(93% 0.005 250)",
+          "oklch(97% 0.003 250)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "页面主标题，如「创建策略」。"
+      },
+      "mono-sm": {
+        "displayName": "Mono SM",
+        "purpose": "交易哈希、限额数字。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 2px rgba(59, 130, 246, 0.5)",
+        "purpose": "键盘焦点，定义于 main.css :focus-visible。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-quart",
+        "value": "cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "导航与按钮 transition-colors duration-150。"
+      }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ],
+    "implementation": {
+      "cssTokens": "app/assets/css/main.css",
+      "tailwind": "tailwind.config.ts",
+      "locale": "zh-CN"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "主操作：创建 Pact。",
+      "html": "<button type=\"button\" class=\"ds-btn-primary\">创建 Pact</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 10px 20px; font-family: Inter, sans-serif; font-size: 0.875rem; font-weight: 600; color: #181a20; background: #fcd535; border: none; border-radius: 6px; cursor: pointer; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary:hover { background: #f0b90b; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); } .ds-btn-primary:disabled { background: #3a3a1f; color: #707a8a; cursor: not-allowed; }"
+    },
+    {
+      "name": "Pact Preview Panel",
+      "kind": "card",
+      "refersTo": "pact-preview-panel",
+      "description": "创建策略页右侧 sticky 预览。",
+      "html": "<aside class=\"ds-pact-panel\"><header class=\"ds-pact-head\"><h2>Pact 预览</h2><span class=\"ds-chip\">可提交</span></header><dl><dt>意图</dt><dd>保守型收益 · USDC</dd><dt>支出上限</dt><dd class=\"ds-mono\">500 USDC</dd></dl><button class=\"ds-btn-primary\">创建 Pact</button></aside>",
+      "css": ".ds-pact-panel { display: flex; flex-direction: column; background: #1e2329; border-radius: 8px; color: #fff; font-family: Inter, sans-serif; max-width: 380px; } .ds-pact-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 20px; border-bottom: 1px solid #2b3139; } .ds-pact-head h2 { margin: 0; font-size: 1rem; font-weight: 600; } .ds-chip { font-size: 0.75rem; padding: 4px 10px; border-radius: 4px; background: #2b3139; color: #0ecb81; } .ds-pact-panel dl { padding: 16px 20px; margin: 0; flex: 1; } .ds-pact-panel dt { font-size: 0.75rem; color: #929aa5; margin-top: 12px; } .ds-pact-panel dt:first-child { margin-top: 0; } .ds-pact-panel dd { margin: 4px 0 0; font-size: 0.875rem; color: #eaecef; } .ds-mono { font-family: JetBrains Mono, monospace; font-size: 0.8125rem; } .ds-pact-panel .ds-btn-primary { margin: 0 20px 20px; width: calc(100% - 40px); }"
+    },
+    {
+      "name": "Console Top Nav",
+      "kind": "nav",
+      "refersTo": "top-nav-console",
+      "description": "全局顶栏，中文导航。",
+      "html": "<nav class=\"ds-top-nav\"><a class=\"ds-brand\" href=\"#\">YieldAgent</a><a class=\"ds-link ds-link--on\" href=\"#\">控制台</a><a class=\"ds-link\" href=\"#\">创建策略</a><a class=\"ds-link\" href=\"#\">Pact 管理</a></nav>",
+      "css": ".ds-top-nav { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 24px; background: #0b0e11; border-bottom: 1px solid #2b3139; font-family: Inter, sans-serif; } .ds-brand { color: #fcd535; font-weight: 600; font-size: 0.875rem; text-decoration: none; } .ds-link { color: #707a8a; font-size: 0.875rem; text-decoration: none; padding-bottom: 2px; border-bottom: 2px solid transparent; } .ds-link:hover { color: #eaecef; } .ds-link--on { color: #fff; border-bottom-color: #fcd535; }"
+    },
+    {
+      "name": "Dark Input",
+      "kind": "input",
+      "refersTo": "input-dark",
+      "description": "表单字段，如画布色输入框。",
+      "html": "<input class=\"ds-input\" placeholder=\"例如：500\" aria-label=\"最大支出\" />",
+      "css": ".ds-input { width: 100%; max-width: 280px; height: 40px; padding: 10px 14px; font-family: JetBrains Mono, monospace; font-size: 0.875rem; color: #fff; background: #0b0e11; border: 1px solid transparent; border-radius: 6px; box-sizing: border-box; } .ds-input::placeholder { color: #707a8a; font-family: Inter, sans-serif; } .ds-input:focus { outline: none; border-color: #2b3139; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); }"
+    },
+    {
+      "name": "Status Chip Pending",
+      "kind": "chip",
+      "refersTo": "pact-status-chip",
+      "description": "等待审批等状态。",
+      "html": "<span class=\"ds-chip-pending\">等待审批</span>",
+      "css": ".ds-chip-pending { display: inline-block; padding: 4px 10px; font-size: 0.75rem; font-weight: 500; color: #929aa5; background: #2b3139; border-radius: 4px; font-family: Inter, sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Pact Ledger（Pact 账本）",
+    "overview": "YieldAgent 是以 Pact 为先的中文 Agent 控制台。设计 token 实现在 app/assets/css/main.css，经 Tailwind 映射到 Vue 组件。已交付创建策略分栏页与顶栏导航。",
+    "keyCharacteristics": [
+      "深色画布 canvas；界面文案 zh-CN",
+      "黄色仅用于主 CTA 与哈希链接",
+      "JetBrains Mono 用于可复制的数字与哈希",
+      "创建策略：左表单 + 右 sticky Pact 预览",
+      "prefers-reduced-motion 已在 main.css 处理"
+    ],
+    "rules": [
+      {
+        "name": "The Yellow Scarcity Rule",
+        "body": "黄色占屏面积 ≤10%。",
+        "section": "colors"
+      },
+      {
+        "name": "The Pact Before Profit Rule",
+        "body": "Pact 预览与流程状态优先于目标 APY。",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono Evidence Rule",
+        "body": "可复制字符串使用等宽字体。",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "无玻璃拟态与装饰渐变。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do 保持 zh-CN 文案与 --color-* token 来源",
+      "Do 动词+宾语按钮：创建 Pact、解析并填入表单",
+      "Do 用 font-mono 显示限额与交易哈希",
+      "Do 尊重 prefers-reduced-motion"
+    ],
+    "donts": [
+      "Don't Meme DeFi 霓虹与 APY 英雄区",
+      "Don't AI 模板：眉题、01/02/03、渐变字、图标卡片栅格",
+      "Don't 仿 Binance 营销首页",
+      "Don't 用 trading 色作通用表单错误色",
+      "Don't 彩色 border-left 条纹"
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+import { z } from 'zod'
+import type { NetworkId } from '../../../shared/types/demo'
+import { getState } from '../../utils/demo-store'
+
+const schema = z.object({
+  network: z.enum(['base-sepolia', 'arbitrum-sepolia']).optional(),
+  defaultAgentFee: z.number().min(0).max(30).optional(),
+  userSplit: z.number().min(0).max(100).optional(),
+  apiKey: z.string().optional(),
+})
+
+export default defineEventHandler(async (event) => {
+  const body = await readBody(event)
+  const parsed = schema.safeParse(body)
+
+  if (!parsed.success) {
+    throw createError({ statusCode: 400, data: { error: '请求参数无效' } })
+  }
+
+  const settings = getState().settings
+  const data = parsed.data
+
+  if (data.network) settings.network = data.network as NetworkId
+  if (data.defaultAgentFee !== undefined) settings.defaultAgentFee = data.defaultAgentFee
+  if (data.userSplit !== undefined) settings.userSplit = data.userSplit
+  if (data.apiKey?.trim()) settings.apiKeyConfigured = true
+
+  return settings
+})

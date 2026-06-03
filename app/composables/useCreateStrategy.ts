@@ -1,0 +1,294 @@
+export type NetworkId = 'base-sepolia' | 'arbitrum-sepolia'
+export type RiskLevel = 'conservative' | 'balanced' | 'aggressive'
+
+export type PipelineStage =
+  | 'configure'
+  | 'preview-ready'
+  | 'submitting'
+  | 'awaiting-approval'
+  | 'executing'
+  | 'success'
+  | 'failed'
+
+export interface StrategyForm {
+  network: NetworkId
+  asset: string
+  targetApy: string
+  riskLevel: RiskLevel
+  maxSpend: string
+  agentFee: string
+  userSplit: string
+}
+
+const NETWORK_LABELS: Record<NetworkId, string> = {
+  'base-sepolia': 'Base Sepolia 测试网',
+  'arbitrum-sepolia': 'Arbitrum Sepolia 测试网',
+}
+
+const RISK_LABELS: Record<RiskLevel, string> = {
+  conservative: '保守型收益',
+  balanced: '平衡型收益',
+  aggressive: '激进型收益',
+}
+
+const DEFAULT_FORM: StrategyForm = {
+  network: 'base-sepolia',
+  asset: 'USDC',
+  targetApy: '',
+  riskLevel: 'conservative',
+  maxSpend: '500',
+  agentFee: '15',
+  userSplit: '85',
+}
+
+export function useCreateStrategy() {
+  const form = reactive<StrategyForm>({ ...DEFAULT_FORM })
+  const nlOpen = ref(false)
+  const nlText = ref('')
+  const nlFilled = ref(false)
+  const errors = reactive<Partial<Record<keyof StrategyForm, string>>>({})
+  const pipeline = ref<PipelineStage>('preview-ready')
+  const executionStep = ref(0)
+  const demoTxHash = ref('')
+  const pipelineError = ref('')
+
+  const agentSplit = computed(() => {
+    const user = Number(form.userSplit)
+    if (Number.isNaN(user)) return '—'
+    return String(Math.max(0, Math.min(100, 100 - user)))
+  })
+
+  const intentSummary = computed(() => {
+    const risk = RISK_LABELS[form.riskLevel]
+    const apy = form.targetApy.trim() ? `，目标 APY ${form.targetApy}%` : ''
+    return `${risk} · ${form.asset}（${NETWORK_LABELS[form.network]}）${apy}`
+  })
+
+  const previewLines = computed(() => [
+    { label: '意图', value: intentSummary.value },
+    { label: '支出上限', value: `${form.maxSpend || '—'} ${form.asset}` },
+    { label: '网络', value: NETWORK_LABELS[form.network] },
+    {
+      label: '允许 Recipe',
+      value:
+        form.riskLevel === 'aggressive'
+          ? 'Aave 存入、Compound 存入、Uniswap 兑换'
+          : 'Aave 存入、Compound 存入',
+    },
+    { label: '期限', value: '7 天（演示）' },
+    {
+      label: '收益分账',
+      value: `用户 ${form.userSplit}% · Agent ${agentSplit.value}%`,
+    },
+    { label: 'Agent 绩效费', value: `${form.agentFee}%` },
+  ])
+
+  const isFormValid = computed(() => validateForm(false))
+
+  const stepIndex = computed(() => {
+    const map: Record<PipelineStage, number> = {
+      configure: 0,
+      'preview-ready': 1,
+      submitting: 2,
+      'awaiting-approval': 3,
+      executing: 4,
+      success: 5,
+      failed: 5,
+    }
+    return map[pipeline.value]
+  })
+
+  function validateForm(setErrors = true): boolean {
+    const next: Partial<Record<keyof StrategyForm, string>> = {}
+    const spend = Number(form.maxSpend)
+    const fee = Number(form.agentFee)
+    const user = Number(form.userSplit)
+
+    if (!form.maxSpend || Number.isNaN(spend) || spend < 10 || spend > 1_000_000) {
+      next.maxSpend = '请输入 10–1,000,000 USDC'
+    }
+    if (!form.agentFee || Number.isNaN(fee) || fee < 0 || fee > 30) {
+      next.agentFee = '请输入 0–30%'
+    }
+    if (!form.userSplit || Number.isNaN(user) || user < 0 || user > 100) {
+      next.userSplit = '请输入 0–100%'
+    }
+    if (form.targetApy.trim()) {
+      const apy = Number(form.targetApy)
+      if (Number.isNaN(apy) || apy < 0 || apy > 100) {
+        next.targetApy = '请输入 0–100，或留空'
+      }
+    }
+
+    if (setErrors) {
+      Object.keys(errors).forEach((k) => delete errors[k as keyof StrategyForm])
+      Object.assign(errors, next)
+    }
+
+    return Object.keys(next).length === 0
+  }
+
+  watch(
+    form,
+    () => {
+      validateForm(true)
+      if (['configure', 'preview-ready'].includes(pipeline.value)) {
+        pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
+      }
+    },
+    { deep: true },
+  )
+
+  function parseNlIntoForm() {
+    const text = nlText.value.toLowerCase()
+
+    if (
+      text.includes('aggressive')
+      || text.includes('激进')
+    ) {
+      form.riskLevel = 'aggressive'
+    } else if (text.includes('balanced') || text.includes('平衡')) {
+      form.riskLevel = 'balanced'
+    } else if (text.includes('conservative') || text.includes('保守')) {
+      form.riskLevel = 'conservative'
+    }
+
+    const amount = text.match(/(\d+)\s*usdc/i) || text.match(/(\d+)\s*(?:枚|个)?\s*usdc?/i)
+    if (amount) form.maxSpend = amount[1]
+
+    const apy =
+      text.match(/(\d+(?:\.\d+)?)\s*%?\s*apy/i)
+      || text.match(/apy\s*(\d+)/i)
+      || text.match(/目标\s*(\d+(?:\.\d+)?)\s*%/)
+      || text.match(/(\d+(?:\.\d+)?)\s*%\s*收益/)
+    if (apy) form.targetApy = apy[1]
+
+    if (text.includes('arbitrum') || text.includes('仲裁')) form.network = 'arbitrum-sepolia'
+    if (text.includes('base') || text.includes('基地')) form.network = 'base-sepolia'
+
+    nlFilled.value = true
+    validateForm(true)
+    pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
+  }
+
+  function clearNlFill() {
+    nlFilled.value = false
+    Object.assign(form, { ...DEFAULT_FORM })
+    validateForm(true)
+    pipeline.value = 'configure'
+  }
+
+  let timers: ReturnType<typeof setTimeout>[] = []
+
+  function clearTimers() {
+    timers.forEach(clearTimeout)
+    timers = []
+  }
+
+  const executionSteps = [
+    '校验 Pact 策略',
+    '兑换为 USDC',
+    '存入 Aave',
+    '写入执行日志',
+  ] as const
+
+  async function submitPact() {
+    if (!validateForm(true) || pipeline.value === 'submitting') return
+
+    clearTimers()
+    pipeline.value = 'submitting'
+    pipelineError.value = ''
+    demoTxHash.value = ''
+
+    const store = useDemoStore()
+    try {
+      await store.createStrategy({
+        network: form.network,
+        asset: form.asset,
+        targetApy: form.targetApy.trim() || undefined,
+        riskLevel: form.riskLevel,
+        maxSpend: form.maxSpend,
+        agentFee: form.agentFee,
+        userSplit: form.userSplit,
+      })
+    } catch (e: unknown) {
+      pipeline.value = 'failed'
+      if (e && typeof e === 'object' && 'data' in e) {
+        const data = (e as { data?: { error?: string } }).data
+        pipelineError.value = data?.error ?? '创建策略失败，请重试。'
+      } else {
+        pipelineError.value = '创建策略失败，请重试。'
+      }
+      return
+    }
+
+    await new Promise((r) => setTimeout(r, 800))
+    pipeline.value = 'awaiting-approval'
+
+    timers.push(
+      setTimeout(() => {
+        pipeline.value = 'executing'
+        executionStep.value = 0
+        let i = 0
+        const tick = () => {
+          executionStep.value = i
+          i += 1
+          if (i < executionSteps.length) {
+            timers.push(setTimeout(tick, 1200))
+          } else {
+            timers.push(
+              setTimeout(() => {
+                demoTxHash.value =
+                  '0x8f3a91c2e4b1076d5a9c3f812e7b4c9a1d0e5f6a8b2c3d4e5f60718293a4b5c6'
+                pipeline.value = 'success'
+                navigateTo('/?created=1')
+              }, 900),
+            )
+          }
+        }
+        timers.push(setTimeout(tick, 600))
+      }, 2000),
+    )
+  }
+
+  function simulateFailure() {
+    clearTimers()
+    pipeline.value = 'failed'
+    pipelineError.value = 'Recipe 执行回滚：滑点超出 Pact 容忍范围（演示）。'
+    demoTxHash.value = ''
+  }
+
+  function resetToEdit() {
+    clearTimers()
+    pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
+    pipelineError.value = ''
+    demoTxHash.value = ''
+    executionStep.value = 0
+  }
+
+  onUnmounted(clearTimers)
+
+  return {
+    form,
+    nlOpen,
+    nlText,
+    nlFilled,
+    errors,
+    pipeline,
+    executionStep,
+    demoTxHash,
+    pipelineError,
+    agentSplit,
+    intentSummary,
+    previewLines,
+    isFormValid,
+    stepIndex,
+    executionSteps,
+    validateForm,
+    parseNlIntoForm,
+    clearNlFill,
+    submitPact,
+    simulateFailure,
+    resetToEdit,
+  }
+}

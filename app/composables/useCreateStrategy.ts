@@ -1,6 +1,8 @@
 export type NetworkId = 'base-sepolia' | 'arbitrum-sepolia'
 export type RiskLevel = 'conservative' | 'balanced' | 'aggressive'
 
+export type StrategyTemplateKey = 'conservative-usdc' | 'balanced-supply' | 'custom'
+
 export type PipelineStage =
   | 'configure'
   | 'preview-ready'
@@ -41,10 +43,51 @@ const DEFAULT_FORM: StrategyForm = {
   userSplit: '85',
 }
 
+const TEMPLATE_PRESETS: Record<StrategyTemplateKey, {
+  title: string
+  description: string
+  nlText: string
+  form: StrategyForm
+}> = {
+  'conservative-usdc': {
+    title: '保守型 USDC 收益',
+    description: '首次体验推荐：最多 500 USDC，只允许 Aave / Compound Supply。',
+    nlText: '我想在 Base Sepolia 上用 500 USDC 做一个保守收益策略，只允许 Aave 和 Compound，期限 7 天，收益 85% 给我，15% 给 Agent。',
+    form: { ...DEFAULT_FORM, riskLevel: 'conservative', maxSpend: '500', targetApy: '8' },
+  },
+  'balanced-supply': {
+    title: '平衡型收益策略',
+    description: '允许小额调整，但仍受预算、白名单协议和期限限制。',
+    nlText: '我想在 Arbitrum Sepolia 上用 800 USDC 做一个平衡收益策略，允许小额兑换后存入 Aave 或 Compound，收益 88% 给我，12% 给 Agent。',
+    form: { ...DEFAULT_FORM, network: 'arbitrum-sepolia', riskLevel: 'balanced', maxSpend: '800', agentFee: '12', userSplit: '88' },
+  },
+  custom: {
+    title: '自定义策略',
+    description: '用自然语言描述目标，系统先生成 Pact Preview。',
+    nlText: '',
+    form: { ...DEFAULT_FORM },
+  },
+}
+
+const STRATEGY_TEMPLATES = Object.entries(TEMPLATE_PRESETS).map(([key, value]) => ({
+  key: key as StrategyTemplateKey,
+  title: value.title,
+  description: value.description,
+}))
+
 export function useCreateStrategy() {
-  const form = reactive<StrategyForm>({ ...DEFAULT_FORM })
-  const nlOpen = ref(false)
-  const nlText = ref('')
+  const route = useRoute()
+  const queryTemplate = Array.isArray(route.query.template)
+    ? route.query.template[0]
+    : route.query.template
+  const initialTemplate =
+    queryTemplate && queryTemplate in TEMPLATE_PRESETS
+      ? (queryTemplate as StrategyTemplateKey)
+      : 'conservative-usdc'
+
+  const form = reactive<StrategyForm>({ ...TEMPLATE_PRESETS[initialTemplate].form })
+  const nlOpen = ref(initialTemplate !== 'custom')
+  const nlText = ref(TEMPLATE_PRESETS[initialTemplate].nlText)
   const nlFilled = ref(false)
   const errors = reactive<Partial<Record<keyof StrategyForm, string>>>({})
   const pipeline = ref<PipelineStage>('preview-ready')
@@ -63,6 +106,24 @@ export function useCreateStrategy() {
     const apy = form.targetApy.trim() ? `，目标 APY ${form.targetApy}%` : ''
     return `${risk} · ${form.asset}（${NETWORK_LABELS[form.network]}）${apy}`
   })
+
+  const allowedActions = computed(() => {
+    const base = [
+      `使用最多 ${form.maxSpend || '—'} ${form.asset}`,
+      `在 ${NETWORK_LABELS[form.network]} 执行`,
+      '调用 Aave Supply / Compound Supply',
+      `收益分账：用户 ${form.userSplit}% · Agent ${agentSplit.value}%`,
+    ]
+    if (form.riskLevel === 'aggressive') base.push('执行小额 Uniswap 兑换（演示）')
+    return base
+  })
+
+  const deniedActions = computed(() => [
+    `使用超过 ${form.maxSpend || '—'} ${form.asset} 的资金`,
+    '调用非白名单协议或未知 token',
+    '在 Pact 终止或过期后继续执行',
+    '更改用户确认过的收益分账比例',
+  ])
 
   const previewLines = computed(() => [
     { label: '意图', value: intentSummary.value },
@@ -171,6 +232,16 @@ export function useCreateStrategy() {
     pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
   }
 
+  function applyTemplate(key: StrategyTemplateKey) {
+    const preset = TEMPLATE_PRESETS[key]
+    Object.assign(form, { ...preset.form })
+    nlText.value = preset.nlText
+    nlOpen.value = key !== 'custom'
+    nlFilled.value = key !== 'custom'
+    validateForm(true)
+    pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
+  }
+
   function clearNlFill() {
     nlFilled.value = false
     Object.assign(form, { ...DEFAULT_FORM })
@@ -186,10 +257,10 @@ export function useCreateStrategy() {
   }
 
   const executionSteps = [
-    '校验 Pact 策略',
-    '兑换为 USDC',
-    '存入 Aave',
-    '写入执行日志',
+    'Strategy Agent 生成收益策略',
+    '校验 Pact allowlist / max spend',
+    'Executor Agent 执行 Aave Supply',
+    'Revenue Agent 写入收益与分账日志',
   ] as const
 
   async function submitPact() {
@@ -241,7 +312,7 @@ export function useCreateStrategy() {
                 demoTxHash.value =
                   '0x8f3a91c2e4b1076d5a9c3f812e7b4c9a1d0e5f6a8b2c3d4e5f60718293a4b5c6'
                 pipeline.value = 'success'
-                navigateTo('/?created=1')
+                navigateTo('/dashboard?created=1')
               }, 900),
             )
           }
@@ -254,7 +325,7 @@ export function useCreateStrategy() {
   function simulateFailure() {
     clearTimers()
     pipeline.value = 'failed'
-    pipelineError.value = 'Recipe 执行回滚：滑点超出 Pact 容忍范围（演示）。'
+    pipelineError.value = 'Denied：Agent 尝试 Swap 500 USDC into unknown token。原因：Recipe not allowed by current Pact。'
     demoTxHash.value = ''
   }
 
@@ -281,11 +352,15 @@ export function useCreateStrategy() {
     agentSplit,
     intentSummary,
     previewLines,
+    allowedActions,
+    deniedActions,
+    strategyTemplates: STRATEGY_TEMPLATES,
     isFormValid,
     stepIndex,
     executionSteps,
     validateForm,
     parseNlIntoForm,
+    applyTemplate,
     clearNlFill,
     submitPact,
     simulateFailure,

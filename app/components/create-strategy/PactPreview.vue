@@ -8,6 +8,8 @@ const props = defineProps<{
   submitting: boolean
   demoTxHash: string
   pipelineError: string
+  allowedActions: string[]
+  deniedActions: string[]
   executionStep: number
   executionSteps: readonly string[]
 }>()
@@ -27,7 +29,7 @@ const statusChip = computed(() => {
     case 'success':
       return { label: 'Pact 已生效', class: 'text-trading-up' }
     case 'failed':
-      return { label: '失败', class: 'text-trading-down' }
+      return { label: '已拒绝', class: 'text-trading-down' }
     case 'preview-ready':
       return { label: '可提交', class: 'text-trading-up' }
     default:
@@ -55,23 +57,48 @@ const showPipelinePanel = computed(() =>
           {{ statusChip.label }}
         </span>
       </div>
-      <p class="mt-1 text-xs text-muted">资金操作前的 CAW 策略摘要。</p>
+      <p class="mt-1 text-xs text-muted">批准前先确认 Agent 能做什么，以及明确不能做什么。</p>
     </div>
 
-    <dl class="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+    <div class="flex-1 space-y-4 overflow-y-auto px-5 py-4">
       <template v-if="!props.isFormValid && !showPipelinePanel">
         <p class="text-sm text-muted">请填写必填项以生成 Pact 边界。</p>
       </template>
-      <div v-for="line in props.lines" :key="line.label" class="grid gap-0.5">
-        <dt class="text-xs font-medium text-muted-strong">{{ line.label }}</dt>
-        <dd
-          class="text-sm text-body"
-          :class="line.label === '意图' ? '' : 'font-mono text-[0.8125rem]'"
-        >
-          {{ line.value }}
-        </dd>
-      </div>
-    </dl>
+
+      <dl class="space-y-3">
+        <div v-for="line in props.lines" :key="line.label" class="grid gap-0.5">
+          <dt class="text-xs font-medium text-muted-strong">{{ line.label }}</dt>
+          <dd
+            class="text-sm text-body"
+            :class="line.label === '意图' ? '' : 'font-mono text-[0.8125rem]'"
+          >
+            {{ line.value }}
+          </dd>
+        </div>
+      </dl>
+
+      <section v-if="props.isFormValid" class="rounded-md bg-canvas p-4" aria-labelledby="allowed-heading">
+        <h3 id="allowed-heading" class="text-xs font-semibold uppercase tracking-[0.18em] text-trading-up">
+          允许 Agent
+        </h3>
+        <ul class="mt-3 space-y-2 text-sm text-body">
+          <li v-for="item in props.allowedActions" :key="item" class="flex gap-2">
+            <span aria-hidden="true">✅</span><span>{{ item }}</span>
+          </li>
+        </ul>
+      </section>
+
+      <section v-if="props.isFormValid" class="rounded-md bg-canvas p-4" aria-labelledby="denied-heading">
+        <h3 id="denied-heading" class="text-xs font-semibold uppercase tracking-[0.18em] text-trading-down">
+          不允许 Agent
+        </h3>
+        <ul class="mt-3 space-y-2 text-sm text-body">
+          <li v-for="item in props.deniedActions" :key="item" class="flex gap-2">
+            <span aria-hidden="true">❌</span><span>{{ item }}</span>
+          </li>
+        </ul>
+      </section>
+    </div>
 
     <div v-if="showPipelinePanel" class="border-t border-hairline px-5 py-4">
       <div v-if="props.pipeline === 'submitting'" class="text-sm text-muted" role="status">
@@ -107,24 +134,33 @@ const showPipelinePanel = computed(() =>
         </a>
       </div>
       <div v-else-if="props.pipeline === 'failed'" class="space-y-2" role="alert">
-        <p class="text-sm font-medium text-trading-down">执行失败</p>
+        <p class="text-sm font-medium text-trading-down">已拒绝：超出 Pact 权限边界</p>
         <p class="text-xs text-body">{{ props.pipelineError }}</p>
       </div>
     </div>
 
     <div class="mt-auto space-y-2 border-t border-hairline p-5">
-      <button
-        v-if="!showPipelinePanel"
-        type="button"
-        class="flex h-10 w-full items-center justify-center rounded-md bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary-active disabled:cursor-not-allowed disabled:bg-[var(--color-primary-disabled)] disabled:text-muted"
-        :disabled="!props.isFormValid || props.submitting"
-        @click="emit('submit')"
-      >
-        创建 Pact
-      </button>
+      <template v-if="!showPipelinePanel">
+        <button
+          type="button"
+          class="flex h-10 w-full items-center justify-center rounded-md bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary-active disabled:cursor-not-allowed disabled:bg-[var(--color-primary-disabled)] disabled:text-muted"
+          :disabled="!props.isFormValid || props.submitting"
+          @click="emit('submit')"
+        >
+          创建 Pact
+        </button>
+        <button
+          type="button"
+          class="flex h-10 w-full items-center justify-center rounded-md border border-hairline bg-transparent text-sm font-semibold text-body hover:bg-surface-elevated disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="!props.isFormValid"
+          @click="emit('simulateFail')"
+        >
+          模拟越权请求
+        </button>
+      </template>
       <template v-else-if="props.pipeline === 'success'">
         <NuxtLink
-          to="/"
+          to="/dashboard"
           class="flex h-10 w-full items-center justify-center rounded-md bg-primary text-sm font-semibold text-on-primary no-underline hover:bg-primary-active"
         >
           返回控制台
@@ -152,7 +188,7 @@ const showPipelinePanel = computed(() =>
           class="flex h-10 w-full items-center justify-center rounded-md border border-hairline text-sm font-medium text-muted hover:text-body"
           @click="emit('simulateFail')"
         >
-          模拟失败（演示）
+          模拟越权请求
         </button>
       </template>
     </div>

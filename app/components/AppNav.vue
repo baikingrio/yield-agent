@@ -2,7 +2,8 @@
 const route = useRoute()
 
 const links = [
-  { to: '/', label: '控制台' },
+  { to: '/', label: '首页' },
+  { to: '/dashboard', label: 'Demo 控制台' },
   { to: '/create-strategy', label: '创建策略' },
   { to: '/pacts', label: 'Pact 管理' },
   { to: '/history', label: '交易历史' },
@@ -17,7 +18,7 @@ function isActive(path: string) {
 
 <template>
   <header
-    class="sticky top-0 z-[var(--z-sticky)] flex h-14 items-center gap-8 border-b border-hairline bg-canvas px-4 md:px-6"
+    class="sticky top-0 z-[var(--z-sticky)] flex h-14 items-center gap-8 border-b border-hairline bg-canvas/95 px-4 backdrop-blur md:px-6"
   >
     <NuxtLink
       to="/"

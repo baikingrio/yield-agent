@@ -133,12 +133,68 @@ yield-agent-collective/
 
 ## 6. 用户流程（User Flow）
 
-1. 用户进入 Dashboard → 点击 “新建策略”
-2. 输入自然语言 + 配置参数 → 生成 Pact 预览
-3. 确认提交 → 显示 “等待 Cobo 审批” 模拟界面
-4. Agent 执行策略（Swap → Supply → Compound）
-5. 收益产生 → Revenue Agent 触发分账转账
-6. Dashboard 实时展示所有 Tx Hash 和日志
+### 6.1 首次访问路径
+
+YieldAgent 不应该让用户第一次访问就直接进入 Dashboard。首次访问路径应先解释产品价值，再引导用户创建第一条 Pact 策略：
+
+1. 用户访问 YieldAgent 首页；
+2. 用户理解核心价值：AI Agent 可以执行收益策略，但只能在用户批准的 Pact 边界内行动；
+3. 用户选择 Demo 模式或测试网模式，Hackathon 默认推荐 Demo 模式；
+4. 用户选择策略模板，例如“保守型 USDC 收益”；
+5. 用户输入或修改自然语言策略；
+6. 系统生成 Pact Preview；
+7. 用户确认资金上限、允许 Recipe、执行期限和收益分账；
+8. 用户批准 Pact 或运行 dry-run 演示；
+9. Agent 在 Pact 范围内执行收益策略；
+10. Dashboard 展示 Pact 状态、Agent 动作、审计日志、tx hash 和收益曲线；
+11. 用户可进入 History 复查日志，或进入 Pact 管理页终止 Pact。
+
+### 6.2 Pact Preview 确认页 / 确认阶段
+
+Pact Preview 是 YieldAgent 的核心产品体验。它必须清楚区分：
+
+**允许 Agent：**
+
+- 使用最多指定数量的资产，例如 500 USDC；
+- 在指定测试网执行，例如 Base Sepolia；
+- 调用白名单 Recipe，例如 Aave Supply / Compound Supply；
+- 在指定期限内执行，例如 7 天；
+- 按用户确认的收益分账比例结算。
+
+**不允许 Agent：**
+
+- 使用超过 Pact 上限的资金；
+- 调用非白名单协议或未知 token；
+- 在 Pact 终止或过期后继续执行；
+- 更改用户确认过的收益分账比例；
+- 执行高风险 leverage / LP / 衍生品策略。
+
+### 6.3 Dashboard 使用路径
+
+Dashboard 是策略启动后的监控页面，不是首次使用入口。Dashboard 的信息优先级：
+
+1. 当前 active Pact 与剩余权限边界；
+2. 最近 Agent 动作：Strategy Agent、Executor Agent、Revenue Agent；
+3. Audit Trail：每一步是否被允许、原因和 tx hash；
+4. 策略列表与 Pact 管理入口；
+5. 收益曲线，作为辅助信息而不是主视觉。
+
+### 6.4 拒绝路径 Demo
+
+Demo 必须展示至少一个越权请求被拒绝的场景。例如：
+
+```text
+Agent 尝试执行：
+Swap 500 USDC into unknown token
+
+结果：
+Denied
+
+原因：
+Recipe not allowed by current Pact.
+```
+
+这个拒绝路径比单纯展示成功交易更重要，因为它证明 CAW Pact 真正限制了 Agent 的权限。
 
 ---
 

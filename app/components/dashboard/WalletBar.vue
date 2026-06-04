@@ -41,7 +41,7 @@ const shortAddress = computed(() => {
     </div>
     <template v-else-if="wallet">
       <div class="flex flex-wrap items-center gap-3">
-        <span class="text-xs text-muted">Agent 钱包</span>
+        <span class="text-xs text-muted">CAW Agent Wallet</span>
         <button
           type="button"
           class="font-mono text-sm text-on-dark transition-colors hover:text-primary"
@@ -51,10 +51,14 @@ const shortAddress = computed(() => {
           {{ shortAddress }}
         </button>
         <span v-if="copied" class="text-xs text-trading-up">已复制</span>
+        <span class="rounded-sm bg-surface-elevated px-2 py-1 font-mono text-[0.65rem] text-muted-strong">Demo / testnet funds</span>
       </div>
+      <p class="mt-3 text-xs leading-5 text-muted">
+        资金来源：用户真实模式下从 EOA 转入；当前 Demo 使用 mock / 预置测试网余额。Agent 只能在 Active Pact 预算内操作。
+      </p>
       <dl class="mt-4 grid gap-4 sm:grid-cols-3">
         <div>
-          <dt class="text-xs text-muted">总资产 (USDC)</dt>
+          <dt class="text-xs text-muted">Agent Wallet 余额 (USDC)</dt>
           <dd class="mt-1 font-mono text-sm text-on-dark">
             {{ wallet.totalAssetsUsdc.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) }}
           </dd>

@@ -3,6 +3,7 @@ const route = useRoute()
 
 const links = [
   { to: '/', label: '首页' },
+  { to: '/wallet', label: '资金准备' },
   { to: '/dashboard', label: 'Demo 控制台' },
   { to: '/create-strategy', label: '创建策略' },
   { to: '/pacts', label: 'Pact 管理' },

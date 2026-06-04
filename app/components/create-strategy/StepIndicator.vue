@@ -3,7 +3,7 @@ const props = defineProps<{
   activeIndex: number
 }>()
 
-const steps = ['配置', '预览', '提交', '审批', '执行', '完成'] as const
+const steps = ['资金', '策略', '预览', '审批', '执行', '审计'] as const
 </script>
 
 <template>

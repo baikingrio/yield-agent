@@ -57,7 +57,7 @@ const showPipelinePanel = computed(() =>
           {{ statusChip.label }}
         </span>
       </div>
-      <p class="mt-1 text-xs text-muted">批准前先确认 Agent 能做什么，以及明确不能做什么。</p>
+      <p class="mt-1 text-xs text-muted">批准前先确认资金来源、Pact 预算，以及 Agent 能做什么 / 不能做什么。</p>
     </div>
 
     <div class="flex-1 space-y-4 overflow-y-auto px-5 py-4">

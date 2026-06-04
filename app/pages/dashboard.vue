@@ -43,10 +43,13 @@ onMounted(async () => {
 
 <template>
   <main class="mx-auto max-w-5xl space-y-8 px-4 py-6 md:px-6 md:py-8">
-    <header>
+    <header class="space-y-2">
+      <div class="inline-flex rounded-full border border-hairline bg-surface px-3 py-1 font-mono text-xs text-muted-strong">
+        Demo Console · mock/testnet funds
+      </div>
       <h1 class="text-2xl font-semibold text-on-dark">控制台</h1>
       <p class="mt-2 max-w-prose text-sm text-muted">
-        Agent 钱包、策略与可审计执行记录。收益图为辅助信息，Pact 边界优先。
+        控制台展示 Agent Wallet、Active Pact、执行日志和 tx hash。当前 Demo 使用 mock / 预置测试网 Agent Wallet，收益图只是辅助信息。
       </p>
     </header>
 
@@ -66,15 +69,15 @@ onMounted(async () => {
 
     <DashboardWalletBar :wallet="store.wallet" :loading="initialLoading" />
 
+    <DashboardStrategyList :strategies="store.strategies" :loading="initialLoading" />
+
+    <DashboardRecentLogsTable :logs="store.logs" :loading="initialLoading" />
+
     <DashboardYieldChart
       :series="store.yieldSeries"
       :loading="initialLoading"
       :range="store.yieldRange"
       @update:range="onRangeChange"
     />
-
-    <DashboardStrategyList :strategies="store.strategies" :loading="initialLoading" />
-
-    <DashboardRecentLogsTable :logs="store.logs" :loading="initialLoading" />
   </main>
 </template>

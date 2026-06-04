@@ -109,7 +109,7 @@ export function useCreateStrategy() {
 
   const allowedActions = computed(() => {
     const base = [
-      `使用最多 ${form.maxSpend || '—'} ${form.asset}`,
+      `资金来自 Agent Wallet，本次 Pact 最多允许 ${form.maxSpend || '—'} ${form.asset}`,
       `在 ${NETWORK_LABELS[form.network]} 执行`,
       '调用 Aave Supply / Compound Supply',
       `收益分账：用户 ${form.userSplit}% · Agent ${agentSplit.value}%`,
@@ -127,6 +127,9 @@ export function useCreateStrategy() {
 
   const previewLines = computed(() => [
     { label: '意图', value: intentSummary.value },
+    { label: '资金来源', value: 'Demo mock / 预置测试网 Agent Wallet' },
+    { label: 'Agent Wallet 余额', value: '500 USDC ready（演示）' },
+    { label: 'Pact 可用预算', value: `${form.maxSpend || '—'} ${form.asset}` },
     { label: '支出上限', value: `${form.maxSpend || '—'} ${form.asset}` },
     { label: '网络', value: NETWORK_LABELS[form.network] },
     {
@@ -148,9 +151,9 @@ export function useCreateStrategy() {
 
   const stepIndex = computed(() => {
     const map: Record<PipelineStage, number> = {
-      configure: 0,
-      'preview-ready': 1,
-      submitting: 2,
+      configure: 1,
+      'preview-ready': 2,
+      submitting: 3,
       'awaiting-approval': 3,
       executing: 4,
       success: 5,
@@ -215,14 +218,16 @@ export function useCreateStrategy() {
     }
 
     const amount = text.match(/(\d+)\s*usdc/i) || text.match(/(\d+)\s*(?:枚|个)?\s*usdc?/i)
-    if (amount) form.maxSpend = amount[1]
+    const amountValue = amount?.[1]
+    if (amountValue) form.maxSpend = amountValue
 
     const apy =
       text.match(/(\d+(?:\.\d+)?)\s*%?\s*apy/i)
       || text.match(/apy\s*(\d+)/i)
       || text.match(/目标\s*(\d+(?:\.\d+)?)\s*%/)
       || text.match(/(\d+(?:\.\d+)?)\s*%\s*收益/)
-    if (apy) form.targetApy = apy[1]
+    const apyValue = apy?.[1]
+    if (apyValue) form.targetApy = apyValue
 
     if (text.includes('arbitrum') || text.includes('仲裁')) form.network = 'arbitrum-sepolia'
     if (text.includes('base') || text.includes('基地')) form.network = 'base-sepolia'

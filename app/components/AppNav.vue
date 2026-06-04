@@ -25,13 +25,13 @@ function isActive(path: string) {
 
 <template>
   <header
-    class="sticky top-0 z-[var(--z-sticky)] flex h-14 items-center gap-8 border-b border-hairline bg-canvas/95 px-4 backdrop-blur md:px-6"
+    class="sticky top-0 z-[var(--z-sticky)] flex h-14 items-center gap-8 border-b border-hairline bg-canvas px-4 md:px-6"
   >
     <NuxtLink
       to="/"
       class="shrink-0 text-sm font-semibold text-primary no-underline hover:text-primary-active"
     >
-      PactTrader
+      YieldAgent
     </NuxtLink>
 
     <nav

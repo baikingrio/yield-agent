@@ -11,6 +11,8 @@ const {
   executionStep,
   demoTxHash,
   pipelineError,
+  pactSubmissionMessage,
+  coboPactId,
   previewLines,
   allowedActions,
   deniedActions,
@@ -131,6 +133,8 @@ const formDisabled = computed(() =>
         :submitting="pipeline === 'submitting'"
         :demo-tx-hash="demoTxHash"
         :pipeline-error="pipelineError"
+        :pact-submission-message="pactSubmissionMessage"
+        :cobo-pact-id="coboPactId"
         :allowed-actions="allowedActions"
         :denied-actions="deniedActions"
         :execution-step="executionStep"

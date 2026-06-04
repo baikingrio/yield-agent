@@ -1,17 +1,14 @@
 import { z } from 'zod'
-import type { NetworkId, Pact, Strategy } from '../../../shared/types/demo'
+import type { Pact, Strategy } from '../../../shared/types/demo'
 import { DEMO_TX_HASH } from '../../fixtures/initial-state'
 import { getState } from '../../utils/demo-store'
+import { buildYieldPactDraft, strategyWhitelist, submitYieldPactToCobo } from '../../utils/cobo-pact'
+import type { CoboPactSubmitResult } from '../../utils/cobo-pact'
 
 const RISK_NAMES: Record<string, string> = {
   conservative: '保守型收益',
   balanced: '平衡型收益',
   aggressive: '激进型收益',
-}
-
-const NETWORK_NAMES: Record<NetworkId, string> = {
-  'base-sepolia': 'Base Sepolia 测试网',
-  'arbitrum-sepolia': 'Arbitrum Sepolia 测试网',
 }
 
 const schema = z.object({
@@ -79,13 +76,17 @@ export default defineEventHandler(async (event) => {
   const pactId = `pact-${ts}`
 
   const riskLabel = RISK_NAMES[data.riskLevel] ?? data.riskLevel
-  const apyPart = data.targetApy?.trim() ? `，目标 APY ${data.targetApy}%` : ''
-  const intent = `${riskLabel} · ${data.asset}（${NETWORK_NAMES[data.network]}）${apyPart}`
-
-  const whitelist =
-    data.riskLevel === 'aggressive'
-      ? ['Aave 存入', 'Compound 存入', 'Uniswap 兑换']
-      : ['Aave 存入', 'Compound 存入']
+  const draft = buildYieldPactDraft(data)
+  const whitelist = strategyWhitelist(data.riskLevel)
+  let submitResult: CoboPactSubmitResult
+  try {
+    submitResult = await submitYieldPactToCobo(state, data, pactId)
+  } catch (err) {
+    throw createError({
+      statusCode: 502,
+      data: { error: err instanceof Error ? err.message : 'Cobo Pact 提交失败' },
+    })
+  }
 
   const strategy: Strategy = {
     id: strategyId,
@@ -95,20 +96,25 @@ export default defineEventHandler(async (event) => {
     riskLevel: data.riskLevel,
     maxSpend,
     status: 'active',
-    pactId,
+    pactId: submitResult.pactId,
     createdAt: new Date().toISOString(),
   }
 
   const pact: Pact = {
-    id: pactId,
+    id: submitResult.pactId,
     strategyId,
-    intent,
-    status: 'awaiting-approval',
+    intent: draft.intent,
+    status: submitResult.status,
     maxSpend,
     whitelist,
     durationDays: 7,
     agentFeePercent: agentFee,
     userSplitPercent: userSplit,
+    submissionMode: submitResult.mode,
+    coboPactId: submitResult.mode === 'cobo' ? submitResult.pactId : undefined,
+    approvalId: submitResult.approvalId,
+    coboStatus: submitResult.coboStatus,
+    submissionMessage: submitResult.message,
   }
 
   state.strategies.push(strategy)
@@ -116,10 +122,12 @@ export default defineEventHandler(async (event) => {
   state.logs.unshift({
     id: `log-${ts}`,
     timestamp: new Date().toISOString(),
-    action: 'Pact 已创建，等待审批',
+    action: submitResult.mode === 'cobo'
+      ? 'Pact 已提交到 Cobo，等待 App 审批'
+      : 'Pact draft 已创建，等待接入 Cobo 提交',
     type: 'supply',
     txHash: DEMO_TX_HASH,
-    status: '待审批',
+    status: submitResult.status === 'active' ? '已激活' : '待审批',
   })
 
   setResponseStatus(event, 201)

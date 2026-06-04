@@ -1,54 +1,66 @@
-# PactTrader
+# YieldAgent
 
-PactTrader 是一个面向 AI Web3 School Hackathon 的 **Pact-first DeFi Agent** 原型。项目目标不是让 AI Agent 直接控制用户完整钱包，而是通过 **CAW Agent Wallet + Pact 权限边界**，让用户只把一小块可控测试网资金交给 Agent，并明确限制预算、资产、协议、Recipe、期限和审计路径。
+YieldAgent 是一个面向 AI Web3 School / Cobo Agentic Commerce Hackathon 的 **Pact-first DeFi 收益策略 Agent 控制台**。
 
-当前版本是测试网产品原型（wagmi EOA + Nitro API），用于展示：
+项目目标不是让 AI Agent 无限接管用户钱包，而是通过 **Cobo Agentic Wallet（CAW）+ Pact 权限边界**，让用户只把一小块可控测试网资金交给 Agent，并明确限制预算、资产、网络、Recipe、期限、分账比例和审计路径。
+
+当前版本是测试网产品原型，用于展示：
 
 - 用户从 EOA 钱包准备资金到 CAW Agent Wallet 的流程；
 - Agent 在 Pact 约束下创建和执行收益策略；
 - 允许执行、越权拒绝、tx hash、审计日志和收益看板；
-- 测试网 Agent Wallet 资金准备（wagmi EOA + Nitro API 注资模拟）说明。
+- 测试网 Agent Wallet 资金准备：wagmi EOA 连接、CAW SDK 创建钱包、USDC 转入校验、Cobo 余额同步。
 
-> 说明：当前仓库包名仍是 `yield_agent`，部分页面标题中仍保留 YieldAgent 文案；项目主线与 README 统一按 **PactTrader** 说明。
+> 核心原则：**Pact before profit**。先展示 Agent 被允许做什么，再展示 Agent 实际做了什么。
 
 ## 核心流程
 
 ```text
 User EOA Wallet
-  -> deposit / transfer testnet USDC
+  -> transfer testnet USDC
 CAW Agent Wallet
-  -> Pact: max budget + allowlist + duration
+  -> Pact: max budget + allowlist + duration + revenue split
 Executor Agent
   -> allowed Recipe only
-Aave / Compound on testnet
+Aave / Compound / testnet yield action
+  -> audit log + tx hash
 ```
 
-关键原则：
+关键边界：
 
 - Agent 不直接控制用户完整 EOA 钱包；
+- Agent 只能操作用户主动转入 Agent Wallet 的测试网资金；
 - Agent Wallet 有余额，也必须继续受 Pact 预算限制；
 - 只有白名单协议和 Recipe 可以执行；
 - 越权动作需要被明确拒绝，并留下可解释的审计记录；
-- 仅 Base / Arbitrum Sepolia 测试网；不涉及主网真实资产。注资与执行由服务端模拟并写入审计日志。
+- 当前仅面向 Base / Arbitrum Sepolia 测试网，不涉及主网真实资产。
 
 ## 技术栈
 
-- 前端：Nuxt.js、Vue、TypeScript、Tailwind CSS、shadcn-vue/ui 风格组件
+- 前端：Nuxt 4、Vue 3、TypeScript、Tailwind CSS、shadcn-vue/ui 风格组件
+- 钱包连接：wagmi、viem
 - 执行层：CAW（Cobo Agentic Wallet）/ Pact
-- Agent / 策略层：Z.AI API
-- 数据库与日志：SQLite
+- Agent / 策略层：Z.AI API（待接入）
+- 数据库与日志：SQLite（待接入；当前为内存 Demo store）
 - 部署：Vercel
-- 当前原型依赖：Pinia、Zod、Chart.js、vue-chartjs
+- 当前原型依赖：Pinia、Zod、Chart.js、vue-chartjs、@cobo/agentic-wallet
 
 ## 已实现页面
 
-- `/`：产品落地页，解释 PactTrader 的资金边界与测试网入门路径
+- `/`：产品落地页，解释 YieldAgent 的 Pact-first 价值和测试网路径
 - `/wallet`：资金准备页（wagmi 连接 EOA → 创建 Agent Wallet → 转入测试网 USDC）
 - `/create-strategy`：创建策略页，支持策略模板、自然语言输入、Pact Preview、允许/禁止动作说明
 - `/dashboard`：控制台，展示 Agent Wallet、策略、执行日志和收益图
 - `/pacts`：Pact 管理页，查看 Pact 状态与权限边界
 - `/history`：交易历史 / Audit Trail
-- `/settings`：网络、分账、Agent 参数等测试网设置
+- `/settings`：网络、分账、Cobo API Key 等测试网设置
+
+## 文档
+
+- 产品定义：[`PRODUCT.md`](./PRODUCT.md)
+- PRD：[`docs/YieldAgent_Collective_PRD.md`](./docs/YieldAgent_Collective_PRD.md)
+- 技术架构、目录结构与任务拆解：[`docs/YieldAgent_Technical_Architecture.md`](./docs/YieldAgent_Technical_Architecture.md)
+- 产品流程决策：[`docs/product-flow-decisions.md`](./docs/product-flow-decisions.md)
 
 ## 目录结构
 
@@ -56,48 +68,50 @@ Aave / Compound on testnet
 .
 ├── app/
 │   ├── app.vue
-│   ├── assets/css/main.css          # Tailwind 与全局视觉样式
+│   ├── assets/css/main.css
 │   ├── components/
-│   │   ├── AppNav.vue               # 顶部导航
-│   │   ├── create-strategy/         # 策略创建与 Pact Preview 组件
-│   │   ├── dashboard/               # 控制台卡片、收益图、日志表
-│   │   ├── history/                 # 审计日志筛选与时间线
-│   │   ├── pacts/                   # Pact 列表与详情
-│   │   ├── settings/                # 设置表单
-│   │   └── ui/                      # 通用 UI 组件
+│   │   ├── AppNav.vue
+│   │   ├── wallet/                 # EOA / Agent Wallet / funding 三步准备组件
+│   │   ├── create-strategy/        # 策略创建与 Pact Preview 组件
+│   │   ├── dashboard/              # 控制台卡片、收益图、日志表
+│   │   ├── history/                # 审计日志筛选与时间线
+│   │   ├── pacts/                  # Pact 列表与详情
+│   │   ├── settings/               # 设置表单
+│   │   └── ui/                     # 通用 UI 组件
 │   ├── composables/
-│   │   ├── useCreateStrategy.ts     # 创建策略流程、模板、Pact Preview 状态
-│   │   └── useDashboardPoll.ts      # 控制台轮询
+│   │   ├── useWalletConnect.ts     # wagmi EOA 连接
+│   │   ├── useUsdcTransfer.ts      # 测试网 USDC 转账
+│   │   ├── useWalletPreparation.ts # 钱包准备流程状态
+│   │   ├── useCreateStrategy.ts    # 创建策略流程
+│   │   └── useDashboardPoll.ts     # 控制台轮询
 │   ├── layouts/default.vue
 │   ├── pages/
-│   │   ├── index.vue                # 落地页
-│   │   ├── wallet.vue               # 资金准备
-│   │   ├── create-strategy.vue      # 创建策略
-│   │   ├── dashboard.vue            # Demo 控制台
-│   │   ├── pacts.vue                # Pact 管理
-│   │   ├── history.vue              # 交易历史
-│   │   └── settings.vue             # 设置
-│   └── stores/demo.ts               # Pinia demo 状态管理
+│   ├── plugins/wagmi.client.ts
+│   └── stores/demo.ts
 ├── server/
 │   ├── api/
 │   │   ├── wallet.get.ts
-│   │   ├── yield-series.get.ts
-│   │   ├── logs/index.get.ts
-│   │   ├── strategies/index.get.ts
-│   │   ├── strategies/index.post.ts
-│   │   ├── pacts/index.get.ts
-│   │   ├── pacts/[id].get.ts
-│   │   ├── pacts/[id]/approve.post.ts
-│   │   ├── pacts/[id]/terminate.post.ts
-│   │   ├── settings/index.get.ts
-│   │   └── settings/index.put.ts
-│   ├── fixtures/initial-state.ts    # Demo 初始数据
-│   └── utils/demo-store.ts          # 服务端内存 demo store
-├── shared/types/demo.ts             # 前后端共享类型
+│   │   ├── wallet/preparation/     # 钱包准备 API
+│   │   ├── strategies/
+│   │   ├── pacts/
+│   │   ├── logs/
+│   │   ├── settings/
+│   │   └── yield-series.get.ts
+│   ├── fixtures/initial-state.ts
+│   └── utils/
+│       ├── demo-store.ts
+│       ├── wallet-preparation.ts
+│       ├── cobo-client.ts
+│       ├── cobo-config.ts
+│       ├── cobo-preparation.ts
+│       ├── deposit-verify.ts
+│       └── settings.ts
+├── shared/types/demo.ts
+├── docs/
 ├── nuxt.config.ts
 ├── tailwind.config.ts
 ├── package.json
-└── README.md
+└── .env.example
 ```
 
 ## 本地开发
@@ -134,16 +148,39 @@ pnpm preview
 pnpm generate
 ```
 
+> 本地构建已在 pnpm 11.5.1 下通过。`pnpm-workspace.yaml` 已显式允许 `vue-demi` build script，并将 pnpm overrides 放在 workspace 配置中。
+
+## 环境变量
+
+参考 `.env.example`：
+
+```text
+AGENT_WALLET_API_URL=https://api.agenticwallet.cobo.com
+AGENT_WALLET_API_KEY=
+AGENT_WALLET_MAIN_NODE_ID=
+```
+
+注意：
+
+- 不要提交真实 API Key；
+- 不要提交私钥、助记词或主网资产信息；
+- Hackathon Demo 默认使用测试网。
+
 ## Demo 数据与接口
 
-当前版本使用服务端 mock 数据模拟钱包、策略、Pact、日志和收益曲线：
+当前版本使用服务端 mock / 内存数据模拟策略、Pact、日志和收益曲线，并已开始接入真实测试网钱包准备流程：
 
 - `GET /api/wallet`：Agent Wallet 摘要
+- `GET /api/wallet/preparation`：钱包准备状态
+- `POST /api/wallet/preparation/connect-eoa`：连接 EOA
+- `POST /api/wallet/preparation/create-agent`：创建 CAW Agent Wallet
+- `GET /api/wallet/preparation/deposit-info`：获取测试网 USDC 转入信息
+- `POST /api/wallet/preparation/deposit`：校验转入 tx hash 并同步余额
 - `GET /api/strategies`：策略列表
 - `POST /api/strategies`：创建策略
 - `GET /api/pacts`：Pact 列表
 - `GET /api/pacts/:id`：Pact 详情
-- `POST /api/pacts/:id/approve`：批准 Pact
+- `POST /api/pacts/:id/approve`：批准 Pact（Demo flow）
 - `POST /api/pacts/:id/terminate`：终止 Pact
 - `GET /api/logs`：执行 / 审计日志
 - `GET /api/yield-series`：收益曲线
@@ -153,63 +190,20 @@ pnpm generate
 
 ## 开发任务拆解
 
-### Phase 1：Demo 原型完善
+详见：[`docs/YieldAgent_Technical_Architecture.md`](./docs/YieldAgent_Technical_Architecture.md#8-开发任务拆解)
 
-- [x] 产品落地页：说明资金来源、Pact 边界和 Demo/真实路径
-- [x] 资金准备页：解释 EOA -> CAW Agent Wallet -> Pact 的流程
-- [x] 创建策略页：模板、自然语言输入、Pact Preview、允许/禁止动作
-- [x] Demo 控制台：Agent Wallet、策略、执行日志、收益曲线
-- [x] Pact 管理与交易历史页面
-- [ ] 统一品牌文案：将残留 YieldAgent 文案改为 PactTrader
-- [ ] 增强移动端检查与视觉细节
+优先级建议：
 
-### Phase 2：执行层接入 CAW
-
-- [x] 配置 CAW SDK 与测试网环境变量（见 `.env.example`）
-- [x] 创建 CAW Agent Wallet（`@cobo/agentic-wallet` + 按会话 `createWallet`）
-- [x] 测试网 USDC 资金准备：EOA wagmi 转账 + 链上回执校验 + Cobo 余额同步
-- [ ] 将 Pact Preview 映射为 CAW Pact / policy 配置
-- [ ] 执行 allowlist 内的 Recipe
-- [ ] 对越权动作返回 Denied 原因和 Pact 边界说明
-
-#### 环境变量
-
-| 变量 | 说明 |
-|------|------|
-| `AGENT_WALLET_API_URL` | Cobo API 地址，默认 `https://api.agenticwallet.cobo.com` |
-| `AGENT_WALLET_API_KEY` | 服务端 API Key（也可在设置页会话内配置） |
-| `AGENT_WALLET_MAIN_NODE_ID` | 创建 MPC 钱包所需的 Agent TSS 节点 ID |
-
-#### 手动验收（Base Sepolia）
-
-1. `caw onboard` 获取 API Key，写入设置或 `.env`
-2. `/wallet`：连接 MetaMask → 创建 Agent Wallet → 转入 USDC → 确认 `ready`
-3. 控制台余额与 Cobo 一致；tx hash 可在区块浏览器查看
-
-### Phase 3：Agent / 策略层接入 Z.AI API
-
-- [ ] 将自然语言策略解析为结构化策略参数
-- [ ] 生成候选 DeFi Recipe 与风险解释
-- [ ] 在 Agent 输出前加入确定性校验，避免越权参数进入执行层
-- [ ] 支持保守 / 平衡等策略模板与 Z.AI 输出结合
-
-### Phase 4：SQLite 审计日志
-
-- [ ] 设计 SQLite schema：wallets、strategies、pacts、execution_logs、settings
-- [ ] 将 mock store 替换为 SQLite repository
-- [ ] 记录允许执行、拒绝执行、tx hash、错误原因和时间戳
-- [ ] 提供 Dashboard / History / Pact Detail 所需查询接口
-
-### Phase 5：Vercel 部署与演示
-
-- [ ] 配置 Vercel 构建流程
-- [ ] 梳理环境变量和测试网密钥管理
-- [ ] 准备评委 Demo 路径：Landing -> Demo Strategy -> Pact Preview -> Dashboard -> Audit Trail
-- [ ] 编写演示脚本和风险说明
+1. 统一 YieldAgent 品牌文案，清理旧项目命名残留；
+2. 修复 pnpm / Vercel 构建问题；
+3. 将 Pact Preview 映射为真实 CAW Pact；
+4. 接入 Z.AI API 做策略解析，并加入确定性校验；
+5. 将内存 Demo store 迁移到 SQLite；
+6. 准备评委 Demo 路径和演示稿。
 
 ## 安全边界
 
-PactTrader 的 Demo 和真实路径都应坚持：
+YieldAgent 的 Demo 和真实路径都应坚持：
 
 - 用户主动准备资金，Agent 不直接接管用户完整钱包；
 - 每次策略执行必须绑定 Pact；

@@ -8,6 +8,8 @@ const props = defineProps<{
   submitting: boolean
   demoTxHash: string
   pipelineError: string
+  pactSubmissionMessage: string
+  coboPactId: string
   allowedActions: string[]
   deniedActions: string[]
   executionStep: number
@@ -106,7 +108,12 @@ const showPipelinePanel = computed(() =>
       </div>
       <div v-else-if="props.pipeline === 'awaiting-approval'" class="space-y-2" role="status">
         <p class="text-sm font-medium text-on-dark">等待 Cobo 审批</p>
-        <p class="text-xs text-muted">测试网环境：请在 Cobo 中完成审批与签名。</p>
+        <p class="text-xs text-muted">
+          {{ props.pactSubmissionMessage || '测试网环境：请在 Cobo Agentic Wallet App 中完成审批与签名。' }}
+        </p>
+        <p v-if="props.coboPactId" class="break-all font-mono text-[0.7rem] text-muted">
+          Pact ID：{{ props.coboPactId }}
+        </p>
       </div>
       <div v-else-if="props.pipeline === 'executing'" class="space-y-2" role="status">
         <p class="text-sm font-medium text-on-dark">正在执行 Recipe</p>

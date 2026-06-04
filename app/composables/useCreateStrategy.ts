@@ -95,6 +95,8 @@ export function useCreateStrategy() {
   const executionStep = ref(0)
   const demoTxHash = ref('')
   const pipelineError = ref('')
+  const pactSubmissionMessage = ref('')
+  const coboPactId = ref('')
 
   const agentSplit = computed(() => {
     const user = Number(form.userSplit)
@@ -292,6 +294,8 @@ export function useCreateStrategy() {
     clearTimers()
     pipeline.value = 'submitting'
     pipelineError.value = ''
+    pactSubmissionMessage.value = ''
+    coboPactId.value = ''
     demoTxHash.value = ''
 
     if (!store.preparation?.ready) {
@@ -301,7 +305,7 @@ export function useCreateStrategy() {
     }
 
     try {
-      await store.createStrategy({
+      const result = await store.createStrategy({
         network: form.network,
         asset: form.asset,
         targetApy: form.targetApy.trim() || undefined,
@@ -310,6 +314,13 @@ export function useCreateStrategy() {
         agentFee: form.agentFee,
         userSplit: form.userSplit,
       })
+      pactSubmissionMessage.value = result.pact.submissionMessage ?? ''
+      coboPactId.value = result.pact.coboPactId ?? result.pact.id
+
+      if (result.pact.submissionMode === 'cobo') {
+        pipeline.value = result.pact.status === 'active' ? 'executing' : 'awaiting-approval'
+        return
+      }
     } catch (e: unknown) {
       pipeline.value = 'failed'
       if (e && typeof e === 'object' && 'data' in e) {
@@ -354,6 +365,8 @@ export function useCreateStrategy() {
     clearTimers()
     pipeline.value = 'failed'
     pipelineError.value = 'Denied：Agent 尝试 Swap 500 USDC into unknown token。原因：Recipe not allowed by current Pact。'
+    pactSubmissionMessage.value = ''
+    coboPactId.value = ''
     demoTxHash.value = ''
   }
 
@@ -361,6 +374,8 @@ export function useCreateStrategy() {
     clearTimers()
     pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
     pipelineError.value = ''
+    pactSubmissionMessage.value = ''
+    coboPactId.value = ''
     demoTxHash.value = ''
     executionStep.value = 0
   }
@@ -388,6 +403,8 @@ export function useCreateStrategy() {
     executionStep,
     demoTxHash,
     pipelineError,
+    pactSubmissionMessage,
+    coboPactId,
     agentSplit,
     intentSummary,
     previewLines,

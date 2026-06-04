@@ -3,7 +3,7 @@ export type PrepStep = 'eoa' | 'agent_wallet' | 'funding'
 export type PrepStepStatus = 'pending' | 'in_progress' | 'completed'
 export type FundingStatus = 'idle' | 'processing' | 'ready'
 export type StrategyStatus = 'active' | 'paused' | 'completed'
-export type PactStatus = 'pending' | 'active' | 'terminated' | 'awaiting-approval'
+export type PactStatus = 'pending' | 'active' | 'completed' | 'terminated' | 'awaiting-approval'
 export type LogType = 'swap' | 'supply' | 'revenue'
 export type YieldRange = '7d' | '30d'
 
@@ -36,6 +36,11 @@ export interface Pact {
   durationDays: number
   agentFeePercent: number
   userSplitPercent: number
+  submissionMode?: 'cobo' | 'local-draft'
+  coboPactId?: string
+  approvalId?: string
+  coboStatus?: string
+  submissionMessage?: string
 }
 
 export interface LogEntry {

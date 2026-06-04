@@ -23,24 +23,52 @@ The product must not drop a new visitor directly into a data dashboard. First-ti
 ```text
 1. User visits the YieldAgent landing page.
 2. User understands the core promise: AI agents can execute yield strategies, but only inside a user-approved Pact.
-3. User chooses Demo Mode or testnet mode. Demo Mode is the default for judges.
-4. User chooses a strategy template, preferably Conservative USDC Yield.
-5. User inputs or edits the natural-language strategy.
-6. System generates Pact Preview.
-7. User confirms capital limits, allowed recipes, duration, and revenue split.
-8. User approves the Pact or runs dry-run demo.
-9. Agent executes only inside Pact boundaries.
-10. Dashboard shows active Pact state, recent Agent actions, audit trail, tx hashes, and secondary yield chart.
-11. User can inspect History or terminate the Pact.
+3. User chooses a path:
+   - Real/Testnet Mode: connect wallet first.
+   - Demo Mode: use mock or prefunded testnet Agent Wallet.
+4. In Real/Testnet Mode, user creates or connects a CAW Agent Wallet / Smart Account.
+5. User funds the Agent Wallet by depositing/transferring testnet USDC from their own EOA wallet.
+6. User chooses a strategy template, preferably Conservative USDC Yield.
+7. User inputs or edits the natural-language strategy.
+8. System generates Pact Preview.
+9. User confirms capital limits, allowed recipes, duration, revenue split, and funding source.
+10. User approves / signs the Pact, or runs a dry-run demo.
+11. Agent executes only inside Pact boundaries and only against the Pact budget in the Agent Wallet.
+12. Dashboard shows Agent Wallet balance, active Pact state, recent Agent actions, audit trail, tx hashes, and secondary yield chart.
+13. User can inspect History or terminate the Pact.
 ```
 
 ### Entry Principles
 
-- `/` is the product entry / landing page, not the operational dashboard.
-- The first CTA is **Create first Pact strategy**.
-- The secondary CTA is **View Demo Console**.
+- `/` is a standalone product landing page, not the operational dashboard.
+- The real-mode primary CTA is **Connect Wallet / Start Strategy**.
+- The demo-mode secondary CTA is **Try Demo / View Demo Console**.
+- Users do **not** go directly from landing page into an authenticated console unless they choose Demo Mode.
 - Demo Mode is explicit and safe: no API key, no private key, no real funds.
+- Real/Testnet Mode requires wallet login before creating a real Pact.
 - Users start from a template before free-form natural language.
+
+### Wallet Login and Funding Model
+
+Real/Testnet Mode requires wallet login because the user must be the authorizing party for Agent Wallet setup, funding, and Pact approval.
+
+The Agent's usable capital comes from the user deliberately funding a CAW Agent Wallet / Smart Account:
+
+```text
+User EOA Wallet
+  -> deposit / transfer testnet USDC
+CAW Agent Wallet / Smart Account
+  -> Pact max budget + allowlisted recipes
+Executor Agent
+  -> allowed DeFi protocol action
+```
+
+Important boundaries:
+
+- Agent does not receive unrestricted access to the user's EOA wallet.
+- Agent can only operate funds inside the Agent Wallet and only up to the Pact budget.
+- If Agent Wallet has 1,000 USDC but Pact maxSpend is 500 USDC, the Agent can operate at most 500 USDC.
+- Demo Mode may use mock balance or a prefunded testnet Agent Wallet, but the UI must label this clearly.
 
 ### Strategy Templates
 

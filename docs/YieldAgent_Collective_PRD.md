@@ -135,19 +135,59 @@ yield-agent-collective/
 
 ### 6.1 首次访问路径
 
-YieldAgent 不应该让用户第一次访问就直接进入 Dashboard。首次访问路径应先解释产品价值，再引导用户创建第一条 Pact 策略：
+YieldAgent 不应该让用户第一次访问就直接进入 Dashboard。`/` 是独立产品落地页；Dashboard 是用户完成钱包 / Demo 准备后的操作台。
+
+真实用户路径：
 
 1. 用户访问 YieldAgent 首页；
 2. 用户理解核心价值：AI Agent 可以执行收益策略，但只能在用户批准的 Pact 边界内行动；
-3. 用户选择 Demo 模式或测试网模式，Hackathon 默认推荐 Demo 模式；
-4. 用户选择策略模板，例如“保守型 USDC 收益”；
-5. 用户输入或修改自然语言策略；
-6. 系统生成 Pact Preview；
-7. 用户确认资金上限、允许 Recipe、执行期限和收益分账；
-8. 用户批准 Pact 或运行 dry-run 演示；
-9. Agent 在 Pact 范围内执行收益策略；
-10. Dashboard 展示 Pact 状态、Agent 动作、审计日志、tx hash 和收益曲线；
-11. 用户可进入 History 复查日志，或进入 Pact 管理页终止 Pact。
+3. 用户点击连接钱包；
+4. 用户用自己的 EOA 钱包登录；
+5. 系统创建或连接 CAW Agent Wallet / Smart Account；
+6. 用户从自己的钱包向 Agent Wallet 转入测试网 USDC；
+7. 用户选择策略模板，例如“保守型 USDC 收益”；
+8. 用户输入或修改自然语言策略；
+9. 系统生成 Pact Preview；
+10. 用户确认资金来源、资金上限、允许 Recipe、执行期限和收益分账；
+11. 用户签名 / 提交 Pact 审批；
+12. Agent 在 Pact 范围内执行收益策略；
+13. Dashboard 展示 Agent Wallet 余额、Pact 状态、Agent 动作、审计日志、tx hash 和收益曲线；
+14. 用户可进入 History 复查日志，或进入 Pact 管理页终止 Pact。
+
+Demo / Hackathon 评委路径：
+
+1. 用户访问首页；
+2. 用户点击 Try Demo / 查看 Demo 控制台；
+3. 系统明确展示当前使用 mock balance 或预置测试网 Agent Wallet；
+4. 用户从策略模板创建策略；
+5. 用户查看 Pact Preview；
+6. 用户 dry-run 批准；
+7. 系统演示一次允许执行和一次越权拒绝；
+8. 用户进入 Dashboard 查看审计日志。
+
+### 6.1.1 钱包登录与资金来源
+
+真实模式需要钱包登录。原因是用户必须作为授权方完成 Agent Wallet 创建、资金注入和 Pact 审批。
+
+Agent 可操作的资金来源必须明确：
+
+```text
+User EOA Wallet
+  -- deposit / transfer testnet USDC -->
+CAW Agent Wallet / Smart Account
+  -- Pact max budget + allowlisted recipes -->
+Executor Agent
+  -- allowed DeFi action -->
+Aave / Compound 等协议
+```
+
+关键边界：
+
+- Agent 不直接控制用户 EOA 钱包；
+- Agent 只能操作用户主动转入 / 授权给 Agent Wallet 的那部分资金；
+- Pact 再进一步限制 Agent Wallet 中可用预算，例如 Agent Wallet 有 1,000 USDC，但 Pact maxSpend 是 500 USDC，则 Agent 最多只能操作 500 USDC；
+- Demo Mode 可以使用 mock balance 或预置测试网 Agent Wallet，但 UI 必须明确标注不是真实资产。
+
 
 ### 6.2 Pact Preview 确认页 / 确认阶段
 

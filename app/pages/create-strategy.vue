@@ -15,6 +15,9 @@ const {
   allowedActions,
   deniedActions,
   strategyTemplates,
+  preparationReady,
+  availableBalanceLabel,
+  fundingSourceLabel,
   isFormValid,
   stepIndex,
   executionSteps,
@@ -27,7 +30,8 @@ const {
 } = useCreateStrategy()
 
 const formDisabled = computed(() =>
-  ['submitting', 'awaiting-approval', 'executing', 'success'].includes(pipeline.value),
+  ['submitting', 'awaiting-approval', 'executing', 'success'].includes(pipeline.value)
+  || !preparationReady.value,
 )
 </script>
 
@@ -43,25 +47,46 @@ const formDisabled = computed(() =>
       <CreateStrategyStepIndicator :active-index="stepIndex" />
     </header>
 
-    <section class="mb-8 rounded-xl border border-hairline bg-surface p-5" aria-label="资金准备状态">
+    <section
+      v-if="!preparationReady"
+      class="mb-8 rounded-lg border border-trading-down/40 bg-surface px-5 py-4"
+      role="alert"
+    >
+      <h2 class="text-sm font-semibold text-on-dark">需要先完成资金准备</h2>
+      <p class="mt-2 text-sm text-body">
+        创建 Pact 前，请连接 EOA、创建 Agent Wallet 并向其中注入测试网 USDC。
+      </p>
+      <div class="mt-4">
+        <NuxtLink
+          to="/wallet"
+          class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary no-underline hover:bg-primary-active"
+        >
+          前往资金准备
+        </NuxtLink>
+      </div>
+    </section>
+
+    <section
+      v-else
+      class="mb-8 rounded-lg border border-hairline bg-surface p-5"
+      aria-label="资金准备状态"
+    >
       <div class="grid gap-5 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
         <div>
-          <div class="inline-flex rounded-sm bg-surface-elevated px-2 py-1 font-mono text-[0.65rem] text-muted-strong">
-            Demo funding source
-          </div>
-          <h2 class="mt-3 text-lg font-semibold text-on-dark">Agent Wallet 已准备测试资金</h2>
-          <p class="mt-2 text-sm leading-6 text-muted">
-            当前是 Demo / 测试网流程：资金来自 mock / 预置测试网 Agent Wallet。真实模式下，用户需要先连接 EOA 钱包，并向 CAW Agent Wallet 转入愿意让 Agent 操作的测试网 USDC。
+          <p class="font-mono text-xs text-muted-strong">资金已就绪</p>
+          <h2 class="mt-2 text-base font-semibold text-on-dark">Agent Wallet 已注入测试资金</h2>
+          <p class="mt-2 text-sm leading-6 text-body">
+            Pact maxSpend 不能超过 Agent Wallet 当前可用余额。超出部分将在提交时被拒绝。
           </p>
         </div>
         <dl class="grid gap-3 sm:grid-cols-3">
           <div class="rounded-lg bg-canvas p-4">
             <dt class="text-xs text-muted">资金来源</dt>
-            <dd class="mt-1 text-sm font-semibold text-on-dark">Demo Agent Wallet</dd>
+            <dd class="mt-1 text-sm font-semibold text-on-dark">{{ fundingSourceLabel }}</dd>
           </div>
           <div class="rounded-lg bg-canvas p-4">
             <dt class="text-xs text-muted">可用余额</dt>
-            <dd class="mt-1 font-mono text-sm text-on-dark">500 USDC</dd>
+            <dd class="mt-1 font-mono text-sm text-on-dark">{{ availableBalanceLabel }}</dd>
           </div>
           <div class="rounded-lg bg-canvas p-4">
             <dt class="text-xs text-muted">Pact 将限制</dt>
@@ -76,10 +101,11 @@ const formDisabled = computed(() =>
         v-for="template in strategyTemplates"
         :key="template.key"
         type="button"
-        class="rounded-lg border border-hairline bg-surface p-4 text-left transition-colors hover:border-primary/70 hover:bg-surface-elevated"
+        class="rounded-lg border border-hairline bg-surface p-4 text-left transition-colors hover:border-primary/70 hover:bg-surface-elevated disabled:opacity-50"
+        :disabled="!preparationReady"
         @click="applyTemplate(template.key)"
       >
-        <span class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-primary">模板</span>
+        <span class="font-mono text-[0.65rem] text-primary">模板</span>
         <h2 class="mt-2 text-sm font-semibold text-on-dark">{{ template.title }}</h2>
         <p class="mt-1 text-xs leading-5 text-muted">{{ template.description }}</p>
       </button>
@@ -101,7 +127,7 @@ const formDisabled = computed(() =>
       <CreateStrategyPactPreview
         :lines="previewLines"
         :pipeline="pipeline"
-        :is-form-valid="isFormValid"
+        :is-form-valid="isFormValid && preparationReady"
         :submitting="pipeline === 'submitting'"
         :demo-tx-hash="demoTxHash"
         :pipeline-error="pipelineError"

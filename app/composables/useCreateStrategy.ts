@@ -77,6 +77,7 @@ const STRATEGY_TEMPLATES = Object.entries(TEMPLATE_PRESETS).map(([key, value]) =
 
 export function useCreateStrategy() {
   const route = useRoute()
+  const store = useDemoStore()
   const queryTemplate = Array.isArray(route.query.template)
     ? route.query.template[0]
     : route.query.template
@@ -114,7 +115,7 @@ export function useCreateStrategy() {
       '调用 Aave Supply / Compound Supply',
       `收益分账：用户 ${form.userSplit}% · Agent ${agentSplit.value}%`,
     ]
-    if (form.riskLevel === 'aggressive') base.push('执行小额 Uniswap 兑换（演示）')
+    if (form.riskLevel === 'aggressive') base.push('执行小额 Uniswap 兑换（测试网）')
     return base
   })
 
@@ -125,10 +126,22 @@ export function useCreateStrategy() {
     '更改用户确认过的收益分账比例',
   ])
 
+  const fundingSourceLabel = computed(() => {
+    const prep = store.preparation
+    if (!prep?.ready) return '未完成资金准备'
+    return 'EOA → Agent Wallet（测试网）'
+  })
+
+  const availableBalanceLabel = computed(() => {
+    const prep = store.preparation
+    if (!prep?.ready) return '—'
+    return `${prep.funding.availableUsdc.toLocaleString('zh-CN')} ${form.asset}`
+  })
+
   const previewLines = computed(() => [
     { label: '意图', value: intentSummary.value },
-    { label: '资金来源', value: 'Demo mock / 预置测试网 Agent Wallet' },
-    { label: 'Agent Wallet 余额', value: '500 USDC ready（演示）' },
+    { label: '资金来源', value: fundingSourceLabel.value },
+    { label: 'Agent Wallet 余额', value: availableBalanceLabel.value },
     { label: 'Pact 可用预算', value: `${form.maxSpend || '—'} ${form.asset}` },
     { label: '支出上限', value: `${form.maxSpend || '—'} ${form.asset}` },
     { label: '网络', value: NETWORK_LABELS[form.network] },
@@ -139,7 +152,7 @@ export function useCreateStrategy() {
           ? 'Aave 存入、Compound 存入、Uniswap 兑换'
           : 'Aave 存入、Compound 存入',
     },
-    { label: '期限', value: '7 天（演示）' },
+    { label: '期限', value: '7 天（测试网）' },
     {
       label: '收益分账',
       value: `用户 ${form.userSplit}% · Agent ${agentSplit.value}%`,
@@ -170,6 +183,11 @@ export function useCreateStrategy() {
 
     if (!form.maxSpend || Number.isNaN(spend) || spend < 10 || spend > 1_000_000) {
       next.maxSpend = '请输入 10–1,000,000 USDC'
+    } else if (store.preparation?.ready) {
+      const available = store.preparation.funding.availableUsdc
+      if (spend > available) {
+        next.maxSpend = `不能超过 Agent Wallet 可用余额（${available} USDC）`
+      }
     }
     if (!form.agentFee || Number.isNaN(fee) || fee < 0 || fee > 30) {
       next.agentFee = '请输入 0–30%'
@@ -276,7 +294,12 @@ export function useCreateStrategy() {
     pipelineError.value = ''
     demoTxHash.value = ''
 
-    const store = useDemoStore()
+    if (!store.preparation?.ready) {
+      pipeline.value = 'failed'
+      pipelineError.value = '请先完成资金准备，再创建 Pact 策略。'
+      return
+    }
+
     try {
       await store.createStrategy({
         network: form.network,
@@ -342,7 +365,18 @@ export function useCreateStrategy() {
     executionStep.value = 0
   }
 
+  onMounted(async () => {
+    try {
+      await store.fetchPreparation()
+      if (!store.preparation?.ready) {
+        await store.fetchWallet()
+      }
+    } catch { /* page shows gate */ }
+  })
+
   onUnmounted(clearTimers)
+
+  const preparationReady = computed(() => store.preparation?.ready ?? false)
 
   return {
     form,
@@ -360,6 +394,9 @@ export function useCreateStrategy() {
     allowedActions,
     deniedActions,
     strategyTemplates: STRATEGY_TEMPLATES,
+    preparationReady,
+    availableBalanceLabel,
+    fundingSourceLabel,
     isFormValid,
     stepIndex,
     executionSteps,

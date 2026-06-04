@@ -2,12 +2,12 @@
 
 PactTrader 是一个面向 AI Web3 School Hackathon 的 **Pact-first DeFi Agent** 原型。项目目标不是让 AI Agent 直接控制用户完整钱包，而是通过 **CAW Agent Wallet + Pact 权限边界**，让用户只把一小块可控测试网资金交给 Agent，并明确限制预算、资产、协议、Recipe、期限和审计路径。
 
-当前版本是可演示的前端 + mock/testnet 数据原型，用于展示：
+当前版本是测试网产品原型（wagmi EOA + Nitro API），用于展示：
 
 - 用户从 EOA 钱包准备资金到 CAW Agent Wallet 的流程；
 - Agent 在 Pact 约束下创建和执行收益策略；
 - 允许执行、越权拒绝、tx hash、审计日志和收益看板；
-- Demo/评委路径下的 mock/testnet Agent Wallet 资金说明。
+- 测试网 Agent Wallet 资金准备（wagmi EOA + Nitro API 注资模拟）说明。
 
 > 说明：当前仓库包名仍是 `yield_agent`，部分页面标题中仍保留 YieldAgent 文案；项目主线与 README 统一按 **PactTrader** 说明。
 
@@ -29,7 +29,7 @@ Aave / Compound on testnet
 - Agent Wallet 有余额，也必须继续受 Pact 预算限制；
 - 只有白名单协议和 Recipe 可以执行；
 - 越权动作需要被明确拒绝，并留下可解释的审计记录；
-- Demo 模式使用 mock / 预置测试网 Agent Wallet，不涉及真实资产。
+- 仅 Base / Arbitrum Sepolia 测试网；不涉及主网真实资产。注资与执行由服务端模拟并写入审计日志。
 
 ## 技术栈
 
@@ -42,13 +42,13 @@ Aave / Compound on testnet
 
 ## 已实现页面
 
-- `/`：产品落地页，解释 PactTrader 的资金边界、真实路径和 Demo 路径
-- `/wallet`：资金准备页，解释 EOA Wallet、CAW Agent Wallet 与测试网 USDC 注入流程
+- `/`：产品落地页，解释 PactTrader 的资金边界与测试网入门路径
+- `/wallet`：资金准备页（wagmi 连接 EOA → 创建 Agent Wallet → 转入测试网 USDC）
 - `/create-strategy`：创建策略页，支持策略模板、自然语言输入、Pact Preview、允许/禁止动作说明
-- `/dashboard`：Demo 控制台，展示 Agent Wallet、策略、执行日志和收益图
+- `/dashboard`：控制台，展示 Agent Wallet、策略、执行日志和收益图
 - `/pacts`：Pact 管理页，查看 Pact 状态与权限边界
 - `/history`：交易历史 / Audit Trail
-- `/settings`：网络、分账、Agent 参数等演示设置
+- `/settings`：网络、分账、Agent 参数等测试网设置
 
 ## 目录结构
 
@@ -140,14 +140,14 @@ pnpm generate
 
 - `GET /api/wallet`：Agent Wallet 摘要
 - `GET /api/strategies`：策略列表
-- `POST /api/strategies`：创建演示策略
+- `POST /api/strategies`：创建策略
 - `GET /api/pacts`：Pact 列表
 - `GET /api/pacts/:id`：Pact 详情
 - `POST /api/pacts/:id/approve`：批准 Pact
 - `POST /api/pacts/:id/terminate`：终止 Pact
 - `GET /api/logs`：执行 / 审计日志
 - `GET /api/yield-series`：收益曲线
-- `GET /api/settings` / `PUT /api/settings`：演示设置
+- `GET /api/settings` / `PUT /api/settings`：测试网设置
 
 后续接入 SQLite 后，`server/utils/demo-store.ts` 中的内存状态应迁移为 SQLite 持久化读写，并保留审计日志的可追溯性。
 
@@ -165,12 +165,26 @@ pnpm generate
 
 ### Phase 2：执行层接入 CAW
 
-- [ ] 配置 CAW SDK 与测试网环境变量
-- [ ] 创建 / 连接 CAW Agent Wallet
-- [ ] 实现测试网 USDC 资金准备状态读取
+- [x] 配置 CAW SDK 与测试网环境变量（见 `.env.example`）
+- [x] 创建 CAW Agent Wallet（`@cobo/agentic-wallet` + 按会话 `createWallet`）
+- [x] 测试网 USDC 资金准备：EOA wagmi 转账 + 链上回执校验 + Cobo 余额同步
 - [ ] 将 Pact Preview 映射为 CAW Pact / policy 配置
 - [ ] 执行 allowlist 内的 Recipe
 - [ ] 对越权动作返回 Denied 原因和 Pact 边界说明
+
+#### 环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `AGENT_WALLET_API_URL` | Cobo API 地址，默认 `https://api.agenticwallet.cobo.com` |
+| `AGENT_WALLET_API_KEY` | 服务端 API Key（也可在设置页会话内配置） |
+| `AGENT_WALLET_MAIN_NODE_ID` | 创建 MPC 钱包所需的 Agent TSS 节点 ID |
+
+#### 手动验收（Base Sepolia）
+
+1. `caw onboard` 获取 API Key，写入设置或 `.env`
+2. `/wallet`：连接 MetaMask → 创建 Agent Wallet → 转入 USDC → 确认 `ready`
+3. 控制台余额与 Cobo 一致；tx hash 可在区块浏览器查看
 
 ### Phase 3：Agent / 策略层接入 Z.AI API
 

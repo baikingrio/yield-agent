@@ -1,4 +1,7 @@
 export type NetworkId = 'base-sepolia' | 'arbitrum-sepolia'
+export type PrepStep = 'eoa' | 'agent_wallet' | 'funding'
+export type PrepStepStatus = 'pending' | 'in_progress' | 'completed'
+export type FundingStatus = 'idle' | 'processing' | 'ready'
 export type StrategyStatus = 'active' | 'paused' | 'completed'
 export type PactStatus = 'pending' | 'active' | 'terminated' | 'awaiting-approval'
 export type LogType = 'swap' | 'supply' | 'revenue'
@@ -60,6 +63,41 @@ export interface DemoSettings {
   apiKeyConfigured: boolean
   defaultAgentFee: number
   userSplit: number
+  /** 仅服务端会话内存，不返回给客户端 */
+  coboApiKey?: string
+}
+
+export interface DepositInfo {
+  agentAddress: string
+  usdcContract: string
+  decimals: number
+  chainId: number
+  coboChainId: string
+  coboTokenId: string
+  minAmount: number
+}
+
+export interface WalletPreparation {
+  network: NetworkId
+  eoa: {
+    connected: boolean
+    address: string | null
+    label: string
+  }
+  agentWallet: {
+    created: boolean
+    address: string
+    coboWalletId: string | null
+  }
+  funding: {
+    status: FundingStatus
+    depositedUsdc: number
+    availableUsdc: number
+    lastTxHash: string | null
+  }
+  steps: Record<PrepStep, PrepStepStatus>
+  ready: boolean
+  updatedAt: string
 }
 
 export interface CreateStrategyPayload {
@@ -74,6 +112,7 @@ export interface CreateStrategyPayload {
 
 export interface DemoState {
   wallet: WalletSummary
+  walletPreparation: WalletPreparation
   strategies: Strategy[]
   pacts: Pact[]
   logs: LogEntry[]

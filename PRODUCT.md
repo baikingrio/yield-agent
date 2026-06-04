@@ -23,16 +23,14 @@ The product must not drop a new visitor directly into a data dashboard. First-ti
 ```text
 1. User visits the YieldAgent landing page.
 2. User understands the core promise: AI agents can execute yield strategies, but only inside a user-approved Pact.
-3. User chooses a path:
-   - Real/Testnet Mode: connect wallet first.
-   - Demo Mode: use mock or prefunded testnet Agent Wallet.
-4. In Real/Testnet Mode, user creates or connects a CAW Agent Wallet / Smart Account.
+3. User connects EOA wallet (wagmi / injected) on Base or Arbitrum Sepolia testnet.
+4. User creates or connects a CAW Agent Wallet / Smart Account.
 5. User funds the Agent Wallet by depositing/transferring testnet USDC from their own EOA wallet.
 6. User chooses a strategy template, preferably Conservative USDC Yield.
 7. User inputs or edits the natural-language strategy.
 8. System generates Pact Preview.
 9. User confirms capital limits, allowed recipes, duration, revenue split, and funding source.
-10. User approves / signs the Pact, or runs a dry-run demo.
+10. User approves / signs the Pact in Cobo (testnet flow).
 11. Agent executes only inside Pact boundaries and only against the Pact budget in the Agent Wallet.
 12. Dashboard shows Agent Wallet balance, active Pact state, recent Agent actions, audit trail, tx hashes, and secondary yield chart.
 13. User can inspect History or terminate the Pact.
@@ -41,11 +39,10 @@ The product must not drop a new visitor directly into a data dashboard. First-ti
 ### Entry Principles
 
 - `/` is a standalone product landing page, not the operational dashboard.
-- The real-mode primary CTA is **Connect Wallet / Start Strategy**.
-- The demo-mode secondary CTA is **Try Demo / View Demo Console**.
-- Users do **not** go directly from landing page into an authenticated console unless they choose Demo Mode.
-- Demo Mode is explicit and safe: no API key, no private key, no real funds.
-- Real/Testnet Mode requires wallet login before creating a real Pact.
+- The primary CTA is **Connect Wallet / Prepare Funds** → `/wallet`.
+- Secondary CTA: **Create Strategy** (gated until wallet preparation is complete).
+- Users do **not** skip wallet preparation before creating a Pact-backed strategy.
+- Testnet only: no mainnet funds; EOA connection is real (wagmi); Agent Wallet funding uses Nitro API simulation on testnet.
 - Users start from a template before free-form natural language.
 
 ### Wallet Login and Funding Model
@@ -68,7 +65,7 @@ Important boundaries:
 - Agent does not receive unrestricted access to the user's EOA wallet.
 - Agent can only operate funds inside the Agent Wallet and only up to the Pact budget.
 - If Agent Wallet has 1,000 USDC but Pact maxSpend is 500 USDC, the Agent can operate at most 500 USDC.
-- Demo Mode may use mock balance or a prefunded testnet Agent Wallet, but the UI must label this clearly.
+- UI labels all balances and txs as testnet. Agent Wallet creation uses Cobo SDK (`createWallet` + `createWalletAddress`); funding is a real EOA ERC20 transfer to the Agent address, verified on-chain and synced via Cobo `listBalances`.
 
 ### Strategy Templates
 

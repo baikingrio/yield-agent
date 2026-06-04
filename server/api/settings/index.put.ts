@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { NetworkId } from '../../../shared/types/demo'
 import { getState } from '../../utils/demo-store'
+import { toPublicSettings } from '../../utils/settings'
 
 const schema = z.object({
   network: z.enum(['base-sepolia', 'arbitrum-sepolia']).optional(),
@@ -23,7 +24,10 @@ export default defineEventHandler(async (event) => {
   if (data.network) settings.network = data.network as NetworkId
   if (data.defaultAgentFee !== undefined) settings.defaultAgentFee = data.defaultAgentFee
   if (data.userSplit !== undefined) settings.userSplit = data.userSplit
-  if (data.apiKey?.trim()) settings.apiKeyConfigured = true
+  if (data.apiKey?.trim()) {
+    settings.coboApiKey = data.apiKey.trim()
+    settings.apiKeyConfigured = true
+  }
 
-  return settings
+  return toPublicSettings(settings)
 })

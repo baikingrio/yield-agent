@@ -1,4 +1,5 @@
 import type { DemoState, YieldPoint } from '../../shared/types/demo'
+import { createInitialWalletPreparation } from '../utils/wallet-preparation'
 
 export const DEMO_TX_HASH =
   '0x8f3a91c2e4b1076d5a9c3f812e7b4c9a1d0e5f6a8b2c3d4e5f60718293a4b5c6'
@@ -22,11 +23,12 @@ export function createInitialState(): DemoState {
 
   return {
     wallet: {
-      address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
-      totalAssetsUsdc: 12450.75,
+      address: '',
+      totalAssetsUsdc: 0,
       currentApy: 4.82,
       cumulativeYieldUsdc: yield7.at(-1)?.cumulativeUsdc ?? 0,
     },
+    walletPreparation: createInitialWalletPreparation('base-sepolia'),
     strategies: [
       {
         id: 'str-demo-1',

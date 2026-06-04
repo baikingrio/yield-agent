@@ -35,10 +35,20 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const state = getState()
   const data = parsed.data
   const maxSpend = Number(data.maxSpend)
   const agentFee = Number(data.agentFee)
   const userSplit = Number(data.userSplit)
+
+  if (!state.walletPreparation.ready) {
+    throw createError({
+      statusCode: 400,
+      data: { error: '请先完成资金准备' },
+    })
+  }
+
+  const available = state.walletPreparation.funding.availableUsdc
 
   if (
     Number.isNaN(maxSpend)
@@ -57,7 +67,13 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const state = getState()
+  if (maxSpend > available) {
+    throw createError({
+      statusCode: 400,
+      data: { error: `支出上限不能超过 Agent Wallet 可用余额（${available} USDC）` },
+    })
+  }
+
   const ts = Date.now()
   const strategyId = `str-${ts}`
   const pactId = `pact-${ts}`

@@ -1,0 +1,40 @@
+import { z } from 'zod'
+import { getState } from '../../../utils/demo-store'
+import { getNetworkChainConfig } from '../../../utils/cobo-config'
+import { isCoboConfigured } from '../../../utils/cobo-client'
+
+const schema = z.object({
+  amountUsdc: z.coerce.number().min(10).max(10_000),
+})
+
+export default defineEventHandler((event) => {
+  const query = getQuery(event)
+  const parsed = schema.safeParse(query)
+
+  if (!parsed.success) {
+    throw createError({ statusCode: 400, data: { error: '请输入 10–10,000 USDC' } })
+  }
+
+  const state = getState()
+  const prep = state.walletPreparation
+
+  if (prep.steps.agent_wallet !== 'completed' || !prep.agentWallet.address) {
+    throw createError({ statusCode: 400, data: { error: '请先创建 Agent Wallet' } })
+  }
+
+  if (!isCoboConfigured(state)) {
+    throw createError({ statusCode: 400, data: { error: '请先在设置中配置 Cobo API Key' } })
+  }
+
+  const networkConfig = getNetworkChainConfig(prep.network)
+
+  return {
+    agentAddress: prep.agentWallet.address,
+    usdcContract: networkConfig.usdcContract,
+    decimals: networkConfig.usdcDecimals,
+    chainId: networkConfig.evmChainId,
+    coboChainId: networkConfig.coboChainId,
+    coboTokenId: networkConfig.coboTokenId,
+    minAmount: parsed.data.amountUsdc,
+  }
+})

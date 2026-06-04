@@ -15,27 +15,18 @@ const proofRows = [
   {
     label: '审计证据',
     title: '执行和拒绝都可追溯',
-    body: '成功操作附带 tx hash；越权请求显示 Denied 与拒绝原因，便于评委核对边界是否生效。',
+    body: '成功操作附带 tx hash；越权请求显示 Denied 与拒绝原因，便于核对边界是否生效。',
   },
 ]
 
-const realJourney = [
-  '连接用户 EOA 钱包',
-  '创建或连接 CAW Agent Wallet',
+const journey = [
+  '连接用户 EOA 钱包（MetaMask 等）',
+  '创建 CAW Agent Wallet',
   '向 Agent Wallet 转入测试网 USDC',
   '选择模板或输入自然语言策略',
-  '确认 Pact Preview 并签名审批',
+  '确认 Pact Preview 并审批',
   'Agent 仅在 Pact 预算内执行',
   '进入控制台查看日志、tx hash 与拒绝记录',
-]
-
-const demoJourney = [
-  '进入 Demo 模式（无真实资产）',
-  '使用 mock / 预置测试网 Agent Wallet',
-  '从保守 USDC 模板开始',
-  '查看 Pact Preview 中的允许 / 禁止动作',
-  '演示允许执行与越权拒绝',
-  '打开 Demo 控制台复查 Audit Trail',
 ]
 
 const boundaryChecks = [
@@ -53,7 +44,7 @@ const boundaryChecks = [
     >
       <div class="space-y-6">
         <p class="font-mono text-xs text-muted-strong">
-          YieldAgent Collective · CAW Pact · zh-CN 演示
+          YieldAgent Collective · CAW Pact · 测试网
         </p>
         <div class="space-y-4">
           <h1
@@ -63,7 +54,7 @@ const boundaryChecks = [
             让 AI Agent 执行收益策略，但只给它一块你可审计的预算。
           </h1>
           <p class="max-w-[65ch] text-pretty text-sm leading-6 text-body md:text-base">
-            新用户不会先看到数据墙。先连接钱包、准备 Agent Wallet 资金，再用 Pact 写明上限与允许 Recipe，然后才进入控制台查看执行与拒绝记录。
+            先连接钱包、准备 Agent Wallet 资金，再用 Pact 写明上限与允许 Recipe，然后进入控制台查看执行与拒绝记录。
           </p>
         </div>
         <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -74,20 +65,14 @@ const boundaryChecks = [
             连接钱包并准备资金
           </NuxtLink>
           <NuxtLink
-            to="/create-strategy?mode=demo&template=conservative-usdc"
-            class="inline-flex h-10 items-center justify-center rounded-md border border-hairline bg-surface px-5 text-sm font-semibold text-on-dark no-underline transition-colors duration-150 hover:bg-surface-elevated"
-          >
-            直接体验 Demo
-          </NuxtLink>
-          <NuxtLink
             to="/dashboard"
             class="inline-flex h-10 items-center justify-center px-2 text-sm font-medium text-primary no-underline hover:text-primary-active"
           >
-            查看 Demo 控制台
+            打开控制台
           </NuxtLink>
         </div>
         <p class="max-w-[65ch] text-xs leading-5 text-muted-strong">
-          Demo 使用 mock / 测试网 Agent Wallet，不涉及真实资产。真实路径需钱包登录、资金准备与 Pact 签名。
+          使用 Base / Arbitrum Sepolia 测试网与 Nitro API；不涉及主网真实资产。注资与链上执行由测试网环境模拟并记录审计日志。
         </p>
       </div>
 
@@ -131,7 +116,7 @@ const boundaryChecks = [
 
     <section class="mt-12 lg:mt-16" aria-labelledby="proof-heading">
       <h2 id="proof-heading" class="text-base font-semibold text-on-dark">
-        评委两分钟应能回答的两件事
+        两分钟应能回答的两件事
       </h2>
       <p class="mt-2 max-w-[65ch] text-sm text-muted-strong">
         边界在哪？证据在哪？下面三点对应资金入口、Pact 约束与可审计轨迹。
@@ -159,7 +144,7 @@ const boundaryChecks = [
         拒绝路径也是产品能力
       </h2>
       <p class="mt-2 text-sm text-body">
-        演示中需出现至少一次越权被拒，证明 Pact 在拦截，而非只展示成功收益。
+        产品应能展示至少一次越权被拒，证明 Pact 在拦截，而非只展示成功收益。
       </p>
       <pre
         class="mt-4 overflow-x-auto rounded-md border border-hairline bg-surface p-4 font-mono text-xs leading-6 text-body"
@@ -168,15 +153,13 @@ Result: Denied
 Reason: Recipe not allowed by current Pact.</code></pre>
     </section>
 
-    <section class="mt-12 grid gap-6 lg:grid-cols-2 lg:mt-16" aria-label="入门路径">
+    <section class="mt-12 lg:mt-16" aria-labelledby="journey-heading">
       <article class="rounded-lg border border-hairline bg-surface p-6">
-        <div class="flex flex-wrap items-baseline justify-between gap-3">
-          <h2 class="text-base font-semibold text-on-dark">真实 / 测试网路径</h2>
-          <span class="font-mono text-xs text-muted-strong">需要钱包</span>
-        </div>
+        <h2 id="journey-heading" class="text-base font-semibold text-on-dark">测试网入门路径</h2>
+        <p class="mt-2 text-sm text-muted">需要 MetaMask 等浏览器钱包，并完成资金准备三步。</p>
         <ol class="mt-5 space-y-3">
           <li
-            v-for="(step, i) in realJourney"
+            v-for="(step, i) in journey"
             :key="step"
             class="flex gap-3 text-sm leading-6 text-body"
           >
@@ -191,42 +174,8 @@ Reason: Recipe not allowed by current Pact.</code></pre>
           to="/wallet"
           class="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary no-underline transition-colors duration-150 hover:bg-primary-active"
         >
-          开始真实路径
+          开始准备资金
         </NuxtLink>
-      </article>
-
-      <article class="rounded-lg border border-hairline bg-surface p-6">
-        <div class="flex flex-wrap items-baseline justify-between gap-3">
-          <h2 class="text-base font-semibold text-on-dark">Demo / 评委路径</h2>
-          <span class="font-mono text-xs text-muted-strong">Mock · 测试网</span>
-        </div>
-        <ol class="mt-5 space-y-3">
-          <li
-            v-for="(step, i) in demoJourney"
-            :key="step"
-            class="flex gap-3 text-sm leading-6 text-body"
-          >
-            <span
-              class="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-canvas font-mono text-xs text-primary"
-              aria-hidden="true"
-            >{{ i + 1 }}</span>
-            <span>{{ step }}</span>
-          </li>
-        </ol>
-        <div class="mt-6 flex flex-wrap gap-3">
-          <NuxtLink
-            to="/create-strategy?mode=demo&template=conservative-usdc"
-            class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-4 text-sm font-semibold text-on-dark no-underline transition-colors duration-150 hover:bg-surface-elevated"
-          >
-            体验 Demo 策略
-          </NuxtLink>
-          <NuxtLink
-            to="/dashboard"
-            class="inline-flex h-10 items-center justify-center px-2 text-sm font-medium text-primary no-underline hover:text-primary-active"
-          >
-            打开 Demo 控制台
-          </NuxtLink>
-        </div>
       </article>
     </section>
   </main>

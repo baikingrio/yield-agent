@@ -51,10 +51,10 @@ const shortAddress = computed(() => {
           {{ shortAddress }}
         </button>
         <span v-if="copied" class="text-xs text-trading-up">已复制</span>
-        <span class="rounded-sm bg-surface-elevated px-2 py-1 font-mono text-[0.65rem] text-muted-strong">Demo / testnet funds</span>
+        <span class="rounded-sm bg-surface-elevated px-2 py-1 font-mono text-[0.65rem] text-muted-strong">测试网 USDC</span>
       </div>
       <p class="mt-3 text-xs leading-5 text-muted">
-        资金来源：用户真实模式下从 EOA 转入；当前 Demo 使用 mock / 预置测试网余额。Agent 只能在 Active Pact 预算内操作。
+        资金由 EOA 转入 Agent Wallet（测试网）。Agent 只能在 Active Pact 的 maxSpend 与白名单 Recipe 内操作。
       </p>
       <dl class="mt-4 grid gap-4 sm:grid-cols-3">
         <div>

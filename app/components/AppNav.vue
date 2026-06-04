@@ -3,7 +3,7 @@ const route = useRoute()
 
 const appLinks = [
   { to: '/wallet', label: '资金准备' },
-  { to: '/dashboard', label: 'Demo 控制台' },
+  { to: '/dashboard', label: '控制台' },
   { to: '/create-strategy', label: '创建策略' },
   { to: '/pacts', label: 'Pact 管理' },
   { to: '/history', label: '交易历史' },
@@ -12,7 +12,7 @@ const appLinks = [
 
 const landingLinks = [
   { to: '/wallet', label: '准备资金', variant: 'secondary' },
-  { to: '/create-strategy?mode=demo&template=conservative-usdc', label: '体验 Demo', variant: 'primary' },
+  { to: '/create-strategy?template=conservative-usdc', label: '创建策略', variant: 'primary' },
 ]
 
 const isLanding = computed(() => route.path === '/')
@@ -72,9 +72,9 @@ function isActive(path: string) {
       </nav>
       <span
         class="hidden shrink-0 rounded-sm bg-surface-elevated px-2 py-1 font-mono text-[0.65rem] text-muted-strong md:inline"
-        title="演示模式"
+        title="测试网环境"
       >
-        演示
+        测试网
       </span>
     </template>
   </header>

@@ -7,9 +7,11 @@ import type {
   NetworkId,
   Pact,
   Strategy,
+  WalletPreparation,
   WalletSummary,
   YieldRange,
   YieldSeries,
+  DepositInfo,
 } from '../../shared/types/demo'
 
 function apiErrorMessage(err: unknown): string {
@@ -29,6 +31,7 @@ export const useDemoStore = defineStore('demo', () => {
   const yieldSeries = ref<YieldSeries | null>(null)
   const yieldRange = ref<YieldRange>('7d')
   const settings = ref<DemoSettings | null>(null)
+  const preparation = ref<WalletPreparation | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -131,6 +134,65 @@ export const useDemoStore = defineStore('demo', () => {
     })
   }
 
+  async function fetchPreparation() {
+    try {
+      preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation')
+      if (preparation.value.ready) {
+        await fetchWallet()
+      }
+    } catch (e) {
+      error.value = apiErrorMessage(e)
+      throw e
+    }
+  }
+
+  async function connectEoa(address: string, label?: string) {
+    preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/connect-eoa', {
+      method: 'POST',
+      body: { address, label },
+    })
+    return preparation.value
+  }
+
+  async function disconnectEoa() {
+    preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/disconnect-eoa', {
+      method: 'POST',
+    })
+    wallet.value = await $fetch<WalletSummary>('/api/wallet')
+    return preparation.value
+  }
+
+  async function createAgentWallet() {
+    preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/create-agent', {
+      method: 'POST',
+    })
+    await fetchWallet()
+    return preparation.value
+  }
+
+  async function depositToAgentWallet(amountUsdc: number, txHash: string) {
+    preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/deposit', {
+      method: 'POST',
+      body: { amountUsdc, txHash },
+    })
+    await Promise.all([fetchWallet(), fetchLogs({ limit: 10 })])
+    return preparation.value
+  }
+
+  async function fetchDepositInfo(amountUsdc: number) {
+    return $fetch<DepositInfo>('/api/wallet/preparation/deposit-info', {
+      query: { amountUsdc },
+    })
+  }
+
+  async function resetPreparation() {
+    preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/reset', {
+      method: 'POST',
+    })
+    await fetchWallet()
+    return preparation.value
+  }
+
   function clearError() {
     error.value = null
   }
@@ -144,6 +206,7 @@ export const useDemoStore = defineStore('demo', () => {
     yieldSeries,
     yieldRange,
     settings,
+    preparation,
     loading,
     error,
     fetchWallet,
@@ -157,6 +220,13 @@ export const useDemoStore = defineStore('demo', () => {
     approvePact,
     terminatePact,
     createStrategy,
+    fetchPreparation,
+    connectEoa,
+    disconnectEoa,
+    createAgentWallet,
+    depositToAgentWallet,
+    fetchDepositInfo,
+    resetPreparation,
     clearError,
   }
 })

@@ -35,7 +35,7 @@ const detailLines = computed(() => {
     { label: '意图', value: p.intent },
     { label: '支出上限', value: `${p.maxSpend} USDC` },
     { label: '允许 Recipe', value: p.whitelist.join('、') },
-    { label: '期限', value: `${p.durationDays} 天（演示）` },
+    { label: '期限', value: `${p.durationDays} 天（测试网）` },
     {
       label: '收益分账',
       value: `用户 ${p.userSplitPercent}% · Agent ${100 - p.userSplitPercent}%`,

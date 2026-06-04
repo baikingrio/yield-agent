@@ -106,7 +106,7 @@ const showPipelinePanel = computed(() =>
       </div>
       <div v-else-if="props.pipeline === 'awaiting-approval'" class="space-y-2" role="status">
         <p class="text-sm font-medium text-on-dark">等待 Cobo 审批</p>
-        <p class="text-xs text-muted">演示环境：审批为模拟流程。正式环境请在 Cobo 中签名。</p>
+        <p class="text-xs text-muted">测试网环境：请在 Cobo 中完成审批与签名。</p>
       </div>
       <div v-else-if="props.pipeline === 'executing'" class="space-y-2" role="status">
         <p class="text-sm font-medium text-on-dark">正在执行 Recipe</p>
@@ -122,7 +122,7 @@ const showPipelinePanel = computed(() =>
       </div>
       <div v-else-if="props.pipeline === 'success'" class="space-y-2" role="status">
         <p class="text-sm font-medium text-trading-up">执行完成</p>
-        <p class="text-xs text-muted">首次 Recipe 已记入测试网日志（演示）。</p>
+        <p class="text-xs text-muted">首次 Recipe 已记入测试网审计日志。</p>
         <a
           v-if="props.demoTxHash"
           :href="`https://sepolia.basescan.org/tx/${props.demoTxHash}`"
@@ -130,7 +130,7 @@ const showPipelinePanel = computed(() =>
           rel="noopener noreferrer"
           class="block break-all font-mono text-xs text-primary hover:underline"
         >
-          查看交易 {{ props.demoTxHash.slice(0, 10) }}…{{ props.demoTxHash.slice(-8) }}
+          查看测试网交易 {{ props.demoTxHash.slice(0, 10) }}…{{ props.demoTxHash.slice(-8) }}
         </a>
       </div>
       <div v-else-if="props.pipeline === 'failed'" class="space-y-2" role="alert">

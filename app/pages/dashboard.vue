@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { YieldRange } from '../../shared/types/demo'
 
-useHead({ title: 'Demo 控制台 · YieldAgent' })
+useHead({ title: '控制台 · YieldAgent' })
 
 const route = useRoute()
 const router = useRouter()
@@ -45,11 +45,11 @@ onMounted(async () => {
   <main class="mx-auto max-w-5xl space-y-8 px-4 py-6 md:px-6 md:py-8">
     <header class="space-y-2">
       <div class="inline-flex rounded-full border border-hairline bg-surface px-3 py-1 font-mono text-xs text-muted-strong">
-        Demo Console · mock/testnet funds
+        测试网 · Agent Wallet
       </div>
       <h1 class="text-2xl font-semibold text-on-dark">控制台</h1>
       <p class="mt-2 max-w-prose text-sm text-muted">
-        控制台展示 Agent Wallet、Active Pact、执行日志和 tx hash。当前 Demo 使用 mock / 预置测试网 Agent Wallet，收益图只是辅助信息。
+        展示 CAW Agent Wallet 余额、Active Pact、执行日志与 tx hash。收益图为辅助信息；越权拒绝会出现在审计轨迹中。
       </p>
     </header>
 

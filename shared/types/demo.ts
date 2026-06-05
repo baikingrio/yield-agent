@@ -4,7 +4,7 @@ export type PrepStepStatus = 'pending' | 'in_progress' | 'completed'
 export type FundingStatus = 'idle' | 'processing' | 'ready'
 export type StrategyStatus = 'active' | 'paused' | 'completed'
 export type PactStatus = 'pending' | 'active' | 'completed' | 'terminated' | 'awaiting-approval'
-export type LogType = 'swap' | 'supply' | 'revenue'
+export type LogType = 'swap' | 'supply' | 'revenue' | 'pact'
 export type YieldRange = '7d' | '30d'
 
 export interface WalletSummary {

@@ -1,7 +1,7 @@
 import type { LogType } from '../../../shared/types/demo'
 import { getState } from '../../utils/demo-store'
 
-const LOG_TYPES: LogType[] = ['swap', 'supply', 'revenue']
+const LOG_TYPES: LogType[] = ['swap', 'supply', 'revenue', 'pact']
 
 export default defineEventHandler((event) => {
   const query = getQuery(event)

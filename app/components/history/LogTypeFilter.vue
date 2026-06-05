@@ -16,6 +16,7 @@ const options: { value: LogFilter; label: string }[] = [
   { value: 'swap', label: 'Swap' },
   { value: 'supply', label: 'Supply' },
   { value: 'revenue', label: 'Revenue Share' },
+  { value: 'pact', label: 'Pact / Policy' },
 ]
 </script>
 

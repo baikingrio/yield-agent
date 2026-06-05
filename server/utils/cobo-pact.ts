@@ -50,20 +50,120 @@ function recipeSlugs(riskLevel: string): string[] {
     : ['aave-supply', 'compound-supply']
 }
 
-function mapCoboStatus(status?: CoboPactStatus | string): PactStatus {
+export function mapCoboPactStatus(status?: CoboPactStatus | string): PactStatus {
   switch (String(status ?? '').toUpperCase()) {
     case 'ACTIVE':
       return 'active'
     case 'COMPLETED':
       return 'completed'
+    case 'TERMINATED':
     case 'REVOKED':
     case 'WITHDRAWN':
     case 'REJECTED':
+    case 'EXPIRED':
       return 'terminated'
+    case 'PENDING':
+      return 'pending'
     case 'PENDING_APPROVAL':
     default:
       return 'awaiting-approval'
   }
+}
+
+function localStatusLabel(status: PactStatus): string {
+  switch (status) {
+    case 'active':
+      return '已激活'
+    case 'completed':
+      return '已完成'
+    case 'terminated':
+      return '已终止'
+    case 'pending':
+      return '待处理'
+    case 'awaiting-approval':
+    default:
+      return '待审批'
+  }
+}
+
+export function applyCoboPactStatusToState(
+  state: DemoState,
+  pactId: string,
+  coboStatus?: CoboPactStatus | string,
+  message?: string,
+) {
+  const pact = state.pacts.find((item) => item.id === pactId || item.coboPactId === pactId)
+  if (!pact) {
+    throw new Error('Pact not found')
+  }
+
+  const previousStatus = pact.status
+  const nextStatus = mapCoboPactStatus(coboStatus)
+  pact.status = nextStatus
+  pact.coboStatus = coboStatus ? String(coboStatus) : pact.coboStatus
+  if (message) pact.submissionMessage = message
+
+  const strategy = state.strategies.find((item) => item.id === pact.strategyId)
+  if (strategy) {
+    if (nextStatus === 'terminated') {
+      strategy.status = 'paused'
+    } else if (nextStatus === 'completed') {
+      strategy.status = 'completed'
+    } else if (nextStatus === 'active' || nextStatus === 'awaiting-approval' || nextStatus === 'pending') {
+      strategy.status = 'active'
+    }
+  }
+
+  if (previousStatus !== nextStatus) {
+    state.logs.unshift({
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      action: `Pact 状态已同步：${previousStatus} → ${nextStatus}`,
+      type: 'pact',
+      txHash: '',
+      status: localStatusLabel(nextStatus),
+    })
+  }
+
+  return pact
+}
+
+export interface CoboPactStatusPayload {
+  status?: CoboPactStatus | string
+  message?: string
+}
+
+export type CoboPactStatusFetcher = (pactId: string) => Promise<CoboPactStatusPayload>
+
+export async function syncCoboPactStatus(
+  state: DemoState,
+  pactId: string,
+  fetchStatus: CoboPactStatusFetcher,
+) {
+  const pact = state.pacts.find((item) => item.id === pactId || item.coboPactId === pactId)
+  if (!pact) {
+    throw new Error('Pact not found')
+  }
+
+  if (pact.submissionMode !== 'cobo') {
+    return pact
+  }
+
+  const coboPactId = pact.coboPactId || pact.id
+  const latest = await fetchStatus(coboPactId)
+  return applyCoboPactStatusToState(state, pact.id, latest.status, latest.message)
+}
+
+export async function refreshCoboPactStatus(state: DemoState, pactId: string) {
+  return syncCoboPactStatus(state, pactId, async (coboPactId) => {
+    const pactsApi = createCoboPactsApi(state)
+    const resp = await pactsApi.getPact(coboPactId)
+    const result = resp.data.result
+    return {
+      status: result.status,
+      message: result.message,
+    }
+  })
 }
 
 function buildPolicies(data: CreateStrategyPayload): InlinePolicyCreate[] {
@@ -226,7 +326,7 @@ export async function submitYieldPactToCobo(
     return {
       mode: 'cobo',
       pactId: result.pact_id,
-      status: mapCoboStatus(result.status),
+      status: mapCoboPactStatus(result.status),
       approvalId: result.approval_id,
       message: result.message || 'Pact 已提交到 Cobo，请在 Cobo Agentic Wallet App 中审批。',
       coboStatus: String(result.status),

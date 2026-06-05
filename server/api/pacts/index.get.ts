@@ -1,12 +1,29 @@
 import type { PactStatus } from '../../../shared/types/demo'
 import { getState } from '../../utils/demo-store'
+import { refreshCoboPactStatus } from '../../utils/cobo-pact'
 
-const STATUSES: PactStatus[] = ['pending', 'active', 'terminated', 'awaiting-approval']
+const STATUSES: PactStatus[] = ['pending', 'active', 'completed', 'terminated', 'awaiting-approval']
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const status = typeof query.status === 'string' ? query.status : undefined
-  let pacts = getState().pacts
+  const state = getState()
+
+  if (query.sync === 'true') {
+    await Promise.all(
+      state.pacts
+        .filter((pact) => pact.submissionMode === 'cobo')
+        .map(async (pact) => {
+          try {
+            await refreshCoboPactStatus(state, pact.id)
+          } catch {
+            // Keep the endpoint useful in demo mode even if one remote Cobo sync fails.
+          }
+        }),
+    )
+  }
+
+  let pacts = state.pacts
 
   if (status && STATUSES.includes(status as PactStatus)) {
     pacts = pacts.filter((p) => p.status === status)

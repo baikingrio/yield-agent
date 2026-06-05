@@ -9,11 +9,13 @@ const props = defineProps<{
 const emit = defineEmits<{
   approve: []
   terminate: []
+  sync: []
 }>()
 
 const STATUS_LABELS: Record<Pact['status'], string> = {
   pending: '待处理',
   active: '生效中',
+  completed: '已完成',
   terminated: '已终止',
   'awaiting-approval': '待审批',
 }
@@ -25,7 +27,11 @@ const canApprove = computed(
 )
 
 const canTerminate = computed(
-  () => props.pact && props.pact.status !== 'terminated',
+  () => props.pact && !['terminated', 'completed'].includes(props.pact.status),
+)
+
+const canSync = computed(
+  () => props.pact?.submissionMode === 'cobo',
 )
 
 const detailLines = computed(() => {
@@ -41,6 +47,11 @@ const detailLines = computed(() => {
       value: `用户 ${p.userSplitPercent}% · Agent ${100 - p.userSplitPercent}%`,
     },
     { label: 'Agent 绩效费', value: `${p.agentFeePercent}%` },
+    { label: '提交模式', value: p.submissionMode === 'cobo' ? 'Cobo Pact' : '本地 Draft' },
+    ...(p.coboPactId ? [{ label: 'Cobo Pact ID', value: p.coboPactId }] : []),
+    ...(p.approvalId ? [{ label: 'Approval ID', value: p.approvalId }] : []),
+    ...(p.coboStatus ? [{ label: 'Cobo 状态', value: p.coboStatus }] : []),
+    ...(p.submissionMessage ? [{ label: '状态说明', value: p.submissionMessage }] : []),
   ]
 })
 </script>
@@ -64,6 +75,15 @@ const detailLines = computed(() => {
       </div>
     </dl>
     <div class="flex flex-wrap gap-3 border-t border-hairline px-5 py-4">
+      <button
+        v-if="canSync"
+        type="button"
+        class="h-10 rounded-md border border-primary/50 px-4 text-sm font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+        :disabled="busy"
+        @click="emit('sync')"
+      >
+        同步 Cobo 状态
+      </button>
       <button
         v-if="canApprove"
         type="button"

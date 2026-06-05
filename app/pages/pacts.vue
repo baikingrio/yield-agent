@@ -55,6 +55,20 @@ async function onTerminate() {
   }
 }
 
+async function onSync() {
+  if (!selectedId.value) return
+  busy.value = true
+  store.clearError()
+  try {
+    await store.syncPact(selectedId.value)
+    await store.fetchPacts()
+  } catch {
+    /* store.error set */
+  } finally {
+    busy.value = false
+  }
+}
+
 function selectPact(id: string) {
   selectedId.value = id
 }
@@ -91,6 +105,7 @@ onMounted(load)
         :busy="busy"
         @approve="onApprove"
         @terminate="onTerminate"
+        @sync="onSync"
       />
     </div>
   </main>

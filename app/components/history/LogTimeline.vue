@@ -10,6 +10,7 @@ const TYPE_LABELS: Record<LogEntry['type'], string> = {
   swap: 'Swap',
   supply: 'Supply',
   revenue: 'Revenue Share',
+  pact: 'Pact / Policy',
 }
 
 function formatTime(ts: string) {

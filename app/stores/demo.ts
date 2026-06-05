@@ -53,9 +53,12 @@ export const useDemoStore = defineStore('demo', () => {
     }
   }
 
-  async function fetchPacts(status?: string) {
+  async function fetchPacts(status?: string, options?: { sync?: boolean }) {
     try {
-      const query = status ? { status } : undefined
+      const query = {
+        ...(status ? { status } : {}),
+        ...(options?.sync ? { sync: 'true' } : {}),
+      }
       pacts.value = await $fetch<Pact[]>('/api/pacts', { query })
     } catch (e) {
       error.value = apiErrorMessage(e)
@@ -63,13 +66,23 @@ export const useDemoStore = defineStore('demo', () => {
     }
   }
 
-  async function fetchPact(id: string) {
+  async function fetchPact(id: string, options?: { sync?: boolean }) {
     try {
-      selectedPact.value = await $fetch<Pact>(`/api/pacts/${id}`)
+      selectedPact.value = await $fetch<Pact>(`/api/pacts/${id}`, {
+        query: options?.sync ? { sync: 'true' } : undefined,
+      })
+      const idx = pacts.value.findIndex((p) => p.id === selectedPact.value?.id)
+      if (idx >= 0 && selectedPact.value) pacts.value[idx] = selectedPact.value
     } catch (e) {
       error.value = apiErrorMessage(e)
       throw e
     }
+  }
+
+  async function syncPact(id: string) {
+    await fetchPact(id, { sync: true })
+    await Promise.all([fetchStrategies(), fetchLogs({ limit: 10 })])
+    return selectedPact.value
   }
 
   async function fetchLogs(params?: { type?: LogType; limit?: number }) {
@@ -213,6 +226,7 @@ export const useDemoStore = defineStore('demo', () => {
     fetchStrategies,
     fetchPacts,
     fetchPact,
+    syncPact,
     fetchLogs,
     fetchYieldSeries,
     fetchSettings,

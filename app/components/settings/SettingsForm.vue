@@ -71,7 +71,7 @@ watch(
         v-model="apiKey"
         type="password"
         autocomplete="off"
-        placeholder="Cobo Agent API Key（caw onboard 后获取）"
+        placeholder="Cobo Agent API Key（可从 CAW provision 或平台获得）"
         class="h-10 w-full rounded-md border border-hairline bg-surface px-3 font-mono text-sm text-on-dark placeholder:text-muted"
       />
       <p v-if="settings?.apiKeyConfigured" class="mt-1 text-xs text-trading-up">已配置（会话内）</p>

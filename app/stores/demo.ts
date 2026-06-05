@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type {
   CreateStrategyPayload,
+  CawReadiness,
   DemoSettings,
   LogEntry,
   LogType,
@@ -32,6 +33,7 @@ export const useDemoStore = defineStore('demo', () => {
   const yieldRange = ref<YieldRange>('7d')
   const settings = ref<DemoSettings | null>(null)
   const preparation = ref<WalletPreparation | null>(null)
+  const cawReadiness = ref<CawReadiness | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -108,6 +110,34 @@ export const useDemoStore = defineStore('demo', () => {
   async function fetchSettings() {
     try {
       settings.value = await $fetch<DemoSettings>('/api/settings')
+    } catch (e) {
+      error.value = apiErrorMessage(e)
+      throw e
+    }
+  }
+
+  async function fetchCawReadiness() {
+    try {
+      cawReadiness.value = await $fetch<CawReadiness>('/api/caw/readiness')
+      return cawReadiness.value
+    } catch (e) {
+      error.value = apiErrorMessage(e)
+      throw e
+    }
+  }
+
+  async function provisionCawAgent(name: string) {
+    try {
+      const result = await $fetch<{
+        provision: { agentId: string; status: string }
+        readiness: CawReadiness
+      }>('/api/caw/provision', {
+        method: 'POST',
+        body: { name },
+      })
+      cawReadiness.value = result.readiness
+      await fetchSettings()
+      return result.provision
     } catch (e) {
       error.value = apiErrorMessage(e)
       throw e
@@ -220,6 +250,7 @@ export const useDemoStore = defineStore('demo', () => {
     yieldRange,
     settings,
     preparation,
+    cawReadiness,
     loading,
     error,
     fetchWallet,
@@ -230,6 +261,8 @@ export const useDemoStore = defineStore('demo', () => {
     fetchLogs,
     fetchYieldSeries,
     fetchSettings,
+    fetchCawReadiness,
+    provisionCawAgent,
     updateSettings,
     approvePact,
     terminatePact,

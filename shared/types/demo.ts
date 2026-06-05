@@ -6,6 +6,8 @@ export type StrategyStatus = 'active' | 'paused' | 'completed'
 export type PactStatus = 'pending' | 'active' | 'completed' | 'terminated' | 'awaiting-approval'
 export type LogType = 'swap' | 'supply' | 'revenue' | 'pact'
 export type YieldRange = '7d' | '30d'
+export type CawEnvironment = 'dev' | 'prod' | 'custom'
+export type CawPactMode = 'local-draft' | 'cobo-pact' | 'pact-execution-ready'
 
 export interface WalletSummary {
   address: string
@@ -68,8 +70,25 @@ export interface DemoSettings {
   apiKeyConfigured: boolean
   defaultAgentFee: number
   userSplit: number
+  agentId?: string
   /** 仅服务端会话内存，不返回给客户端 */
   coboApiKey?: string
+}
+
+export interface CawReadiness {
+  environment: CawEnvironment
+  apiBaseUrl: string
+  apiKeyConfigured: boolean
+  apiKeySource: 'settings' | 'env' | 'missing'
+  mainNodeConfigured: boolean
+  agentId: string | null
+  agentWalletConfigured: boolean
+  agentWalletAddress: string | null
+  walletReady: boolean
+  fundingReady: boolean
+  pactMode: CawPactMode
+  missing: string[]
+  nextAction: string
 }
 
 export interface DepositInfo {

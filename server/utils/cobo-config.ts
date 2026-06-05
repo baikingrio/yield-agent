@@ -1,4 +1,4 @@
-import type { NetworkId } from '../../shared/types/demo'
+import type { CawEnvironment, NetworkId } from '../../shared/types/demo'
 
 export interface NetworkChainConfig {
   coboChainId: string
@@ -33,5 +33,17 @@ export function getNetworkChainConfig(network: NetworkId): NetworkChainConfig {
 }
 
 export function getCoboBasePath(): string {
-  return process.env.AGENT_WALLET_API_URL?.trim() || 'https://api.agenticwallet.cobo.com'
+  const explicit = process.env.AGENT_WALLET_API_URL?.trim()
+  if (explicit) return explicit
+
+  return getCoboEnvironment() === 'prod'
+    ? 'https://api-core.agenticwallet.cobo.com'
+    : 'https://api-core.agenticwallet.dev.cobo.com'
+}
+
+export function getCoboEnvironment(): CawEnvironment {
+  const env = process.env.AGENT_WALLET_ENV?.trim().toLowerCase()
+  if (env === 'prod') return 'prod'
+  if (env === 'dev' || !env) return 'dev'
+  return 'custom'
 }

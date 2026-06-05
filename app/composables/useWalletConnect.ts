@@ -1,5 +1,6 @@
-import { useAccount, useChainId, useConnect, useDisconnect } from '@wagmi/vue'
+import { useConnect, useConnection, useDisconnect } from '@wagmi/vue'
 import { arbitrumSepolia, baseSepolia } from '@wagmi/vue/chains'
+import { injected } from '@wagmi/vue/connectors'
 import type { NetworkId } from '../../shared/types/demo'
 
 const CHAIN_TO_NETWORK: Record<number, NetworkId> = {
@@ -16,10 +17,9 @@ export function useWalletConnect() {
   const store = useDemoStore()
   const pageError = ref<string | null>(null)
 
-  const { address, isConnected, connector, status } = useAccount()
-  const chainId = useChainId()
-  const { connect, connectors, isPending: connectPending, error: connectError } = useConnect()
-  const { disconnect, isPending: disconnectPending } = useDisconnect()
+  const { address, chainId, isConnected, isConnecting, connector } = useConnection()
+  const connectMutation = useConnect()
+  const disconnectMutation = useDisconnect()
 
   const expectedNetwork = computed(
     () => store.preparation?.network ?? store.settings?.network ?? 'base-sepolia',
@@ -40,18 +40,20 @@ export function useWalletConnect() {
   })
 
   const busy = computed(
-    () => connectPending.value || disconnectPending.value || status.value === 'connecting',
+    () =>
+      connectMutation.isPending.value
+      || disconnectMutation.isPending.value
+      || isConnecting.value,
   )
 
   async function connectWallet() {
     pageError.value = null
     store.clearError()
-    const target = connectors.value.find((c) => c.id === 'injected') ?? connectors.value[0]
-    if (!target) {
-      pageError.value = '未检测到浏览器钱包，请安装 MetaMask 等扩展'
-      return
+    try {
+      await connectMutation.mutateAsync({ connector: injected() })
+    } catch (err) {
+      pageError.value = err instanceof Error ? err.message : '连接钱包失败'
     }
-    connect({ connector: target })
   }
 
   async function syncConnectedEoa() {
@@ -70,11 +72,13 @@ export function useWalletConnect() {
   async function disconnectWallet() {
     pageError.value = null
     store.clearError()
-    if (isConnected.value) disconnect()
     try {
+      if (isConnected.value) {
+        await disconnectMutation.mutateAsync()
+      }
       await store.disconnectEoa()
-    } catch {
-      pageError.value = store.error
+    } catch (err) {
+      pageError.value = err instanceof Error ? err.message : store.error
     }
   }
 
@@ -84,10 +88,6 @@ export function useWalletConnect() {
       if (isConnected.value && address.value) syncConnectedEoa()
     },
   )
-
-  watch(connectError, (err) => {
-    if (err) pageError.value = err.message
-  })
 
   return {
     address,

@@ -1,8 +1,8 @@
 # YieldAgent 技术架构文档、目录结构与开发任务拆解
 
-> 更新日期：2026-06-04  
-> 当前同步代码：`aad1ab7 feat: integrate wallet preparation and funding flow for testnet`  
-> 项目仓库：`https://github.com/baikingrio/yield-agent`  
+> 更新日期：2026-06-05
+> 当前同步代码：本地最新提交，已加入 CAW readiness 与 Hermes strategy readiness
+> 项目仓库：`https://github.com/baikingrio/yield-agent`
 > 当前定位：AI Web3 School / Cobo Agentic Commerce Hackathon 项目主线
 
 ---
@@ -51,9 +51,10 @@
 
 ### 2.4 Agent / 策略层
 
-- 目标技术栈：**Z.AI API**。
-- 当前代码还未真正接入 Z.AI API。
-- 当前策略创建以表单、模板和 Pact Preview 为主，后续需要把自然语言策略解析为结构化参数。
+- 目标技术栈：**本机 Hermes Agent**（替代原计划 Z.AI API）。
+- 当前新增了 Hermes strategy readiness：`server/utils/strategy-agent-readiness.ts` 与 `GET /api/strategy-agent/readiness`。
+- 当前策略创建以表单、模板和 Pact Preview 为主；后续把自然语言策略交给本机 Hermes 解析为结构化参数，再经过 deterministic validator 后进入 Pact builder。
+- Hermes 只负责“解析 / 解释 / 风险说明”，不能绕过 Pact validator 或直接提交交易。
 
 ### 2.5 数据库与日志
 
@@ -131,7 +132,7 @@ Executor Agent
 - 新增 `server/utils/cobo-config.ts`：Base / Arbitrum Sepolia 的 Cobo chain/token 配置。
 - 新增 `server/utils/cobo-preparation.ts`：创建 CAW Agent Wallet、查询余额、确认转入。
 - 新增 `server/utils/deposit-verify.ts`：链上 USDC 转入校验。
-- 新增 `.env.example`：Cobo API 与 TSS 节点环境变量说明。
+- 新增 `.env.example`：Cobo API、本机 TSS 节点、Hermes strategy runtime 环境变量说明。
 
 ---
 
@@ -306,9 +307,11 @@ yield-agent/
 - [ ] 轮询 Pact 状态：pending → active / rejected / expired。
 - [ ] 把 Pact 状态写入 Dashboard 和 History。
 
-### Phase 3：Strategy Agent / Z.AI API
+### Phase 3：Strategy Agent / 本机 Hermes
 
-- [ ] 新增 `server/utils/zai-client.ts`，封装 Z.AI API 调用。
+- [x] 新增 `server/utils/strategy-agent-readiness.ts`，确认策略层调用本机 Hermes CLI / API。
+- [x] 新增 `GET /api/strategy-agent/readiness` 和 Settings 状态卡。
+- [ ] 新增 `server/utils/hermes-strategy-parser.ts`，封装 Hermes CLI / API 调用。
 - [ ] 定义策略解析 schema：network、asset、maxSpend、riskLevel、targetApy、duration、allowedRecipes、revenueSplit。
 - [ ] 将自然语言输入解析为结构化策略参数。
 - [ ] 在 LLM 输出后增加 deterministic validator，防止越权参数进入执行层。
@@ -341,7 +344,7 @@ yield-agent/
 ### Phase 6：Vercel 部署与演示
 
 - [ ] 配置 Vercel 项目。
-- [ ] 整理环境变量：`AGENT_WALLET_API_URL`、`AGENT_WALLET_API_KEY`、`AGENT_WALLET_MAIN_NODE_ID`、Z.AI API Key 等。
+- [ ] 整理环境变量：`AGENT_WALLET_API_URL`、`AGENT_WALLET_API_KEY`、`AGENT_WALLET_TSS_RUNTIME=local`、`AGENT_WALLET_MAIN_NODE_ID`、`HERMES_STRATEGY_MODE`、`HERMES_CLI_BIN` 等。
 - [ ] 确认服务端环境变量不泄漏到客户端。
 - [ ] 跑通 `pnpm build`。
 - [ ] 准备 Demo 路径：Landing → Wallet → Create Strategy → Pact Preview → Dashboard → History。
@@ -361,7 +364,7 @@ yield-agent/
 
 ### 9.3 API Key 与隐私
 
-`.env.example` 只保留空值模板是正确的。后续不要把真实 Cobo API Key、Z.AI API Key、钱包私钥或主网资产信息写进公开仓库。
+`.env.example` 只保留空值模板是正确的。后续不要把真实 Cobo API Key、Hermes provider key、钱包私钥或主网资产信息写进公开仓库。
 
 ### 9.4 Demo 范围控制
 
@@ -383,5 +386,5 @@ yield-agent/
 1. **先统一 README 和页面文案为 YieldAgent**，避免项目主线混乱。
 2. **修复 pnpm build / Vercel 构建问题**，保证 Demo 可部署。
 3. **把 Pact Preview 接到真实 CAW Pact submit**，这是 Cobo 赛道最关键的证明点。
-4. **接入 Z.AI API 做策略解析**，但输出必须经过确定性校验。
+4. **接入本机 Hermes 做策略解析**，但输出必须经过确定性校验。
 5. **把日志从内存迁移到 SQLite**，让审计路径稳定可复现。

@@ -6,13 +6,18 @@ useHead({ title: '设置 · YieldAgent' })
 const store = useDemoStore()
 const saving = ref(false)
 const cawBusy = ref(false)
+const strategyBusy = ref(false)
 const loading = ref(true)
 
 async function load() {
   loading.value = true
   store.clearError()
   try {
-    await Promise.all([store.fetchSettings(), store.fetchCawReadiness()])
+    await Promise.all([
+      store.fetchSettings(),
+      store.fetchCawReadiness(),
+      store.fetchStrategyAgentReadiness(),
+    ])
   } finally {
     loading.value = false
   }
@@ -54,6 +59,16 @@ async function provisionCawAgent(name: string) {
   }
 }
 
+async function refreshStrategyAgentReadiness() {
+  strategyBusy.value = true
+  store.clearError()
+  try {
+    await store.fetchStrategyAgentReadiness()
+  } finally {
+    strategyBusy.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -81,6 +96,13 @@ onMounted(load)
       :busy="cawBusy"
       @refresh="refreshCawReadiness"
       @provision="provisionCawAgent"
+    />
+
+    <SettingsStrategyAgentReadinessCard
+      v-if="!loading"
+      :readiness="store.strategyAgentReadiness"
+      :busy="strategyBusy"
+      @refresh="refreshStrategyAgentReadiness"
     />
   </main>
 </template>

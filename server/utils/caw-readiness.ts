@@ -15,7 +15,7 @@ function nextActionFor(missing: string[], readiness: Pick<CawReadiness, 'pactMod
     return 'Provision 或配置 Cobo API Key，当前只能创建本地 Pact Draft。'
   }
   if (missing.includes('TSS Node ID')) {
-    return '配置 AGENT_WALLET_MAIN_NODE_ID，并确认 TSS Node 在本地/VPS runtime 中运行。'
+    return '配置 AGENT_WALLET_MAIN_NODE_ID，并确认 TSS Node 在本机 runtime 中运行。'
   }
   if (missing.includes('Agent Wallet')) {
     return '前往 Wallet 页面创建 Agent Wallet 并生成 EVM 地址。'
@@ -51,6 +51,7 @@ export function buildCawReadiness(state: DemoState): CawReadiness {
     apiKeyConfigured,
     apiKeySource: source,
     mainNodeConfigured,
+    tssRuntime: 'local',
     agentId: state.settings.agentId ?? null,
     agentWalletConfigured,
     agentWalletAddress: prep.agentWallet.address || null,

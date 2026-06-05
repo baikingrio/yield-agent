@@ -102,7 +102,7 @@ const apiKeyLabel = computed(() => {
       <div class="rounded-md border border-primary/30 bg-primary/5 p-4">
         <p class="text-sm text-body">下一步：{{ readiness.nextAction }}</p>
         <p class="mt-2 text-xs leading-5 text-muted">
-          注意：Vercel 不适合长期运行 TSS Node。完整 CAW runtime 应放在本地开发环境或安全 VPS/worker 中。
+          注意：TSS Node 按当前方案放在本机运行；Vercel 只承载 Nuxt 前端和无状态 API，不跑长期 TSS 进程。
         </p>
       </div>
 

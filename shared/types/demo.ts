@@ -8,6 +8,8 @@ export type LogType = 'swap' | 'supply' | 'revenue' | 'pact'
 export type YieldRange = '7d' | '30d'
 export type CawEnvironment = 'dev' | 'prod' | 'custom'
 export type CawPactMode = 'local-draft' | 'cobo-pact' | 'pact-execution-ready'
+export type StrategyAgentProvider = 'hermes'
+export type StrategyAgentMode = 'cli' | 'api'
 
 export interface WalletSummary {
   address: string
@@ -81,12 +83,26 @@ export interface CawReadiness {
   apiKeyConfigured: boolean
   apiKeySource: 'settings' | 'env' | 'missing'
   mainNodeConfigured: boolean
+  tssRuntime: 'local'
   agentId: string | null
   agentWalletConfigured: boolean
   agentWalletAddress: string | null
   walletReady: boolean
   fundingReady: boolean
   pactMode: CawPactMode
+  missing: string[]
+  nextAction: string
+}
+
+export interface StrategyAgentReadiness {
+  provider: StrategyAgentProvider
+  mode: StrategyAgentMode
+  localExecution: boolean
+  configured: boolean
+  command: string | null
+  endpoint: string | null
+  profile: string
+  model: string | null
   missing: string[]
   nextAction: string
 }

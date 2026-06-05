@@ -40,7 +40,7 @@ Aave / Compound / testnet yield action
 - 前端：Nuxt 4、Vue 3、TypeScript、Tailwind CSS、shadcn-vue/ui 风格组件
 - 钱包连接：wagmi、viem
 - 执行层：CAW（Cobo Agentic Wallet）/ Pact
-- Agent / 策略层：Z.AI API（待接入）
+- Agent / 策略层：本机 Hermes Agent（替代 Z.AI API，用于自然语言策略解析与风险解释）
 - 数据库与日志：SQLite（待接入；当前为内存 Demo store）
 - 部署：Vercel
 - 当前原型依赖：Pinia、Zod、Chart.js、vue-chartjs、@cobo/agentic-wallet
@@ -60,6 +60,8 @@ Aave / Compound / testnet yield action
 - 产品定义：[`PRODUCT.md`](./PRODUCT.md)
 - PRD：[`docs/YieldAgent_Collective_PRD.md`](./docs/YieldAgent_Collective_PRD.md)
 - 技术架构、目录结构与任务拆解：[`docs/YieldAgent_Technical_Architecture.md`](./docs/YieldAgent_Technical_Architecture.md)
+- CAW 接入说明：[`docs/caw-integration.md`](./docs/caw-integration.md)
+- Hermes 策略层说明：[`docs/hermes-strategy-agent.md`](./docs/hermes-strategy-agent.md)
 - 产品流程决策：[`docs/product-flow-decisions.md`](./docs/product-flow-decisions.md)
 
 ## 目录结构
@@ -155,9 +157,14 @@ pnpm generate
 参考 `.env.example`：
 
 ```text
-AGENT_WALLET_API_URL=https://api.agenticwallet.cobo.com
+AGENT_WALLET_ENV=dev
+AGENT_WALLET_API_URL=https://api-core.agenticwallet.dev.cobo.com
 AGENT_WALLET_API_KEY=
+AGENT_WALLET_TSS_RUNTIME=local
 AGENT_WALLET_MAIN_NODE_ID=
+HERMES_STRATEGY_MODE=cli
+HERMES_CLI_BIN=hermes
+HERMES_PROFILE=default
 ```
 
 注意：
@@ -197,7 +204,7 @@ AGENT_WALLET_MAIN_NODE_ID=
 1. 统一 YieldAgent 品牌文案，清理旧项目命名残留；
 2. 修复 pnpm / Vercel 构建问题；
 3. 将 Pact Preview 映射为真实 CAW Pact；
-4. 接入 Z.AI API 做策略解析，并加入确定性校验；
+4. 接入本机 Hermes 做策略解析，并加入确定性校验；
 5. 将内存 Demo store 迁移到 SQLite；
 6. 准备评委 Demo 路径和演示稿。
 

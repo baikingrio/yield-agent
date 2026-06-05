@@ -3,6 +3,7 @@ import type {
   CreateStrategyPayload,
   CawReadiness,
   DemoSettings,
+  StrategyAgentReadiness,
   LogEntry,
   LogType,
   NetworkId,
@@ -34,6 +35,7 @@ export const useDemoStore = defineStore('demo', () => {
   const settings = ref<DemoSettings | null>(null)
   const preparation = ref<WalletPreparation | null>(null)
   const cawReadiness = ref<CawReadiness | null>(null)
+  const strategyAgentReadiness = ref<StrategyAgentReadiness | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -120,6 +122,16 @@ export const useDemoStore = defineStore('demo', () => {
     try {
       cawReadiness.value = await $fetch<CawReadiness>('/api/caw/readiness')
       return cawReadiness.value
+    } catch (e) {
+      error.value = apiErrorMessage(e)
+      throw e
+    }
+  }
+
+  async function fetchStrategyAgentReadiness() {
+    try {
+      strategyAgentReadiness.value = await $fetch<StrategyAgentReadiness>('/api/strategy-agent/readiness')
+      return strategyAgentReadiness.value
     } catch (e) {
       error.value = apiErrorMessage(e)
       throw e
@@ -251,6 +263,7 @@ export const useDemoStore = defineStore('demo', () => {
     settings,
     preparation,
     cawReadiness,
+    strategyAgentReadiness,
     loading,
     error,
     fetchWallet,
@@ -262,6 +275,7 @@ export const useDemoStore = defineStore('demo', () => {
     fetchYieldSeries,
     fetchSettings,
     fetchCawReadiness,
+    fetchStrategyAgentReadiness,
     provisionCawAgent,
     updateSettings,
     approvePact,

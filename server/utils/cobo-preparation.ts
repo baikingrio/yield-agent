@@ -135,13 +135,18 @@ export async function fetchUsdcBalanceFromCobo(
   if (!walletId || !prep.agentWallet.created || !prep.agentWallet.address) return 0
 
   const net = network ?? prep.network
-  const coboBalance = await fetchUsdcBalanceFromCoboApi(
-    state,
-    net,
-    walletId,
-    prep.agentWallet.address,
-  )
-  if (coboBalance > 0) return coboBalance
+  try {
+    const coboBalance = await fetchUsdcBalanceFromCoboApi(
+      state,
+      net,
+      walletId,
+      prep.agentWallet.address,
+    )
+    if (coboBalance > 0) return coboBalance
+  } catch {
+    // If the Cobo SDK is unavailable/not configured, keep the demo usable by
+    // falling back to an on-chain balance read instead of failing the route.
+  }
 
   return fetchUsdcBalanceOnChain(net, prep.agentWallet.address)
 }

@@ -52,16 +52,36 @@ describe('detectBootstrapMode', () => {
 
   it('falls back to sdk-create when CLI is unavailable but main node is configured', async () => {
     vi.stubEnv('AGENT_WALLET_MAIN_NODE_ID', 'node-123')
-    vi.spyOn(bootstrap, 'resolveCawCliBin').mockResolvedValue(null)
+    vi.stubEnv('CAW_CLI_BIN', '/tmp/missing-caw-bin')
 
     const mode = await bootstrap.detectBootstrapMode()
     expect(mode).toBe('sdk-create')
   })
 
   it('returns unavailable when neither CLI nor main node is configured', async () => {
-    vi.spyOn(bootstrap, 'resolveCawCliBin').mockResolvedValue(null)
+    vi.stubEnv('CAW_CLI_BIN', '/tmp/missing-caw-bin')
+
     const mode = await bootstrap.detectBootstrapMode()
     expect(mode).toBe('unavailable')
+  })
+})
+
+describe('checkTssReadiness', () => {
+  it('treats local TSS as online even when caw node status exits non-zero with partial JSON', async () => {
+    const err = new Error('remote status forbidden') as Error & { stdout: string }
+    err.stdout = JSON.stringify({
+      local: { running: true },
+      remote: { error: '403 Forbidden' },
+    })
+    const runner = vi.fn(async (args: string[]) => {
+      if (args.join(' ') === 'node status') throw err
+      throw new Error('unexpected')
+    })
+
+    const readiness = await bootstrap.checkTssReadiness(createState(), null, runner)
+
+    expect(readiness.online).toBe(true)
+    expect(readiness.source).toBe('cli-local')
   })
 })
 

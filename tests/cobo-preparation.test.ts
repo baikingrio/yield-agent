@@ -6,9 +6,10 @@ const pollAgentBootstrap = vi.fn()
 const regenerateAgentPairing = vi.fn()
 const syncPreparationFromCawCli = vi.fn()
 const listBalances = vi.hoisted(() => vi.fn())
+const createCoboBalanceApi = vi.hoisted(() => vi.fn(() => ({ listBalances })))
 
 vi.mock('../server/utils/cobo-client', () => ({
-  createCoboBalanceApi: () => ({ listBalances }),
+  createCoboBalanceApi,
   extractCoboErrorMessage: vi.fn(),
   withCoboRetry: (operation: () => Promise<unknown>) => operation(),
 }))
@@ -65,6 +66,7 @@ function prepResponse(prep: WalletPreparation) {
 
 afterEach(() => {
   vi.clearAllMocks()
+  createCoboBalanceApi.mockImplementation(() => ({ listBalances }))
 })
 
 describe('createCoboAgentWallet bootstrap orchestration', () => {
@@ -168,6 +170,38 @@ describe('syncFundingFromExistingBalance', () => {
     expect(prep.funding.availableUsdc).toBe(120)
     expect(prep.steps.funding).toBe('completed')
     expect(prep.funding.lastTxHash).toBeNull()
+  })
+})
+
+describe('syncWalletSummaryFromCobo', () => {
+  it('keeps the wallet summary available when Cobo API key is not configured', async () => {
+    createCoboBalanceApi.mockImplementation(() => {
+      throw new Error('COBO_NOT_CONFIGURED')
+    })
+
+    const state = createState({
+      walletPreparation: {
+        network: 'base-sepolia',
+        eoa: { connected: true, address: '0xEoa', label: 'Demo EOA' },
+        agentWallet: {
+          created: true,
+          address: '0x0000000000000000000000000000000000000000',
+          coboWalletId: 'wallet-1',
+          pairing: { status: 'paired', code: null, expiresAt: null },
+        },
+        funding: { status: 'ready', depositedUsdc: 10, availableUsdc: 10, lastTxHash: null },
+        steps: { eoa: 'completed', agent_wallet: 'completed', funding: 'completed' },
+        ready: true,
+        updatedAt: new Date(0).toISOString(),
+      },
+    })
+
+    const { syncWalletSummaryFromCobo } = await import('../server/utils/cobo-preparation')
+    await expect(syncWalletSummaryFromCobo(state)).resolves.toBeUndefined()
+
+    expect(state.wallet.address).toBe('0x0000000000000000000000000000000000000000')
+    expect(state.wallet.totalAssetsUsdc).toBe(0)
+    expect(state.walletPreparation.funding.availableUsdc).toBe(0)
   })
 })
 

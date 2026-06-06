@@ -332,7 +332,13 @@ export async function submitYieldPactToCobo(
       coboStatus: String(result.status),
     }
   } catch (err) {
-    throw new Error(extractCoboErrorMessage(err))
+    const message = extractCoboErrorMessage(err)
+    return {
+      mode: 'local-draft',
+      pactId: fallbackPactId,
+      status: 'awaiting-approval',
+      message: `Cobo Pact 提交暂不可用，已保留为本地 Pact draft：${message}`,
+    }
   }
 }
 

@@ -120,6 +120,25 @@ export async function runCawJson(
   return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {}
 }
 
+async function runCawJsonBestEffort(
+  args: string[],
+  runner: CawCliRunner = defaultCawRunner,
+): Promise<Record<string, unknown> | unknown[]> {
+  try {
+    return await runCawJson(args, runner)
+  } catch (err) {
+    const stdout = err && typeof err === 'object' && 'stdout' in err
+      ? (err as { stdout?: unknown }).stdout
+      : null
+    if (typeof stdout === 'string' && stdout.trim()) {
+      const parsed = JSON.parse(stdout)
+      if (Array.isArray(parsed)) return parsed
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {}
+    }
+    throw err
+  }
+}
+
 export async function detectBootstrapMode(
   runner: CawCliRunner = defaultCawRunner,
 ): Promise<AgentBootstrapMode | 'unavailable'> {
@@ -148,7 +167,7 @@ export async function checkTssReadiness(
   const cawBin = await resolveCawCliBin()
   if (cawBin) {
     try {
-      const status = await runCawJson(['node', 'status'], runner) as Record<string, unknown>
+      const status = await runCawJsonBestEffort(['node', 'status'], runner) as Record<string, unknown>
       const remote = status.remote as Record<string, unknown> | undefined
       const local = status.local as Record<string, unknown> | undefined
       const online = bool(remote?.online) || bool(local?.running)

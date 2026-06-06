@@ -56,10 +56,6 @@ export function useWalletPreparation() {
 
   async function runCreateAgent() {
     if (stepLocked('agent_wallet') || prep.value?.steps.agent_wallet === 'completed') return
-    if (!coboConfigured.value) {
-      pageError.value = '请先在设置页配置 Cobo API Key'
-      return
-    }
     pageError.value = null
     busy.value = true
     try {

@@ -39,7 +39,7 @@ async function copyAddress(addr: string) {
         <p class="font-mono text-xs text-primary">步骤 2</p>
         <h2 id="step-agent-heading" class="mt-2 text-base font-semibold text-on-dark">创建 CAW Agent Wallet</h2>
         <p class="mt-2 max-w-prose text-sm leading-6 text-body">
-          通过 Cobo SDK 创建托管 Agent Wallet。EOA 仅用于授权与注资，Agent 后续只操作此地址内的资金。
+          YieldAgent 会自动向 CAW provision 初始 API Key 并创建 Agent Wallet。创建后请在 CAW App 输入配对码完成激活。
         </p>
       </div>
       <UiStatusChip
@@ -48,14 +48,6 @@ async function copyAddress(addr: string) {
         :tone="prep.steps.agent_wallet === 'completed' ? 'active' : 'neutral'"
       />
     </div>
-
-    <p
-      v-if="!coboConfigured"
-      class="mt-4 rounded-md border border-trading-down/30 bg-canvas px-3 py-2 text-xs text-trading-down"
-    >
-      需要 Cobo API Key。
-      <NuxtLink to="/settings" class="font-medium text-primary hover:underline">前往设置</NuxtLink>
-    </p>
 
     <div v-if="prep?.agentWallet.created && prep.agentWallet.address" class="mt-4 space-y-2">
       <div class="flex flex-wrap items-center gap-3">
@@ -72,12 +64,24 @@ async function copyAddress(addr: string) {
       <p v-if="prep.agentWallet.coboWalletId" class="font-mono text-xs text-muted">
         CAW Wallet ID：{{ shortId(prep.agentWallet.coboWalletId) }}
       </p>
+      <div
+        v-if="prep.agentWallet.pairing?.status === 'pairing'"
+        class="rounded-md border border-primary/30 bg-canvas px-3 py-2 text-xs text-body"
+      >
+        <p class="font-semibold text-on-dark">请到 CAW App 输入配对码完成激活</p>
+        <p v-if="prep.agentWallet.pairing.code" class="mt-2 font-mono text-lg text-primary">
+          {{ prep.agentWallet.pairing.code }}
+        </p>
+        <p v-if="prep.agentWallet.pairing.expiresAt" class="mt-1 text-muted">
+          过期时间：{{ prep.agentWallet.pairing.expiresAt }}
+        </p>
+      </div>
     </div>
     <button
       v-else
       type="button"
       class="mt-4 inline-flex h-10 items-center justify-center rounded-md border border-hairline px-4 text-sm font-semibold text-on-dark transition-colors duration-150 hover:bg-surface-elevated disabled:opacity-50"
-      :disabled="locked || busy || !coboConfigured"
+      :disabled="locked || busy"
       @click="emit('create')"
     >
       {{ createLabel }}

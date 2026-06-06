@@ -276,7 +276,7 @@ export const useDemoStore = defineStore('demo', () => {
     preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/create-agent', {
       method: 'POST',
     })
-    await fetchWallet()
+    await Promise.all([fetchWallet(), fetchSettings(), fetchCawReadiness()])
     return preparation.value
   }
 

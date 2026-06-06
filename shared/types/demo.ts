@@ -165,6 +165,11 @@ export interface WalletPreparation {
     created: boolean
     address: string
     coboWalletId: string | null
+    pairing?: {
+      status: 'unpaired' | 'pairing' | 'paired'
+      code: string | null
+      expiresAt: string | null
+    }
   }
   funding: {
     status: FundingStatus

@@ -1,18 +1,137 @@
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import type { DemoState, NetworkId, WalletPreparation } from '../../shared/types/demo'
-import { getNetworkChainConfig } from './cobo-config'
+import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
 import {
   createCoboBalanceApi,
   createCoboWalletsApi,
   extractCoboErrorMessage,
 } from './cobo-client'
 import { verifyUsdcDeposit } from './deposit-verify'
+import { provisionCawPrincipal } from './caw-provision'
 import {
   applyDepositToState,
   markAgentWalletCreated,
   touchPreparation,
 } from './wallet-preparation'
 
+const execFileAsync = promisify(execFile)
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+interface PairInitiateResponse {
+  success?: boolean
+  message?: string
+  suggestion?: string
+  result?: {
+    token?: string
+    expires_at?: string
+    expire_at?: string
+    expired_at?: string
+  }
+}
+
+function currentCoboApiKey(state: DemoState): string | null {
+  return state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim() || null
+}
+
+async function ensureCawPrincipal(state: DemoState): Promise<void> {
+  if (currentCoboApiKey(state)) return
+  await provisionCawPrincipal(state, { name: 'YieldAgent Dev' })
+}
+
+async function initiateWalletPairing(
+  state: DemoState,
+  walletId: string,
+): Promise<{ status: 'pairing'; code: string | null; expiresAt: string | null } | undefined> {
+  const apiKey = currentCoboApiKey(state)
+  if (!apiKey) return undefined
+
+  const resp = await fetch(`${getCoboBasePath()}/api/v1/wallets/pairs/initiate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': apiKey,
+    },
+    body: JSON.stringify({ wallet_id: walletId }),
+  })
+  const payload = await resp.json().catch(() => ({})) as PairInitiateResponse
+  if (!resp.ok || payload.success === false) {
+    throw new Error(payload.message || payload.suggestion || `CAW wallet pairing failed with HTTP ${resp.status}`)
+  }
+
+  return {
+    status: 'pairing',
+    code: payload.result?.token ?? null,
+    expiresAt: payload.result?.expires_at ?? payload.result?.expire_at ?? payload.result?.expired_at ?? null,
+  }
+}
+
+async function runCawJson(args: string[]): Promise<Record<string, unknown> | unknown[]> {
+  const {
+    AGENT_WALLET_API_KEY: _apiKey,
+    AGENT_WALLET_API_URL: _apiUrl,
+    ...safeEnv
+  } = process.env
+
+  const { stdout } = await execFileAsync('caw', args, {
+    timeout: 120_000,
+    maxBuffer: 1024 * 1024,
+    env: {
+      ...safeEnv,
+      PATH: `/usr/local/bin:${process.env.PATH ?? ''}`,
+    },
+  })
+  return JSON.parse(stdout || '{}') as Record<string, unknown> | unknown[]
+}
+
+function str(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+async function adoptCurrentCawWalletFromCli(state: DemoState): Promise<WalletPreparation> {
+  const prep = state.walletPreparation
+  const networkConfig = getNetworkChainConfig(prep.network)
+  const walletPayload = await runCawJson(['wallet', 'current'])
+  if (Array.isArray(walletPayload)) throw new Error('CAW_CURRENT_WALLET_NOT_FOUND')
+
+  const walletUuid = str(walletPayload.wallet_uuid)
+  if (!walletUuid) throw new Error('CAW_CURRENT_WALLET_NOT_FOUND')
+
+  let addressesPayload: Record<string, unknown>[] = []
+  try {
+    const payload = await runCawJson(['address', 'list'])
+    if (Array.isArray(payload)) addressesPayload = payload as Record<string, unknown>[]
+  } catch {
+    addressesPayload = []
+  }
+
+  const addressEntry = addressesPayload.find((item) => {
+    if (!item || typeof item !== 'object') return false
+    const obj = item as Record<string, unknown>
+    const compatibleChains = obj.compatible_chains
+    return (
+      str(obj.wallet_id) === walletUuid
+      && str(obj.address)
+      && (
+        (isStringArray(compatibleChains) && compatibleChains.includes(networkConfig.coboChainId))
+        || str(obj.chain_type) === 'ETH'
+      )
+    )
+  }) as Record<string, unknown> | undefined
+
+  const configuredAddress = str(process.env.CAW_EXISTING_EVM_ADDRESS)
+  const address = str(addressEntry?.address) ?? configuredAddress
+  if (!address) throw new Error('CAW_ADDRESS_NOT_FOUND')
+
+  return markAgentWalletCreated(state, {
+    address,
+    coboWalletId: walletUuid,
+  })
+}
 
 async function waitForWalletActive(
   walletsApi: ReturnType<typeof createCoboWalletsApi>,
@@ -36,9 +155,22 @@ export async function createCoboAgentWallet(state: DemoState): Promise<WalletPre
     throw new Error('EOA_NOT_CONNECTED')
   }
 
+  await ensureCawPrincipal(state)
+
   const walletsApi = createCoboWalletsApi(state)
   const networkConfig = getNetworkChainConfig(prep.network)
   const mainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim()
+
+  // On this Hermes host the CAW onboarding flow already created and paired an
+  // Agent Wallet. Prefer adopting that active wallet for the demo preparation
+  // flow instead of attempting to create another wallet with a pact-scoped key.
+  if (process.env.CAW_ADOPT_EXISTING_WALLET !== 'false') {
+    try {
+      return await adoptCurrentCawWalletFromCli(state)
+    } catch {
+      // Fall back to normal Cobo wallet creation when no local CAW wallet exists.
+    }
+  }
 
   try {
     const createResp = await walletsApi.createWallet({
@@ -63,9 +195,23 @@ export async function createCoboAgentWallet(state: DemoState): Promise<WalletPre
     return markAgentWalletCreated(state, {
       address,
       coboWalletId: walletUuid,
+      pairing: await initiateWalletPairing(state, walletUuid),
     })
   } catch (err) {
-    throw new Error(extractCoboErrorMessage(err))
+    const message = extractCoboErrorMessage(err)
+
+    // When the configured CAW credential belongs to an already-onboarded/paired
+    // agent, creating another wallet may be forbidden. For the hackathon demo we
+    // can still complete the wallet-preparation flow by adopting the active CAW
+    // wallet that is already paired to this Hermes Agent host. Try that fallback
+    // for any createWallet failure, then surface the original CAW API error only
+    // if the local CAW wallet cannot be adopted.
+    try {
+      return await adoptCurrentCawWalletFromCli(state)
+    } catch (fallbackErr) {
+      console.warn('CAW_CURRENT_WALLET_FALLBACK_FAILED', fallbackErr instanceof Error ? fallbackErr.message : fallbackErr)
+      throw new Error(message)
+    }
   }
 }
 

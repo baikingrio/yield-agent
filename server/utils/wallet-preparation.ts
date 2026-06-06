@@ -21,6 +21,11 @@ export function createInitialWalletPreparation(
       created: false,
       address: '',
       coboWalletId: null,
+      pairing: {
+        status: 'unpaired',
+        code: null,
+        expiresAt: null,
+      },
     },
     funding: {
       status: 'idle',
@@ -84,6 +89,7 @@ export function disconnectEoa(state: DemoState): WalletPreparation {
   prep.agentWallet.created = false
   prep.agentWallet.address = ''
   prep.agentWallet.coboWalletId = null
+  prep.agentWallet.pairing = { status: 'unpaired', code: null, expiresAt: null }
   prep.funding.status = 'idle'
   prep.funding.depositedUsdc = 0
   prep.funding.availableUsdc = 0
@@ -96,12 +102,21 @@ export function disconnectEoa(state: DemoState): WalletPreparation {
 
 export function markAgentWalletCreated(
   state: DemoState,
-  params: { address: string; coboWalletId: string },
+  params: {
+    address: string
+    coboWalletId: string
+    pairing?: { status: 'unpaired' | 'pairing' | 'paired'; code: string | null; expiresAt: string | null }
+  },
 ): WalletPreparation {
   const prep = state.walletPreparation
   prep.agentWallet.created = true
   prep.agentWallet.address = params.address
   prep.agentWallet.coboWalletId = params.coboWalletId
+  prep.agentWallet.pairing = params.pairing ?? prep.agentWallet.pairing ?? {
+    status: 'unpaired',
+    code: null,
+    expiresAt: null,
+  }
   state.wallet.address = params.address
   prep.steps.agent_wallet = 'completed'
   touchPreparation(prep)

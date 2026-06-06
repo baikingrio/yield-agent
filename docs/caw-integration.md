@@ -20,15 +20,15 @@ AGENT_WALLET_API_URL=https://api-core.agenticwallet.cobo.com
 
 If `AGENT_WALLET_API_URL` is set explicitly, YieldAgent uses that URL. If it is omitted, the app derives the base URL from `AGENT_WALLET_ENV`.
 
-## Required Server-Side Values
+## Server-Side Values
 
 ```env
-AGENT_WALLET_API_KEY=
+# AGENT_WALLET_API_KEY= # optional; normally auto-provisioned by YieldAgent
 AGENT_WALLET_TSS_RUNTIME=hermes-agent-host
 AGENT_WALLET_MAIN_NODE_ID=
 ```
 
-- `AGENT_WALLET_API_KEY`: initial CAW Agent API key. It can be provisioned through CAW API `POST /api/v1/principals/provision` or obtained from CAW tooling/platform flow.
+- `AGENT_WALLET_API_KEY`: optional initial CAW Agent API key. The normal YieldAgent flow does not require the user/operator to set it manually; when creating an Agent Wallet, YieldAgent calls CAW API `POST /api/v1/principals/provision` and stores the returned API key server-side only. Set this env var only when reusing an existing CAW Agent credential or intentionally bypassing auto-provision.
 - `AGENT_WALLET_TSS_RUNTIME=hermes-agent-host`: the hackathon runtime decision; TSS Node runs on the current Hermes Agent host machine, not inside Vercel.
 - `AGENT_WALLET_MAIN_NODE_ID`: TSS Node ID on the Hermes Agent host used when creating MPC wallets.
 
@@ -55,6 +55,6 @@ Vercel is suitable for the Nuxt frontend and stateless entry routes, but it is n
 ## Next Steps
 
 1. Persist server-only CAW credential metadata safely outside frontend state.
-2. Add pair-code generation and pair-status polling.
+2. Add pair-status polling after pair-code generation.
 3. Store pact-scoped execution API key server-side after Pact becomes active.
 4. Execute strategy transactions with the pact-scoped API key and write SQLite audit logs.

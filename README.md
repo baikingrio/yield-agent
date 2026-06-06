@@ -160,7 +160,7 @@ pnpm generate
 ```text
 AGENT_WALLET_ENV=dev
 AGENT_WALLET_API_URL=https://api-core.agenticwallet.dev.cobo.com
-AGENT_WALLET_API_KEY=
+# AGENT_WALLET_API_KEY=      # 可选：默认由 YieldAgent 自动 provision
 AGENT_WALLET_TSS_RUNTIME=hermes-agent-host
 AGENT_WALLET_MAIN_NODE_ID=
 HERMES_STRATEGY_MODE=api
@@ -171,7 +171,8 @@ HERMES_PROFILE=default
 
 注意：
 
-- 不要提交真实 API Key；
+- 一般不需要手动配置 `AGENT_WALLET_API_KEY`；YieldAgent 会在创建 Agent Wallet 时自动调用 `POST /api/v1/principals/provision`，并把初始 API Key 仅保存在服务端；
+- 如果手动配置 `AGENT_WALLET_API_KEY`，不要提交真实 API Key；
 - 不要提交私钥、助记词或主网资产信息；
 - Hackathon Demo 默认使用测试网；
 - Vercel 不能运行长期 TSS Node，也不能直接调用本机 CLI；生产 Demo 需要把 TSS Node 和 Hermes API 放在当前 Hermes Agent 主机，并通过公网域名或 tunnel 暴露给 Vercel server/API 调用。

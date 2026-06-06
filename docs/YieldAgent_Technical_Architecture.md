@@ -344,7 +344,7 @@ yield-agent/
 ### Phase 6：Vercel 部署与演示
 
 - [ ] 配置 Vercel 项目。
-- [ ] 整理环境变量：`AGENT_WALLET_API_URL`、`AGENT_WALLET_API_KEY`、`AGENT_WALLET_TSS_RUNTIME=hermes-agent-host`、`AGENT_WALLET_MAIN_NODE_ID`、`HERMES_STRATEGY_MODE=api`、`HERMES_API_URL`、`HERMES_CLI_BIN`（本机开发 fallback）等。
+- [ ] 整理环境变量：`AGENT_WALLET_API_URL`、`AGENT_WALLET_TSS_RUNTIME=hermes-agent-host`、`AGENT_WALLET_MAIN_NODE_ID`、`HERMES_STRATEGY_MODE=api`、`HERMES_API_URL`、`HERMES_CLI_BIN`（本机开发 fallback）等；`AGENT_WALLET_API_KEY` 默认由 YieldAgent 自动 provision，仅复用既有 CAW Agent 凭证时手动配置。
 - [ ] 确认服务端环境变量不泄漏到客户端。
 - [ ] 跑通 `pnpm build`。
 - [ ] 准备 Demo 路径：Landing → Wallet → Create Strategy → Pact Preview → Dashboard → History。

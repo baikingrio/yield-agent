@@ -1,11 +1,14 @@
 import { existsSync } from 'node:fs'
 import { delimiter, isAbsolute, join } from 'node:path'
 import type { StrategyAgentMode, StrategyAgentReadiness } from '../../shared/types/demo'
+import { buildHermesStrategyReadinessEnv } from './hermes-strategy-client'
 
 interface StrategyAgentEnv {
   HERMES_STRATEGY_MODE?: string
   HERMES_CLI_BIN?: string
   HERMES_API_URL?: string
+  HERMES_API_KEY?: string
+  API_SERVER_KEY?: string
   HERMES_PROFILE?: string
   HERMES_STRATEGY_MODEL?: string
   PATH?: string
@@ -41,22 +44,29 @@ export function buildStrategyAgentReadiness(
   const missing: string[] = []
 
   if (mode === 'api') {
-    if (!endpoint) missing.push('Hermes API URL')
+    missing.push(...buildHermesStrategyReadinessEnv(env).missing)
   } else if (!exists(command)) {
     missing.push('Hermes CLI')
   }
 
   const configured = missing.length === 0
+  const remoteCallable = mode === 'api' && configured
+  const deploymentReady = remoteCallable
   const nextAction = configured
-    ? '策略层已改为调用本机 Hermes；下一步接入自然语言解析并在 Pact validator 后提交。'
+    ? deploymentReady
+      ? '策略层会通过远程 Hermes API 调用当前 Hermes Agent 主机；Vercel 部署可使用该 endpoint。'
+      : '本地 CLI 模式只适合在 Hermes Agent 主机上开发；Vercel 部署需切换 HERMES_STRATEGY_MODE=api，并把 HERMES_API_URL 配成可远程访问的 Hermes API/tunnel。'
     : mode === 'api'
-      ? '配置 HERMES_API_URL 指向本机 Hermes API Server。'
-      : '安装或配置 HERMES_CLI_BIN，让 Nuxt server 能在本机调用 Hermes CLI。'
+      ? '配置 HERMES_API_URL 指向当前 Hermes Agent 主机上可远程访问的 Hermes API Server。'
+      : '安装或配置 HERMES_CLI_BIN 仅能满足本机开发；若前端部署到 Vercel，需要改用 Hermes API 模式。'
 
   return {
     provider: 'hermes',
     mode,
     localExecution: true,
+    runtimeHost: 'hermes-agent-host',
+    remoteCallable,
+    deploymentReady,
     configured,
     command: mode === 'cli' ? command : null,
     endpoint: mode === 'api' ? endpoint : null,

@@ -16,6 +16,7 @@ async function load() {
     await Promise.all([
       store.fetchSettings(),
       store.fetchCawReadiness(),
+      store.fetchCawOnboardStatus(),
       store.fetchStrategyAgentReadiness(),
     ])
   } finally {
@@ -59,11 +60,51 @@ async function provisionCawAgent(name: string) {
   }
 }
 
+async function refreshCawOnboardStatus() {
+  cawBusy.value = true
+  store.clearError()
+  try {
+    await store.fetchCawOnboardStatus()
+  } finally {
+    cawBusy.value = false
+  }
+}
+
+async function startCawOnboard(agentName: string) {
+  cawBusy.value = true
+  store.clearError()
+  try {
+    await store.startCawOnboard(agentName)
+  } finally {
+    cawBusy.value = false
+  }
+}
+
+async function continueCawOnboard(sessionId: string, answers: Record<string, unknown>) {
+  cawBusy.value = true
+  store.clearError()
+  try {
+    await store.continueCawOnboard(sessionId, answers)
+  } finally {
+    cawBusy.value = false
+  }
+}
+
 async function refreshStrategyAgentReadiness() {
   strategyBusy.value = true
   store.clearError()
   try {
     await store.fetchStrategyAgentReadiness()
+  } finally {
+    strategyBusy.value = false
+  }
+}
+
+async function pingStrategyAgent() {
+  strategyBusy.value = true
+  store.clearError()
+  try {
+    await store.pingStrategyAgent()
   } finally {
     strategyBusy.value = false
   }
@@ -98,11 +139,22 @@ onMounted(load)
       @provision="provisionCawAgent"
     />
 
+    <SettingsCawOnboardCard
+      v-if="!loading"
+      :status="store.cawOnboardStatus"
+      :busy="cawBusy"
+      @refresh="refreshCawOnboardStatus"
+      @start="startCawOnboard"
+      @continue="continueCawOnboard"
+    />
+
     <SettingsStrategyAgentReadinessCard
       v-if="!loading"
       :readiness="store.strategyAgentReadiness"
+      :ping-result="store.strategyAgentPing"
       :busy="strategyBusy"
       @refresh="refreshStrategyAgentReadiness"
+      @ping="pingStrategyAgent"
     />
   </main>
 </template>

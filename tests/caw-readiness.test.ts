@@ -115,7 +115,8 @@ describe('buildCawReadiness', () => {
 
     expect(readiness.pactMode).toBe('cobo-pact')
     expect(readiness.mainNodeConfigured).toBe(true)
-    expect(readiness.tssRuntime).toBe('local')
+    expect(readiness.tssRuntime).toBe('hermes-agent-host')
+    expect(readiness.remoteRuntimeRequired).toBe(true)
     expect(readiness.agentWalletConfigured).toBe(true)
     expect(readiness.fundingReady).toBe(true)
     expect(readiness.missing).toHaveLength(0)

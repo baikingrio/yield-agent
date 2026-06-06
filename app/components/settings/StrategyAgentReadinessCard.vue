@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { StrategyAgentReadiness } from '../../../shared/types/demo'
+import type { HermesStrategyPingResult, StrategyAgentReadiness } from '../../../shared/types/demo'
 
 function yesNo(value: boolean) {
   return value ? '已就绪' : '未就绪'
 }
 
 function modeLabel(mode?: StrategyAgentReadiness['mode']) {
-  return mode === 'api' ? '本机 Hermes API' : '本机 Hermes CLI'
+  return mode === 'api' ? '远程 Hermes API' : '本机 Hermes CLI（仅开发）'
 }
 
 function providerLabel(provider?: StrategyAgentReadiness['provider']) {
@@ -15,11 +15,13 @@ function providerLabel(provider?: StrategyAgentReadiness['provider']) {
 
 const props = defineProps<{
   readiness: StrategyAgentReadiness | null
+  pingResult?: HermesStrategyPingResult | null
   busy?: boolean
 }>()
 
 const emit = defineEmits<{
   refresh: []
+  ping: []
 }>()
 </script>
 
@@ -28,19 +30,29 @@ const emit = defineEmits<{
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <p class="font-mono text-xs uppercase tracking-[0.2em] text-muted-strong">Strategy Agent</p>
-        <h2 class="mt-2 text-lg font-semibold text-on-dark">策略层：调用本机 Hermes</h2>
+        <h2 class="mt-2 text-lg font-semibold text-on-dark">策略层：远程调用 Hermes Agent 主机</h2>
         <p class="mt-1 text-sm leading-6 text-muted">
-          已将原计划的 Z.AI API 替换为本机 Hermes Agent。Hermes 负责自然语言策略解析与风险解释，结果仍需经过确定性 validator 和 Pact 边界校验。
+          Hermes runtime 和 TSS Node 都运行在当前 Hermes Agent 主机上。前端最终部署到 Vercel，因此生产路径必须通过可远程访问的 Hermes API / tunnel 调用这台主机；Hermes 输出仍需经过确定性 validator 和 Pact 边界校验。
         </p>
       </div>
-      <button
-        type="button"
-        class="h-9 rounded-md border border-hairline px-3 text-xs font-medium text-muted hover:bg-surface-elevated disabled:opacity-50"
-        :disabled="busy"
-        @click="emit('refresh')"
-      >
-        刷新 Hermes 状态
-      </button>
+      <div class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="h-9 rounded-md border border-hairline px-3 text-xs font-medium text-muted hover:bg-surface-elevated disabled:opacity-50"
+          :disabled="busy"
+          @click="emit('refresh')"
+        >
+          刷新 Hermes 状态
+        </button>
+        <button
+          type="button"
+          class="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-on-primary hover:bg-primary-active disabled:opacity-50"
+          :disabled="busy || !readiness?.deploymentReady"
+          @click="emit('ping')"
+        >
+          测试远程调用
+        </button>
+      </div>
     </div>
 
     <div v-if="!readiness" class="mt-5 h-24 animate-pulse rounded-lg bg-surface-elevated" />
@@ -56,13 +68,13 @@ const emit = defineEmits<{
           <dd class="mt-1 text-sm text-on-dark">{{ modeLabel(readiness.mode) }}</dd>
         </div>
         <div class="rounded-md border border-hairline bg-surface-elevated p-3">
-          <dt class="text-xs text-muted">本机执行</dt>
-          <dd class="mt-1 text-sm text-trading-up">{{ readiness.localExecution ? '是' : '否' }}</dd>
+          <dt class="text-xs text-muted">运行主机</dt>
+          <dd class="mt-1 text-sm text-on-dark">当前 Hermes Agent 主机</dd>
         </div>
         <div class="rounded-md border border-hairline bg-surface-elevated p-3">
-          <dt class="text-xs text-muted">状态</dt>
-          <dd class="mt-1 text-sm" :class="readiness.configured ? 'text-trading-up' : 'text-trading-down'">
-            {{ yesNo(readiness.configured) }}
+          <dt class="text-xs text-muted">Vercel 可调用</dt>
+          <dd class="mt-1 text-sm" :class="readiness.deploymentReady ? 'text-trading-up' : 'text-trading-down'">
+            {{ readiness.deploymentReady ? '已配置远程 API' : '需要 API / tunnel' }}
           </dd>
         </div>
         <div class="rounded-md border border-hairline bg-surface-elevated p-3">
@@ -84,6 +96,11 @@ const emit = defineEmits<{
         <p v-if="readiness.missing.length" class="mt-2 text-xs text-trading-down">
           缺失：{{ readiness.missing.join('、') }}
         </p>
+      </div>
+
+      <div v-if="pingResult" class="rounded-md border border-trading-up/30 bg-trading-up/5 p-4">
+        <p class="text-sm font-medium text-trading-up">远程调用已返回</p>
+        <p class="mt-2 break-all font-mono text-xs leading-5 text-body">{{ pingResult.contentPreview }}</p>
       </div>
     </div>
   </section>

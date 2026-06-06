@@ -51,9 +51,9 @@
 
 ### 2.4 Agent / 策略层
 
-- 目标技术栈：**本机 Hermes Agent**（替代原计划 Z.AI API）。
+- 目标技术栈：**当前 Hermes Agent 主机上的 Hermes runtime**（替代原计划 Z.AI API）。
 - 当前新增了 Hermes strategy readiness：`server/utils/strategy-agent-readiness.ts` 与 `GET /api/strategy-agent/readiness`。
-- 当前策略创建以表单、模板和 Pact Preview 为主；后续把自然语言策略交给本机 Hermes 解析为结构化参数，再经过 deterministic validator 后进入 Pact builder。
+- 当前策略创建以表单、模板和 Pact Preview 为主；后续把自然语言策略通过远程 API/tunnel 交给当前 Hermes Agent 主机上的 Hermes 解析为结构化参数，再经过 deterministic validator 后进入 Pact builder。
 - Hermes 只负责“解析 / 解释 / 风险说明”，不能绕过 Pact validator 或直接提交交易。
 
 ### 2.5 数据库与日志
@@ -64,8 +64,8 @@
 
 ### 2.6 部署
 
-- 目标部署：**Vercel**。
-- 当前 Nuxt 项目结构适合 Vercel 部署，但还需要整理环境变量、测试网配置、构建检查和 Demo seed 数据。
+- 目标部署：**Vercel 前端 + 当前 Hermes Agent 主机后端 runtime**。
+- 当前 Nuxt 项目结构适合 Vercel 部署，但 Vercel 不能运行长期 TSS Node，也不能直接调用 Hermes CLI；需要通过公网域名或 tunnel 调用当前 Hermes Agent 主机上的 TSS/Hermes runtime。
 
 ---
 
@@ -132,7 +132,7 @@ Executor Agent
 - 新增 `server/utils/cobo-config.ts`：Base / Arbitrum Sepolia 的 Cobo chain/token 配置。
 - 新增 `server/utils/cobo-preparation.ts`：创建 CAW Agent Wallet、查询余额、确认转入。
 - 新增 `server/utils/deposit-verify.ts`：链上 USDC 转入校验。
-- 新增 `.env.example`：Cobo API、本机 TSS 节点、Hermes strategy runtime 环境变量说明。
+- 新增 `.env.example`：Cobo API、Hermes Agent 主机上的 TSS 节点、远程 Hermes strategy runtime 环境变量说明。
 
 ---
 
@@ -307,9 +307,9 @@ yield-agent/
 - [ ] 轮询 Pact 状态：pending → active / rejected / expired。
 - [ ] 把 Pact 状态写入 Dashboard 和 History。
 
-### Phase 3：Strategy Agent / 本机 Hermes
+### Phase 3：Strategy Agent / Hermes Agent 主机 runtime
 
-- [x] 新增 `server/utils/strategy-agent-readiness.ts`，确认策略层调用本机 Hermes CLI / API。
+- [x] 新增 `server/utils/strategy-agent-readiness.ts`，确认策略层调用当前 Hermes Agent 主机上的 Hermes CLI / 远程 API；Vercel 部署要求 API/tunnel 模式。
 - [x] 新增 `GET /api/strategy-agent/readiness` 和 Settings 状态卡。
 - [ ] 新增 `server/utils/hermes-strategy-parser.ts`，封装 Hermes CLI / API 调用。
 - [ ] 定义策略解析 schema：network、asset、maxSpend、riskLevel、targetApy、duration、allowedRecipes、revenueSplit。
@@ -344,7 +344,7 @@ yield-agent/
 ### Phase 6：Vercel 部署与演示
 
 - [ ] 配置 Vercel 项目。
-- [ ] 整理环境变量：`AGENT_WALLET_API_URL`、`AGENT_WALLET_API_KEY`、`AGENT_WALLET_TSS_RUNTIME=local`、`AGENT_WALLET_MAIN_NODE_ID`、`HERMES_STRATEGY_MODE`、`HERMES_CLI_BIN` 等。
+- [ ] 整理环境变量：`AGENT_WALLET_API_URL`、`AGENT_WALLET_API_KEY`、`AGENT_WALLET_TSS_RUNTIME=hermes-agent-host`、`AGENT_WALLET_MAIN_NODE_ID`、`HERMES_STRATEGY_MODE=api`、`HERMES_API_URL`、`HERMES_CLI_BIN`（本机开发 fallback）等。
 - [ ] 确认服务端环境变量不泄漏到客户端。
 - [ ] 跑通 `pnpm build`。
 - [ ] 准备 Demo 路径：Landing → Wallet → Create Strategy → Pact Preview → Dashboard → History。
@@ -386,5 +386,5 @@ yield-agent/
 1. **先统一 README 和页面文案为 YieldAgent**，避免项目主线混乱。
 2. **修复 pnpm build / Vercel 构建问题**，保证 Demo 可部署。
 3. **把 Pact Preview 接到真实 CAW Pact submit**，这是 Cobo 赛道最关键的证明点。
-4. **接入本机 Hermes 做策略解析**，但输出必须经过确定性校验。
+4. **接入当前 Hermes Agent 主机上的 Hermes 做策略解析**；Vercel 通过远程 API/tunnel 调用，输出必须经过确定性校验。
 5. **把日志从内存迁移到 SQLite**，让审计路径稳定可复现。

@@ -2,7 +2,9 @@ import { defineStore } from 'pinia'
 import type {
   CreateStrategyPayload,
   CawReadiness,
+  CawOnboardStatus,
   DemoSettings,
+  HermesStrategyPingResult,
   StrategyAgentReadiness,
   LogEntry,
   LogType,
@@ -35,7 +37,9 @@ export const useDemoStore = defineStore('demo', () => {
   const settings = ref<DemoSettings | null>(null)
   const preparation = ref<WalletPreparation | null>(null)
   const cawReadiness = ref<CawReadiness | null>(null)
+  const cawOnboardStatus = ref<CawOnboardStatus | null>(null)
   const strategyAgentReadiness = ref<StrategyAgentReadiness | null>(null)
+  const strategyAgentPing = ref<HermesStrategyPingResult | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -156,6 +160,57 @@ export const useDemoStore = defineStore('demo', () => {
     }
   }
 
+  async function fetchCawOnboardStatus() {
+    try {
+      cawOnboardStatus.value = await $fetch<CawOnboardStatus>('/api/caw/onboard/status')
+      return cawOnboardStatus.value
+    } catch (e) {
+      error.value = apiErrorMessage(e)
+      throw e
+    }
+  }
+
+  async function startCawOnboard(agentName: string, wait = false) {
+    try {
+      cawOnboardStatus.value = await $fetch<CawOnboardStatus>('/api/caw/onboard/start', {
+        method: 'POST',
+        body: { agentName, wait },
+      })
+      await Promise.all([fetchCawReadiness(), fetchSettings()])
+      return cawOnboardStatus.value
+    } catch (e) {
+      error.value = apiErrorMessage(e)
+      throw e
+    }
+  }
+
+  async function continueCawOnboard(sessionId: string, answers: Record<string, unknown>, wait = false) {
+    try {
+      cawOnboardStatus.value = await $fetch<CawOnboardStatus>('/api/caw/onboard/continue', {
+        method: 'POST',
+        body: { sessionId, answers, wait },
+      })
+      await Promise.all([fetchCawReadiness(), fetchSettings()])
+      return cawOnboardStatus.value
+    } catch (e) {
+      error.value = apiErrorMessage(e)
+      throw e
+    }
+  }
+
+  async function pingStrategyAgent() {
+    try {
+      strategyAgentPing.value = await $fetch<HermesStrategyPingResult>('/api/strategy-agent/ping', {
+        method: 'POST',
+      })
+      await fetchStrategyAgentReadiness()
+      return strategyAgentPing.value
+    } catch (e) {
+      error.value = apiErrorMessage(e)
+      throw e
+    }
+  }
+
   async function updateSettings(body: {
     network?: NetworkId
     defaultAgentFee?: number
@@ -263,7 +318,9 @@ export const useDemoStore = defineStore('demo', () => {
     settings,
     preparation,
     cawReadiness,
+    cawOnboardStatus,
     strategyAgentReadiness,
+    strategyAgentPing,
     loading,
     error,
     fetchWallet,
@@ -275,7 +332,11 @@ export const useDemoStore = defineStore('demo', () => {
     fetchYieldSeries,
     fetchSettings,
     fetchCawReadiness,
+    fetchCawOnboardStatus,
+    startCawOnboard,
+    continueCawOnboard,
     fetchStrategyAgentReadiness,
+    pingStrategyAgent,
     provisionCawAgent,
     updateSettings,
     approvePact,

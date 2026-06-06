@@ -40,9 +40,10 @@ Aave / Compound / testnet yield action
 - 前端：Nuxt 4、Vue 3、TypeScript、Tailwind CSS、shadcn-vue/ui 风格组件
 - 钱包连接：wagmi、viem
 - 执行层：CAW（Cobo Agentic Wallet）/ Pact
-- Agent / 策略层：本机 Hermes Agent（替代 Z.AI API，用于自然语言策略解析与风险解释）
+- Agent / 策略层：当前 Hermes Agent 主机上的 Hermes runtime（替代 Z.AI API，用于自然语言策略解析与风险解释）
+- 执行 runtime：TSS Node + Hermes 均运行在当前 Hermes Agent 主机，Vercel 通过远程 API / tunnel 调用
 - 数据库与日志：SQLite（待接入；当前为内存 Demo store）
-- 部署：Vercel
+- 部署：Vercel 前端 + 远程 Hermes Agent 主机后端 runtime
 - 当前原型依赖：Pinia、Zod、Chart.js、vue-chartjs、@cobo/agentic-wallet
 
 ## 已实现页面
@@ -160,10 +161,11 @@ pnpm generate
 AGENT_WALLET_ENV=dev
 AGENT_WALLET_API_URL=https://api-core.agenticwallet.dev.cobo.com
 AGENT_WALLET_API_KEY=
-AGENT_WALLET_TSS_RUNTIME=local
+AGENT_WALLET_TSS_RUNTIME=hermes-agent-host
 AGENT_WALLET_MAIN_NODE_ID=
-HERMES_STRATEGY_MODE=cli
-HERMES_CLI_BIN=hermes
+HERMES_STRATEGY_MODE=api
+HERMES_API_URL=https://<your-hermes-agent-host-or-tunnel>/hermes-api
+HERMES_CLI_BIN=hermes        # 仅本机开发 fallback
 HERMES_PROFILE=default
 ```
 
@@ -171,7 +173,8 @@ HERMES_PROFILE=default
 
 - 不要提交真实 API Key；
 - 不要提交私钥、助记词或主网资产信息；
-- Hackathon Demo 默认使用测试网。
+- Hackathon Demo 默认使用测试网；
+- Vercel 不能运行长期 TSS Node，也不能直接调用本机 CLI；生产 Demo 需要把 TSS Node 和 Hermes API 放在当前 Hermes Agent 主机，并通过公网域名或 tunnel 暴露给 Vercel server/API 调用。
 
 ## Demo 数据与接口
 
@@ -204,7 +207,7 @@ HERMES_PROFILE=default
 1. 统一 YieldAgent 品牌文案，清理旧项目命名残留；
 2. 修复 pnpm / Vercel 构建问题；
 3. 将 Pact Preview 映射为真实 CAW Pact；
-4. 接入本机 Hermes 做策略解析，并加入确定性校验；
+4. 接入当前 Hermes Agent 主机上的 Hermes 做策略解析，Vercel 通过远程 API / tunnel 调用，并加入确定性校验；
 5. 将内存 Demo store 迁移到 SQLite；
 6. 准备评委 Demo 路径和演示稿。
 

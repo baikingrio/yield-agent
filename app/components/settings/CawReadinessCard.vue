@@ -102,7 +102,7 @@ const apiKeyLabel = computed(() => {
       <div class="rounded-md border border-primary/30 bg-primary/5 p-4">
         <p class="text-sm text-body">下一步：{{ readiness.nextAction }}</p>
         <p class="mt-2 text-xs leading-5 text-muted">
-          注意：TSS Node 按当前方案放在本机运行；Vercel 只承载 Nuxt 前端和无状态 API，不跑长期 TSS 进程。
+          注意：TSS Node 按当前方案运行在这台 Hermes Agent 主机上；Vercel 只承载前端/无状态入口，必须通过远程 API 或 tunnel 调用该主机，不能假设 Vercel 内部有本机 TSS。
         </p>
       </div>
 

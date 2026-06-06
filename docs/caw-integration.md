@@ -24,13 +24,13 @@ If `AGENT_WALLET_API_URL` is set explicitly, YieldAgent uses that URL. If it is 
 
 ```env
 AGENT_WALLET_API_KEY=
-AGENT_WALLET_TSS_RUNTIME=local
+AGENT_WALLET_TSS_RUNTIME=hermes-agent-host
 AGENT_WALLET_MAIN_NODE_ID=
 ```
 
 - `AGENT_WALLET_API_KEY`: initial CAW Agent API key. It can be provisioned through CAW API `POST /api/v1/principals/provision` or obtained from CAW tooling/platform flow.
-- `AGENT_WALLET_TSS_RUNTIME=local`: the hackathon runtime decision; TSS Node runs on this machine, not Vercel.
-- `AGENT_WALLET_MAIN_NODE_ID`: local TSS Node ID used when creating MPC wallets.
+- `AGENT_WALLET_TSS_RUNTIME=hermes-agent-host`: the hackathon runtime decision; TSS Node runs on the current Hermes Agent host machine, not inside Vercel.
+- `AGENT_WALLET_MAIN_NODE_ID`: TSS Node ID on the Hermes Agent host used when creating MPC wallets.
 
 Never commit real API keys, pact-scoped API keys, private keys, wallet backups, or TSS credentials.
 
@@ -44,7 +44,7 @@ The Settings page displays a CAW Readiness card with these modes:
 
 ## Runtime Caveat
 
-Vercel is suitable for the Nuxt frontend and stateless API routes, but it is not suitable for long-running TSS Node processes. For this project, TSS Node is explicitly placed on this local machine. Vercel should call only stateless Nuxt APIs; local CAW/TSS runtime stays outside Vercel.
+Vercel is suitable for the Nuxt frontend and stateless entry routes, but it is not suitable for long-running TSS Node processes or direct Hermes CLI invocation. For this project, TSS Node is explicitly placed on the current Hermes Agent host machine. The deployed Vercel app must call a remote backend/API or tunnel on that host; it must not assume `localhost` inside Vercel is the Hermes/TSS machine.
 
 ## Current Implementation
 

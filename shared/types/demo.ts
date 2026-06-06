@@ -83,7 +83,8 @@ export interface CawReadiness {
   apiKeyConfigured: boolean
   apiKeySource: 'settings' | 'env' | 'missing'
   mainNodeConfigured: boolean
-  tssRuntime: 'local'
+  tssRuntime: 'hermes-agent-host'
+  remoteRuntimeRequired: boolean
   agentId: string | null
   agentWalletConfigured: boolean
   agentWalletAddress: string | null
@@ -98,6 +99,9 @@ export interface StrategyAgentReadiness {
   provider: StrategyAgentProvider
   mode: StrategyAgentMode
   localExecution: boolean
+  runtimeHost: 'hermes-agent-host'
+  remoteCallable: boolean
+  deploymentReady: boolean
   configured: boolean
   command: string | null
   endpoint: string | null
@@ -105,6 +109,39 @@ export interface StrategyAgentReadiness {
   model: string | null
   missing: string[]
   nextAction: string
+}
+
+export interface CawOnboardPrompt {
+  id: string
+  label?: string
+  type?: string
+  required?: boolean
+  secret?: boolean
+  description?: string
+}
+
+export interface CawOnboardStatus {
+  healthy: boolean
+  walletStatus: string | null
+  walletPaired: boolean
+  agentId: string | null
+  agentName: string | null
+  walletUuid: string | null
+  walletName: string | null
+  apiUrl: string | null
+  phase: 'unknown' | 'active' | 'needs_input' | 'running' | 'error'
+  sessionId: string | null
+  needsInput: boolean
+  prompts: CawOnboardPrompt[]
+  nextAction: string | null
+  lastError: string | null
+}
+
+export interface HermesStrategyPingResult {
+  ok: boolean
+  endpoint: string
+  model: string
+  contentPreview: string
 }
 
 export interface DepositInfo {

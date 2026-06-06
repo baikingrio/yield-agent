@@ -1,5 +1,6 @@
 import type { DemoState } from '../../shared/types/demo'
 import { getCoboBasePath } from './cobo-config'
+import { schedulePersistDemoState } from './demo-state-persistence'
 
 interface ProvisionResponse {
   success?: boolean
@@ -71,6 +72,7 @@ export async function provisionCawPrincipal(
   state.settings.agentId = agentId
   state.settings.coboApiKey = apiKey
   state.settings.apiKeyConfigured = true
+  schedulePersistDemoState(state)
 
   return { agentId, status }
 }

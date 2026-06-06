@@ -23,10 +23,53 @@ export function isCoboConfigured(state: DemoState): boolean {
   }
 }
 
+const TRANSIENT_NETWORK_ERROR_CODES = new Set([
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'ECONNABORTED',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+])
+
+export function isTransientCoboNetworkError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const code = 'code' in err ? String((err as { code?: unknown }).code) : ''
+  if (TRANSIENT_NETWORK_ERROR_CODES.has(code)) return true
+  const message = err instanceof Error ? err.message : String(err)
+  return /ECONNRESET|ETIMEDOUT|ECONNABORTED|socket hang up|network error/i.test(message)
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+export async function withCoboRetry<T>(
+  operation: () => Promise<T>,
+  options: { maxAttempts?: number; baseDelayMs?: number } = {},
+): Promise<T> {
+  const maxAttempts = options.maxAttempts ?? 3
+  const baseDelayMs = options.baseDelayMs ?? 1000
+  let lastErr: unknown
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      return await operation()
+    } catch (err) {
+      lastErr = err
+      const canRetry = isTransientCoboNetworkError(err) && attempt < maxAttempts - 1
+      if (!canRetry) throw err
+      await sleep(baseDelayMs * (attempt + 1))
+    }
+  }
+
+  throw lastErr
+}
+
 function createConfiguration(state: DemoState): Configuration {
   return new Configuration({
     apiKey: getCoboApiKey(state),
     basePath: getCoboBasePath(),
+    baseOptions: {
+      timeout: 60_000,
+    },
   })
 }
 
@@ -52,6 +95,9 @@ export function extractCoboErrorMessage(err: unknown): string {
     }).response?.data
     if (data?.message) return data.message
     if (data?.error?.reason) return data.error.reason
+  }
+  if (isTransientCoboNetworkError(err)) {
+    return '连接 Cobo API 被中断（网络不稳定或 TSS Node 暂时不可达）。请确认 `caw node status` 显示 online 后重试「继续初始化」。'
   }
   if (err instanceof Error && err.message) return err.message
   return 'Cobo API 请求失败'

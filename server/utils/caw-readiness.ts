@@ -15,7 +15,16 @@ function nextActionFor(missing: string[], readiness: Pick<CawReadiness, 'pactMod
     return 'Provision 或配置 Cobo API Key，当前只能创建本地 Pact Draft。'
   }
   if (missing.includes('TSS Node ID')) {
-    return '配置 AGENT_WALLET_MAIN_NODE_ID，并确认 TSS Node 运行在当前 Hermes Agent 主机上；Vercel 只通过远程 API 调用该主机。'
+    return '配置 AGENT_WALLET_MAIN_NODE_ID，并确认 TSS Node 运行在当前 Hermes Agent 主机上；本机可运行 caw node start。'
+  }
+  if (missing.includes('TSS offline')) {
+    return 'TSS Node 未在线。本机运行 caw node start，或确认 Hermes 主机 TSS 常驻。'
+  }
+  if (missing.includes('Onboard incomplete')) {
+    return 'CAW onboard 尚未完成。可在 Wallet 页创建 Agent Wallet，或在设置页推进 onboard。'
+  }
+  if (missing.includes('Pairing pending')) {
+    return '请在 CAW App 输入配对码完成所有权配对。'
   }
   if (missing.includes('Agent Wallet')) {
     return '前往 Wallet 页面创建 Agent Wallet 并生成 EVM 地址。'
@@ -34,10 +43,16 @@ export function buildCawReadiness(state: DemoState): CawReadiness {
   const agentWalletConfigured = Boolean(prep.agentWallet.created && prep.agentWallet.coboWalletId)
   const walletReady = prep.steps.agent_wallet === 'completed' && agentWalletConfigured
   const fundingReady = prep.ready && prep.funding.status === 'ready' && prep.funding.availableUsdc > 0
+  const bootstrap = prep.agentBootstrap
   const missing: string[] = []
 
   if (!apiKeyConfigured) missing.push('Cobo API Key')
   if (!mainNodeConfigured) missing.push('TSS Node ID')
+  if (bootstrap?.tssOnline === false) missing.push('TSS offline')
+  if (prep.steps.agent_wallet === 'in_progress') missing.push('Onboard incomplete')
+  if (agentWalletConfigured && prep.agentWallet.pairing?.status !== 'paired') {
+    missing.push('Pairing pending')
+  }
   if (!agentWalletConfigured) missing.push('Agent Wallet')
   if (!fundingReady) missing.push('Funding')
 

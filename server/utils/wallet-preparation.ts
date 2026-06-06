@@ -4,6 +4,7 @@ import type {
   PrepStepStatus,
   WalletPreparation,
 } from '../../shared/types/demo'
+import { schedulePersistDemoState } from './demo-state-persistence'
 
 const EOA_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/
 
@@ -33,6 +34,14 @@ export function createInitialWalletPreparation(
       availableUsdc: 0,
       lastTxHash: null,
     },
+    agentBootstrap: {
+      mode: null,
+      phase: 'idle',
+      sessionId: null,
+      walletStatus: null,
+      tssOnline: null,
+      message: null,
+    },
     steps: {
       eoa: 'pending',
       agent_wallet: 'pending',
@@ -51,9 +60,10 @@ function syncReady(prep: WalletPreparation): void {
     && prep.funding.status === 'ready'
 }
 
-export function touchPreparation(prep: WalletPreparation): void {
+export function touchPreparation(prep: WalletPreparation, state?: DemoState): void {
   prep.updatedAt = new Date().toISOString()
   syncReady(prep)
+  if (state) schedulePersistDemoState(state)
 }
 
 export function getWalletPreparation(state: DemoState): WalletPreparation {
@@ -74,7 +84,7 @@ export function connectEoa(
   prep.eoa.address = address
   prep.eoa.label = params.label?.trim() || '已连接钱包'
   prep.steps.eoa = 'completed'
-  touchPreparation(prep)
+  touchPreparation(prep, state)
   return prep
 }
 
@@ -96,7 +106,26 @@ export function disconnectEoa(state: DemoState): WalletPreparation {
   prep.funding.lastTxHash = null
   state.wallet.totalAssetsUsdc = 0
   state.wallet.address = ''
-  touchPreparation(prep)
+  touchPreparation(prep, state)
+  return prep
+}
+
+export function markAgentWalletPreparing(
+  state: DemoState,
+  params: {
+    coboWalletId: string
+    pairing?: { status: 'unpaired' | 'pairing' | 'paired'; code: string | null; expiresAt: string | null }
+  },
+): WalletPreparation {
+  const prep = state.walletPreparation
+  prep.agentWallet.created = false
+  prep.agentWallet.address = ''
+  prep.agentWallet.coboWalletId = params.coboWalletId
+  if (params.pairing) {
+    prep.agentWallet.pairing = params.pairing
+  }
+  prep.steps.agent_wallet = 'in_progress'
+  touchPreparation(prep, state)
   return prep
 }
 
@@ -118,15 +147,15 @@ export function markAgentWalletCreated(
     expiresAt: null,
   }
   state.wallet.address = params.address
-  prep.steps.agent_wallet = 'completed'
-  touchPreparation(prep)
+  prep.steps.agent_wallet = prep.agentWallet.pairing.status === 'paired' ? 'completed' : 'in_progress'
+  touchPreparation(prep, state)
   return prep
 }
 
 export function applyDepositToState(
   state: DemoState,
   amountUsdc: number,
-  txHash: string,
+  txHash: string | null,
 ): WalletPreparation {
   const prep = state.walletPreparation
   prep.funding.status = 'ready'
@@ -136,7 +165,7 @@ export function applyDepositToState(
   state.wallet.totalAssetsUsdc = amountUsdc
   state.wallet.address = prep.agentWallet.address
   prep.steps.funding = 'completed'
-  touchPreparation(prep)
+  touchPreparation(prep, state)
   return prep
 }
 
@@ -145,6 +174,7 @@ export function resetWalletPreparation(state: DemoState): WalletPreparation {
   state.walletPreparation = createInitialWalletPreparation(network)
   state.wallet.totalAssetsUsdc = 0
   state.wallet.address = ''
+  touchPreparation(state.walletPreparation, state)
   return state.walletPreparation
 }
 

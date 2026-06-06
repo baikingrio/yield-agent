@@ -65,7 +65,7 @@ Important boundaries:
 - Agent does not receive unrestricted access to the user's EOA wallet.
 - Agent can only operate funds inside the Agent Wallet and only up to the Pact budget.
 - If Agent Wallet has 1,000 USDC but Pact maxSpend is 500 USDC, the Agent can operate at most 500 USDC.
-- UI labels all balances and txs as testnet. Agent Wallet creation uses Cobo SDK (`createWallet` + `createWalletAddress`); funding is a real EOA ERC20 transfer to the Agent address, verified on-chain and synced via Cobo `listBalances`.
+- UI labels all balances and txs as testnet. Agent Wallet creation follows the Cobo canonical bootstrap (`caw onboard` when CLI is available, otherwise SDK `createWallet` with `AGENT_WALLET_MAIN_NODE_ID`); pairing runs only after vault `active`. Funding is a real EOA ERC20 transfer to the Agent address, verified on-chain and synced via Cobo `listBalances`.
 
 ### Strategy Templates
 

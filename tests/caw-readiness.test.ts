@@ -104,7 +104,12 @@ describe('buildCawReadiness', () => {
     vi.stubEnv('AGENT_WALLET_MAIN_NODE_ID', 'node-1')
     const state = createState({
       walletPreparation: {
-        agentWallet: { created: true, address: '0xAgent', coboWalletId: 'wallet-1' },
+        agentWallet: {
+          created: true,
+          address: '0xAgent',
+          coboWalletId: 'wallet-1',
+          pairing: { status: 'paired', code: null, expiresAt: null },
+        },
         funding: { status: 'ready', depositedUsdc: 100, availableUsdc: 100, lastTxHash: '0xTx' },
         steps: { eoa: 'completed', agent_wallet: 'completed', funding: 'completed' },
         ready: true,

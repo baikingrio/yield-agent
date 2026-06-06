@@ -11,6 +11,8 @@ import type {
   NetworkId,
   Pact,
   Strategy,
+  AgentBootstrapState,
+  AgentBootstrapStatusResponse,
   WalletPreparation,
   WalletSummary,
   YieldRange,
@@ -36,6 +38,7 @@ export const useDemoStore = defineStore('demo', () => {
   const yieldRange = ref<YieldRange>('7d')
   const settings = ref<DemoSettings | null>(null)
   const preparation = ref<WalletPreparation | null>(null)
+  const agentBootstrap = ref<AgentBootstrapState | null>(null)
   const cawReadiness = ref<CawReadiness | null>(null)
   const cawOnboardStatus = ref<CawOnboardStatus | null>(null)
   const strategyAgentReadiness = ref<StrategyAgentReadiness | null>(null)
@@ -272,11 +275,43 @@ export const useDemoStore = defineStore('demo', () => {
     return preparation.value
   }
 
+  function applyAgentBootstrapResponse(response: AgentBootstrapStatusResponse | {
+    preparation: WalletPreparation
+    bootstrap?: AgentBootstrapState | null
+    done?: boolean
+  }) {
+    preparation.value = response.preparation
+    agentBootstrap.value = response.bootstrap
+      ?? response.preparation.agentBootstrap
+      ?? null
+    return response
+  }
+
   async function createAgentWallet() {
-    preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/create-agent', {
+    const response = await $fetch<{
+      preparation: WalletPreparation
+      bootstrap: AgentBootstrapState | null
+      done: boolean
+    }>('/api/wallet/preparation/create-agent', {
       method: 'POST',
     })
-    await Promise.all([fetchWallet(), fetchSettings(), fetchCawReadiness()])
+    applyAgentBootstrapResponse(response)
+    void Promise.all([fetchWallet(), fetchSettings(), fetchCawReadiness()])
+    return preparation.value
+  }
+
+  async function pollAgentWalletStatus() {
+    const response = await $fetch<AgentBootstrapStatusResponse>('/api/wallet/preparation/agent-status')
+    applyAgentBootstrapResponse(response)
+    return response
+  }
+
+  async function importAgentWalletFromCli() {
+    preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/import-agent', {
+      method: 'POST',
+    })
+    agentBootstrap.value = preparation.value?.agentBootstrap ?? null
+    void Promise.all([fetchWallet(), fetchSettings(), fetchCawReadiness()])
     return preparation.value
   }
 
@@ -317,6 +352,7 @@ export const useDemoStore = defineStore('demo', () => {
     yieldRange,
     settings,
     preparation,
+    agentBootstrap,
     cawReadiness,
     cawOnboardStatus,
     strategyAgentReadiness,
@@ -346,6 +382,8 @@ export const useDemoStore = defineStore('demo', () => {
     connectEoa,
     disconnectEoa,
     createAgentWallet,
+    pollAgentWalletStatus,
+    importAgentWalletFromCli,
     depositToAgentWallet,
     fetchDepositInfo,
     resetPreparation,

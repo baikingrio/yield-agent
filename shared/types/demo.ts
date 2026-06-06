@@ -1,6 +1,15 @@
 export type NetworkId = 'base-sepolia' | 'arbitrum-sepolia'
 export type PrepStep = 'eoa' | 'agent_wallet' | 'funding'
 export type PrepStepStatus = 'pending' | 'in_progress' | 'completed'
+export type AgentBootstrapMode = 'cli-onboard' | 'sdk-create' | null
+export type AgentBootstrapPhase =
+  | 'idle'
+  | 'tss_check'
+  | 'bootstrapping'
+  | 'active'
+  | 'pairing'
+  | 'paired'
+  | 'failed'
 export type FundingStatus = 'idle' | 'processing' | 'ready'
 export type StrategyStatus = 'active' | 'paused' | 'completed'
 export type PactStatus = 'pending' | 'active' | 'completed' | 'terminated' | 'awaiting-approval'
@@ -154,8 +163,24 @@ export interface DepositInfo {
   minAmount: number
 }
 
+export interface AgentBootstrapState {
+  mode: AgentBootstrapMode
+  phase: AgentBootstrapPhase
+  sessionId: string | null
+  walletStatus: string | null
+  tssOnline: boolean | null
+  message: string | null
+}
+
+export interface AgentBootstrapStatusResponse {
+  preparation: WalletPreparation
+  bootstrap: AgentBootstrapState
+  done: boolean
+}
+
 export interface WalletPreparation {
   network: NetworkId
+  agentBootstrap?: AgentBootstrapState
   eoa: {
     connected: boolean
     address: string | null

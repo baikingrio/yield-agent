@@ -1,153 +1,23 @@
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
+import { createPublicClient, erc20Abi, http } from 'viem'
+import { arbitrumSepolia, baseSepolia } from 'viem/chains'
 import type { DemoState, NetworkId, WalletPreparation } from '../../shared/types/demo'
-import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
+import { getNetworkChainConfig } from './cobo-config'
 import {
   createCoboBalanceApi,
-  createCoboWalletsApi,
   extractCoboErrorMessage,
+  withCoboRetry,
 } from './cobo-client'
+import {
+  pollAgentBootstrap,
+  regenerateAgentPairing,
+  startAgentBootstrap,
+  syncPreparationFromCawCli,
+} from './caw-wallet-bootstrap'
 import { verifyUsdcDeposit } from './deposit-verify'
-import { provisionCawPrincipal } from './caw-provision'
 import {
   applyDepositToState,
-  markAgentWalletCreated,
   touchPreparation,
 } from './wallet-preparation'
-
-const execFileAsync = promisify(execFile)
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
-
-interface PairInitiateResponse {
-  success?: boolean
-  message?: string
-  suggestion?: string
-  result?: {
-    token?: string
-    expires_at?: string
-    expire_at?: string
-    expired_at?: string
-  }
-}
-
-function currentCoboApiKey(state: DemoState): string | null {
-  return state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim() || null
-}
-
-async function ensureCawPrincipal(state: DemoState): Promise<void> {
-  if (currentCoboApiKey(state)) return
-  await provisionCawPrincipal(state, { name: 'YieldAgent Dev' })
-}
-
-async function initiateWalletPairing(
-  state: DemoState,
-  walletId: string,
-): Promise<{ status: 'pairing'; code: string | null; expiresAt: string | null } | undefined> {
-  const apiKey = currentCoboApiKey(state)
-  if (!apiKey) return undefined
-
-  const resp = await fetch(`${getCoboBasePath()}/api/v1/wallets/pairs/initiate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': apiKey,
-    },
-    body: JSON.stringify({ wallet_id: walletId }),
-  })
-  const payload = await resp.json().catch(() => ({})) as PairInitiateResponse
-  if (!resp.ok || payload.success === false) {
-    throw new Error(payload.message || payload.suggestion || `CAW wallet pairing failed with HTTP ${resp.status}`)
-  }
-
-  return {
-    status: 'pairing',
-    code: payload.result?.token ?? null,
-    expiresAt: payload.result?.expires_at ?? payload.result?.expire_at ?? payload.result?.expired_at ?? null,
-  }
-}
-
-async function runCawJson(args: string[]): Promise<Record<string, unknown> | unknown[]> {
-  const {
-    AGENT_WALLET_API_KEY: _apiKey,
-    AGENT_WALLET_API_URL: _apiUrl,
-    ...safeEnv
-  } = process.env
-
-  const { stdout } = await execFileAsync('caw', args, {
-    timeout: 120_000,
-    maxBuffer: 1024 * 1024,
-    env: {
-      ...safeEnv,
-      PATH: `/usr/local/bin:${process.env.PATH ?? ''}`,
-    },
-  })
-  return JSON.parse(stdout || '{}') as Record<string, unknown> | unknown[]
-}
-
-function str(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value : null
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string')
-}
-
-async function adoptCurrentCawWalletFromCli(state: DemoState): Promise<WalletPreparation> {
-  const prep = state.walletPreparation
-  const networkConfig = getNetworkChainConfig(prep.network)
-  const walletPayload = await runCawJson(['wallet', 'current'])
-  if (Array.isArray(walletPayload)) throw new Error('CAW_CURRENT_WALLET_NOT_FOUND')
-
-  const walletUuid = str(walletPayload.wallet_uuid)
-  if (!walletUuid) throw new Error('CAW_CURRENT_WALLET_NOT_FOUND')
-
-  let addressesPayload: Record<string, unknown>[] = []
-  try {
-    const payload = await runCawJson(['address', 'list'])
-    if (Array.isArray(payload)) addressesPayload = payload as Record<string, unknown>[]
-  } catch {
-    addressesPayload = []
-  }
-
-  const addressEntry = addressesPayload.find((item) => {
-    if (!item || typeof item !== 'object') return false
-    const obj = item as Record<string, unknown>
-    const compatibleChains = obj.compatible_chains
-    return (
-      str(obj.wallet_id) === walletUuid
-      && str(obj.address)
-      && (
-        (isStringArray(compatibleChains) && compatibleChains.includes(networkConfig.coboChainId))
-        || str(obj.chain_type) === 'ETH'
-      )
-    )
-  }) as Record<string, unknown> | undefined
-
-  const configuredAddress = str(process.env.CAW_EXISTING_EVM_ADDRESS)
-  const address = str(addressEntry?.address) ?? configuredAddress
-  if (!address) throw new Error('CAW_ADDRESS_NOT_FOUND')
-
-  return markAgentWalletCreated(state, {
-    address,
-    coboWalletId: walletUuid,
-  })
-}
-
-async function waitForWalletActive(
-  walletsApi: ReturnType<typeof createCoboWalletsApi>,
-  walletUuid: string,
-  maxAttempts = 30,
-): Promise<void> {
-  for (let i = 0; i < maxAttempts; i += 1) {
-    const detail = (await walletsApi.getWallet(walletUuid)).data.result
-    if (detail.status === 'active') return
-    if (detail.status === 'archived') {
-      throw new Error('WALLET_ARCHIVED')
-    }
-    await sleep(2000)
-  }
-  throw new Error('WALLET_NOT_ACTIVE')
-}
 
 export async function createCoboAgentWallet(state: DemoState): Promise<WalletPreparation> {
   const prep = state.walletPreparation
@@ -155,72 +25,104 @@ export async function createCoboAgentWallet(state: DemoState): Promise<WalletPre
     throw new Error('EOA_NOT_CONNECTED')
   }
 
-  await ensureCawPrincipal(state)
-
   if (prep.agentWallet.created && prep.agentWallet.coboWalletId && prep.agentWallet.address) {
     if (prep.agentWallet.pairing?.status === 'paired') return prep
-    return markAgentWalletCreated(state, {
-      address: prep.agentWallet.address,
-      coboWalletId: prep.agentWallet.coboWalletId,
-      pairing: await initiateWalletPairing(state, prep.agentWallet.coboWalletId),
-    })
+    return regenerateAgentPairing(state)
   }
 
-  const walletsApi = createCoboWalletsApi(state)
-  const networkConfig = getNetworkChainConfig(prep.network)
-  const mainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim()
+  if (prep.agentWallet.coboWalletId || prep.steps.agent_wallet === 'in_progress') {
+    const result = await pollAgentBootstrap(state)
+    return result.preparation
+  }
 
-  // On this Hermes host the CAW onboarding flow already created and paired an
-  // Agent Wallet. Prefer adopting that active wallet for the demo preparation
-  // flow instead of attempting to create another wallet with a pact-scoped key.
-  if (process.env.CAW_ADOPT_EXISTING_WALLET !== 'false') {
-    try {
-      return await adoptCurrentCawWalletFromCli(state)
-    } catch {
-      // Fall back to normal Cobo wallet creation when no local CAW wallet exists.
-    }
+  const result = await startAgentBootstrap(state)
+  return result.preparation
+}
+
+export async function importCoboAgentWalletFromCli(state: DemoState): Promise<WalletPreparation> {
+  if (state.walletPreparation.steps.eoa !== 'completed') {
+    throw new Error('EOA_NOT_CONNECTED')
+  }
+  return syncPreparationFromCawCli(state)
+}
+
+export async function pollCoboAgentWalletStatus(state: DemoState) {
+  return pollAgentBootstrap(state)
+}
+
+interface CoboBalanceRow {
+  token_id?: string
+  symbol?: string
+  amount?: string
+}
+
+function pickUsdcAmount(
+  balances: CoboBalanceRow[],
+  preferredTokenId: string,
+): number {
+  const usdc = balances.find((b) =>
+    b.token_id === preferredTokenId
+    || b.token_id?.toUpperCase().includes('USDC')
+    || b.symbol?.toUpperCase() === 'USDC',
+  )
+  if (!usdc?.amount) return 0
+  const parsed = Number.parseFloat(usdc.amount)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+async function fetchUsdcBalanceFromCoboApi(
+  state: DemoState,
+  network: NetworkId,
+  walletId: string,
+  address: string,
+): Promise<number> {
+  const networkConfig = getNetworkChainConfig(network)
+  const balanceApi = createCoboBalanceApi(state)
+  const query = async (tokenId?: string) => {
+    const resp = await withCoboRetry(() => balanceApi.listBalances(
+      walletId,
+      networkConfig.coboChainId,
+      address,
+      tokenId,
+      true,
+      50,
+    ))
+    return pickUsdcAmount(resp.data.result ?? [], networkConfig.coboTokenId)
   }
 
   try {
-    const createResp = await walletsApi.createWallet({
-      wallet_type: 'MPC',
-      name: `YieldAgent-${Date.now()}`,
-      group_type: 'agent',
-      ...(mainNodeId ? { main_node_id: mainNodeId } : {}),
+    const withToken = await query(networkConfig.coboTokenId)
+    if (withToken > 0) return withToken
+  } catch {
+    // Fall through to unfiltered query.
+  }
+
+  try {
+    return await query(undefined)
+  } catch {
+    return 0
+  }
+}
+
+export async function fetchUsdcBalanceOnChain(
+  network: NetworkId,
+  address: string,
+): Promise<number> {
+  const chainConfig = getNetworkChainConfig(network)
+  const chain = network === 'base-sepolia' ? baseSepolia : arbitrumSepolia
+  const client = createPublicClient({ chain, transport: http() })
+
+  try {
+    const raw = await client.readContract({
+      address: chainConfig.usdcContract,
+      abi: erc20Abi,
+      functionName: 'balanceOf',
+      args: [address as `0x${string}`],
     })
-
-    const walletUuid = createResp.data.result.uuid
-    await waitForWalletActive(walletsApi, walletUuid)
-
-    const addrResp = await walletsApi.createWalletAddress(walletUuid, {
-      chain_id: networkConfig.coboChainId,
-    })
-
-    const address = addrResp.data.result.address
-    if (!address) {
-      throw new Error('ADDRESS_NOT_CREATED')
-    }
-
-    return markAgentWalletCreated(state, {
-      address,
-      coboWalletId: walletUuid,
-      pairing: await initiateWalletPairing(state, walletUuid),
-    })
-  } catch (err) {
-    const message = extractCoboErrorMessage(err)
-
-    // When the configured CAW credential belongs to an already-onboarded/paired
-    // agent, creating another wallet may be forbidden. For the hackathon demo we
-    // can still complete the wallet-preparation flow by adopting the active CAW
-    // wallet that is already paired to this Hermes Agent host. Try that fallback
-    // for any createWallet failure, then surface the original CAW API error only
-    // if the local CAW wallet cannot be adopted.
-    try {
-      return await adoptCurrentCawWalletFromCli(state)
-    } catch (fallbackErr) {
-      console.warn('CAW_CURRENT_WALLET_FALLBACK_FAILED', fallbackErr instanceof Error ? fallbackErr.message : fallbackErr)
-      throw new Error(message)
-    }
+    const parsed = Number(raw) / 10 ** chainConfig.usdcDecimals
+    return Number.isFinite(parsed) ? parsed : 0
+  } catch {
+    return 0
   }
 }
 
@@ -230,34 +132,35 @@ export async function fetchUsdcBalanceFromCobo(
 ): Promise<number> {
   const prep = state.walletPreparation
   const walletId = prep.agentWallet.coboWalletId
-  if (!walletId || !prep.agentWallet.created) return 0
+  if (!walletId || !prep.agentWallet.created || !prep.agentWallet.address) return 0
 
   const net = network ?? prep.network
-  const networkConfig = getNetworkChainConfig(net)
-  const balanceApi = createCoboBalanceApi(state)
+  const coboBalance = await fetchUsdcBalanceFromCoboApi(
+    state,
+    net,
+    walletId,
+    prep.agentWallet.address,
+  )
+  if (coboBalance > 0) return coboBalance
 
-  try {
-    const resp = await balanceApi.listBalances(
-      walletId,
-      networkConfig.coboChainId,
-      prep.agentWallet.address,
-      networkConfig.coboTokenId,
-      true,
-      50,
-    )
+  return fetchUsdcBalanceOnChain(net, prep.agentWallet.address)
+}
 
-    const balances = resp.data.result ?? []
-    const usdc = balances.find((b) =>
-      b.token_id === networkConfig.coboTokenId
-      || b.token_id.toUpperCase().includes('USDC'),
-    )
-
-    if (!usdc?.amount) return 0
-    const parsed = Number.parseFloat(usdc.amount)
-    return Number.isFinite(parsed) ? parsed : 0
-  } catch {
-    return prep.funding.availableUsdc
+export async function syncFundingFromExistingBalance(state: DemoState): Promise<WalletPreparation> {
+  const prep = state.walletPreparation
+  if (prep.steps.agent_wallet !== 'completed' || !prep.agentWallet.created) {
+    return prep
   }
+  if (prep.funding.status === 'ready') {
+    return prep
+  }
+
+  const balance = await fetchUsdcBalanceFromCobo(state)
+  if (balance <= 0) {
+    return prep
+  }
+
+  return applyDepositToState(state, balance, null)
 }
 
 export async function syncWalletSummaryFromCobo(state: DemoState): Promise<void> {
@@ -287,7 +190,7 @@ export async function confirmUsdcDeposit(
 
   prep.steps.funding = 'in_progress'
   prep.funding.status = 'processing'
-  touchPreparation(prep)
+  touchPreparation(prep, state)
 
   try {
     await verifyUsdcDeposit({
@@ -305,7 +208,7 @@ export async function confirmUsdcDeposit(
   } catch (err) {
     prep.steps.funding = 'pending'
     prep.funding.status = 'idle'
-    touchPreparation(prep)
+    touchPreparation(prep, state)
 
     if (err instanceof Error) {
       switch (err.message) {
@@ -320,3 +223,5 @@ export async function confirmUsdcDeposit(
     throw new Error('转入确认失败，请重试')
   }
 }
+
+export { extractCoboErrorMessage }

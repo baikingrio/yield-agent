@@ -12,7 +12,7 @@ export interface NetworkChainConfig {
 export const NETWORK_CHAIN_CONFIG: Record<NetworkId, NetworkChainConfig> = {
   'base-sepolia': {
     coboChainId: 'TBASE_SETH',
-    coboTokenId: 'TBASE_SETH_USDC',
+    coboTokenId: 'TBASE_USDC',
     evmChainId: 84532,
     usdcContract: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
     usdcDecimals: 6,

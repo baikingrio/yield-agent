@@ -2,15 +2,15 @@ import { useWriteContract } from '@wagmi/vue'
 import { erc20Abi } from 'viem'
 import type { DepositInfo } from '../../shared/types/demo'
 
-export function useUsdcTransfer() {
-  const { writeContractAsync, isPending: isWriting } = useWriteContract()
+function useUsdcTransferClient() {
+  const writeMutation = useWriteContract()
   const transferError = ref<string | null>(null)
 
   async function transferUsdc(info: DepositInfo): Promise<`0x${string}`> {
     transferError.value = null
     const amount = BigInt(Math.round(info.minAmount * 10 ** info.decimals))
     try {
-      const hash = await writeContractAsync({
+      const hash = await writeMutation.mutateAsync({
         address: info.usdcContract as `0x${string}`,
         abi: erc20Abi,
         functionName: 'transfer',
@@ -25,7 +25,27 @@ export function useUsdcTransfer() {
 
   return {
     transferUsdc,
+    isWriting: writeMutation.isPending,
+    transferError,
+  }
+}
+
+function useUsdcTransferStub() {
+  const transferError = ref<string | null>(null)
+  const isWriting = ref(false)
+
+  return {
+    transferUsdc: async () => {
+      throw new Error('链上转账仅可在浏览器中执行')
+    },
     isWriting,
     transferError,
   }
+}
+
+export function useUsdcTransfer() {
+  if (import.meta.server) {
+    return useUsdcTransferStub()
+  }
+  return useUsdcTransferClient()
 }

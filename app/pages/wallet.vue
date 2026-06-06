@@ -8,11 +8,16 @@ const {
   pageError,
   createAgentLabel,
   depositLabel,
+  bootstrap,
+  bootstrapPhaseLabel,
+  bootstrapMessage,
+  agentPolling,
   coboConfigured,
   networkLabel,
   stepLocked,
   init,
   runCreateAgent,
+  runImportAgent,
   runDeposit,
   runReset,
   continueUrl,
@@ -61,11 +66,16 @@ onMounted(() => init())
         />
         <WalletPrepStepAgent
           :prep="prep"
+          :bootstrap="bootstrap"
           :locked="stepLocked('agent_wallet')"
           :busy="busy"
+          :agent-polling="agentPolling"
           :create-label="createAgentLabel"
+          :bootstrap-phase-label="bootstrapPhaseLabel"
+          :bootstrap-message="bootstrapMessage"
           :cobo-configured="coboConfigured"
           @create="runCreateAgent"
+          @import="runImportAgent"
         />
         <WalletPrepStepFund
           :prep="prep"

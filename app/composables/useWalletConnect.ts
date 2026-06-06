@@ -13,7 +13,7 @@ const NETWORK_LABELS: Record<NetworkId, string> = {
   'arbitrum-sepolia': 'Arbitrum Sepolia',
 }
 
-export function useWalletConnect() {
+function useWalletConnectClient() {
   const store = useDemoStore()
   const pageError = ref<string | null>(null)
 
@@ -102,4 +102,29 @@ export function useWalletConnect() {
     disconnectWallet,
     NETWORK_LABELS,
   }
+}
+
+function useWalletConnectStub() {
+  const pageError = ref<string | null>(null)
+
+  return {
+    address: ref<`0x${string}` | undefined>(undefined),
+    isConnected: ref(false),
+    connectedNetwork: computed(() => null),
+    connectedNetworkLabel: computed(() => null),
+    expectedNetwork: computed(() => 'base-sepolia' as NetworkId),
+    networkMismatch: computed(() => false),
+    busy: computed(() => false),
+    pageError,
+    connectWallet: async () => {},
+    disconnectWallet: async () => {},
+    NETWORK_LABELS,
+  }
+}
+
+export function useWalletConnect() {
+  if (import.meta.server) {
+    return useWalletConnectStub()
+  }
+  return useWalletConnectClient()
 }

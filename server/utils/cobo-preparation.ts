@@ -157,6 +157,15 @@ export async function createCoboAgentWallet(state: DemoState): Promise<WalletPre
 
   await ensureCawPrincipal(state)
 
+  if (prep.agentWallet.created && prep.agentWallet.coboWalletId && prep.agentWallet.address) {
+    if (prep.agentWallet.pairing?.status === 'paired') return prep
+    return markAgentWalletCreated(state, {
+      address: prep.agentWallet.address,
+      coboWalletId: prep.agentWallet.coboWalletId,
+      pairing: await initiateWalletPairing(state, prep.agentWallet.coboWalletId),
+    })
+  }
+
   const walletsApi = createCoboWalletsApi(state)
   const networkConfig = getNetworkChainConfig(prep.network)
   const mainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim()

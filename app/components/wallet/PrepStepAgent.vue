@@ -76,6 +76,15 @@ async function copyAddress(addr: string) {
           过期时间：{{ prep.agentWallet.pairing.expiresAt }}
         </p>
       </div>
+      <button
+        v-if="prep.agentWallet.pairing?.status !== 'paired'"
+        type="button"
+        class="inline-flex h-9 items-center justify-center rounded-md border border-hairline px-3 text-xs font-semibold text-on-dark transition-colors duration-150 hover:bg-surface-elevated disabled:opacity-50"
+        :disabled="locked || busy"
+        @click="emit('create')"
+      >
+        {{ createLabel }}
+      </button>
     </div>
     <button
       v-else

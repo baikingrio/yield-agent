@@ -18,7 +18,9 @@ export function useWalletPreparation() {
   const createAgentLabel = computed(() =>
     busy.value && prep.value?.steps.agent_wallet === 'in_progress'
       ? '创建中…'
-      : '创建 Agent Wallet',
+      : prep.value?.agentWallet.created
+        ? '重新生成配对码'
+        : '创建 Agent Wallet',
   )
 
   const depositLabel = computed(() => {
@@ -55,7 +57,8 @@ export function useWalletPreparation() {
   }
 
   async function runCreateAgent() {
-    if (stepLocked('agent_wallet') || prep.value?.steps.agent_wallet === 'completed') return
+    if (stepLocked('agent_wallet')) return
+    if (prep.value?.agentWallet.pairing?.status === 'paired') return
     pageError.value = null
     busy.value = true
     try {

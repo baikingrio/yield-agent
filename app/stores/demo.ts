@@ -266,6 +266,27 @@ export const useDemoStore = defineStore('demo', () => {
     return result
   }
 
+  async function redeemPact(id: string) {
+    const result = await $fetch<import('../../shared/types/demo').PactRedeemResult>(`/api/pacts/${id}/redeem`, {
+      method: 'POST',
+    })
+    await Promise.all([
+      fetchPact(id),
+      fetchWallet(),
+      fetchLogs({ limit: 10, pactId: id }),
+    ])
+    return result
+  }
+
+  async function fetchPactPosition(id: string) {
+    return $fetch<import('../../shared/types/demo').YieldPositionSnapshot & {
+      pactId: string
+      status: string
+      firstExecutionCompleted: boolean
+      redeemCompleted: boolean
+    }>(`/api/pacts/${id}/position`)
+  }
+
   async function parseStrategyText(text: string, limits: import('../../shared/types/demo').StrategyParseLimits) {
     return $fetch<import('../../shared/types/demo').StrategyParseResponse>('/api/strategy-agent/parse', {
       method: 'POST',
@@ -409,6 +430,8 @@ export const useDemoStore = defineStore('demo', () => {
     terminatePact,
     createStrategy,
     executePact,
+    redeemPact,
+    fetchPactPosition,
     simulatePactDenial,
     parseStrategyText,
     fetchPreparation,

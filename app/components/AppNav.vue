@@ -11,8 +11,8 @@ const appLinks = [
 ]
 
 const landingLinks = [
-  { to: '/wallet', label: '准备资金', variant: 'secondary' },
-  { to: '/create-strategy?template=conservative-usdc', label: '创建策略', variant: 'primary' },
+  { to: '/dashboard', label: '控制台', variant: 'secondary' },
+  { to: '/wallet', label: '开始使用', variant: 'primary' },
 ]
 
 const isLanding = computed(() => route.path === '/')

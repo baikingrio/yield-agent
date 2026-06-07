@@ -84,6 +84,56 @@ export function resolveFirstYieldSupplyRoute(chainConfig: NetworkChainConfig): Y
   }
 }
 
+const compoundWithdrawAbi = [{
+  type: 'function',
+  name: 'withdraw',
+  inputs: [
+    { name: 'asset', type: 'address' },
+    { name: 'amount', type: 'uint256' },
+  ],
+  outputs: [],
+  stateMutability: 'nonpayable',
+}] as const
+
+const aaveWithdrawAbi = [{
+  type: 'function',
+  name: 'withdraw',
+  inputs: [
+    { name: 'asset', type: 'address' },
+    { name: 'amount', type: 'uint256' },
+    { name: 'to', type: 'address' },
+  ],
+  outputs: [],
+  stateMutability: 'nonpayable',
+}] as const
+
+export function buildRedeemRequestId(pactId: string, attempt: number): string {
+  return `yieldagent-${pactId}-redeem-a${attempt}`
+}
+
+export function nextRedeemAttempt(pact: Pact): number {
+  return (pact.redeemAttempt ?? 0) + 1
+}
+
+export function encodeYieldWithdrawCalldata(
+  route: YieldSupplyRoute,
+  amount: bigint,
+  walletAddress: `0x${string}`,
+): `0x${string}` {
+  if (route.protocol === 'compound') {
+    return encodeFunctionData({
+      abi: compoundWithdrawAbi,
+      functionName: 'withdraw',
+      args: [route.asset, amount],
+    })
+  }
+  return encodeFunctionData({
+    abi: aaveWithdrawAbi,
+    functionName: 'withdraw',
+    args: [route.asset, amount, walletAddress],
+  })
+}
+
 export function encodeYieldSupplyCalldata(
   route: YieldSupplyRoute,
   amount: bigint,

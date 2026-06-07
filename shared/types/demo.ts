@@ -61,6 +61,9 @@ export interface Pact {
   firstExecutionCompleted?: boolean
   /** 每次重试递增，用于生成新的 Cobo request_id */
   firstExecutionAttempt?: number
+  redeemCompleted?: boolean
+  redeemTxHash?: string
+  redeemAttempt?: number
 }
 
 export interface StrategyParseLimits {
@@ -89,6 +92,19 @@ export interface PactExecutionResult {
   status: string
   coboTransactionId?: string
   action: string
+}
+
+export interface PactRedeemResult {
+  txHash: string
+  status: string
+  amountUsdc: number
+  action: string
+}
+
+export interface YieldPositionSnapshot {
+  protocol: string
+  suppliedUsdc: number
+  redeemable: boolean
 }
 
 export interface PactDenialResult {

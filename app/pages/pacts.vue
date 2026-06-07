@@ -23,12 +23,16 @@ const {
   approveLocalDraft,
   retryExecute,
   runFundAgentGas,
+  runRedeemFunds,
   simulateDenial,
   terminateSelected,
   selectPact,
   gasStatus,
   fundingGas,
   eoaConnected,
+  yieldPosition,
+  redeeming,
+  redeemError,
 } = usePactManagement()
 
 const pactLogs = ref<import('../../shared/types/demo').LogEntry[]>([])
@@ -38,10 +42,12 @@ const pairingReady = computed(
 )
 
 const filterTabs: { key: PactFilterTab; label: string }[] = [
-  { key: 'all', label: '全部' },
+  { key: 'active', label: '执行中' },
   { key: 'awaiting-approval', label: '待审批' },
-  { key: 'active', label: '生效中' },
-  { key: 'ended', label: '已结束' },
+  { key: 'completed', label: '已完成' },
+  { key: 'rejected', label: '已拒绝' },
+  { key: 'expired', label: '已过期' },
+  { key: 'all', label: '全部' },
 ]
 
 async function loadPactLogs(pactId: string | null) {
@@ -158,10 +164,14 @@ watch(actionBanner, () => {
         :gas-status="gasStatus"
         :funding-gas="fundingGas"
         :eoa-connected="eoaConnected"
+        :yield-position="yieldPosition"
+        :redeeming="redeeming"
+        :redeem-error="redeemError"
         @refresh="refreshStatus"
         @approve-local="approveLocalDraft"
         @execute="retryExecute"
         @fund-gas="runFundAgentGas"
+        @redeem="runRedeemFunds"
         @simulate-denial="simulateDenial"
         @terminate="terminateSelected"
       />

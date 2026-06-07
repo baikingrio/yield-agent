@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import type { AgentGasStatus, LogEntry, NetworkId, Pact, Strategy } from '../../../shared/types/demo'
+import type {
+  AgentGasStatus,
+  LogEntry,
+  NetworkId,
+  Pact,
+  Strategy,
+  YieldPositionSnapshot,
+} from '../../../shared/types/demo'
 
 const props = defineProps<{
   pact: Pact | null
@@ -13,6 +20,9 @@ const props = defineProps<{
   gasStatus?: AgentGasStatus | null
   fundingGas?: boolean
   eoaConnected?: boolean
+  yieldPosition?: YieldPositionSnapshot | null
+  redeeming?: boolean
+  redeemError?: string
 }>()
 
 const emit = defineEmits<{
@@ -20,17 +30,12 @@ const emit = defineEmits<{
   approveLocal: []
   execute: []
   fundGas: []
+  redeem: []
   simulateDenial: []
   terminate: []
 }>()
 
-const STATUS_LABELS: Record<Pact['status'], string> = {
-  pending: '待处理',
-  active: '生效中',
-  completed: '已完成',
-  terminated: '已终止',
-  'awaiting-approval': '待审批',
-}
+import { pactDisplayStatusLabel } from '~/utils/pact-filter'
 
 const store = useDemoStore()
 
@@ -68,8 +73,19 @@ const canWithdrawCoboPact = computed(
     && props.pact
     && ['pending', 'awaiting-approval'].includes(props.pact.status),
 )
+const hasDepositedFunds = computed(
+  () => Boolean(props.pact?.firstExecutionCompleted && props.pact?.firstExecutionTxHash?.trim()),
+)
+const canRedeem = computed(() => {
+  if (!isCoboPact.value || !hasDepositedFunds.value || props.pact?.redeemCompleted) return false
+  if (!props.yieldPosition?.redeemable) return false
+  return props.pact?.status === 'active' || props.pact?.status === 'terminated'
+})
 const showOwnerRevokeGuide = computed(
   () => isCoboPact.value && props.pact?.status === 'active',
+)
+const showTerminatedRedeemGuide = computed(
+  () => isCoboPact.value && props.pact?.status === 'terminated' && hasDepositedFunds.value && !props.pact.redeemCompleted,
 )
 const canTerminate = computed(() => {
   if (!props.pact || ['terminated', 'completed'].includes(props.pact.status)) return false
@@ -111,7 +127,7 @@ const detailLines = computed(() => {
     <header class="border-b border-hairline px-5 py-4">
       <div class="flex items-start justify-between gap-3">
         <h2 class="text-base font-semibold text-on-dark">Pact 详情</h2>
-        <UiStatusChip :label="STATUS_LABELS[pact.status]" />
+        <UiStatusChip :label="pactDisplayStatusLabel(pact)" />
       </div>
       <p class="mt-1 font-mono text-xs text-muted">ID: {{ pact.id }}</p>
     </header>
@@ -198,6 +214,39 @@ const detailLines = computed(() => {
         :network="network"
         class="block break-all text-xs"
       />
+      <p v-if="pact.redeemTxHash" class="text-sm text-trading-up">
+        赎回已完成
+        <UiTxLink
+          :hash="pact.redeemTxHash"
+          :network="network"
+          class="ml-1 break-all text-xs"
+        />
+      </p>
+      <p v-if="yieldPosition?.redeemable && !pact.redeemCompleted" class="text-xs text-muted">
+        协议仓位：约 {{ yieldPosition.suppliedUsdc.toLocaleString('zh-CN') }} USDC（{{ yieldPosition.protocol }}）
+      </p>
+      <p v-if="redeemError" class="text-sm text-trading-down" role="alert">
+        {{ redeemError }}
+      </p>
+    </div>
+
+    <div
+      v-else-if="pact.status === 'terminated' && hasDepositedFunds"
+      class="space-y-3 border-b border-hairline px-5 py-4"
+    >
+      <p v-if="pact.redeemTxHash" class="text-sm text-trading-up">
+        赎回已完成
+        <UiTxLink :hash="pact.redeemTxHash" :network="network" class="ml-1 text-xs" />
+      </p>
+      <p v-else-if="showTerminatedRedeemGuide" class="text-sm text-body">
+        此 Pact 已在 App 撤销。撤销不会自动取回 Compound 存款，请尝试下方「赎回至 Agent Wallet」。
+      </p>
+      <p v-if="yieldPosition?.redeemable && !pact.redeemCompleted" class="text-xs text-muted">
+        协议仓位：约 {{ yieldPosition.suppliedUsdc.toLocaleString('zh-CN') }} USDC（{{ yieldPosition.protocol }}）
+      </p>
+      <p v-if="redeemError" class="text-sm text-trading-down" role="alert">
+        {{ redeemError }}
+      </p>
     </div>
 
     <dl class="divide-y divide-hairline px-5">
@@ -235,6 +284,7 @@ const detailLines = computed(() => {
     >
       <p class="font-medium text-on-dark">撤销生效中的 Pact</p>
       <p class="mt-2 text-muted">
+        若已执行存入，请先点击「赎回至 Agent Wallet」，再在 App 撤销。
         Agent 无法代你 revoke。请打开 Cobo Agentic Wallet App → 本 Pact 详情 → 撤销；
         完成后回到此页点击「刷新状态」同步。
       </p>
@@ -275,6 +325,15 @@ const detailLines = computed(() => {
         @click="emit('execute')"
       >
         {{ executing ? '执行中…' : gasReady ? '执行首次 Recipe' : '需先充值 Gas' }}
+      </button>
+      <button
+        v-if="canRedeem"
+        type="button"
+        class="h-10 rounded-md border border-trading-up/40 px-4 text-sm font-medium text-trading-up transition-colors hover:bg-trading-up/10 disabled:opacity-50"
+        :disabled="busy || executing || redeeming"
+        @click="emit('redeem')"
+      >
+        {{ redeeming ? '赎回中…' : '赎回至 Agent Wallet' }}
       </button>
       <button
         v-if="canSimulateDenial"

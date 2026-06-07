@@ -1,8 +1,14 @@
-import type { AgentGasStatus, Pact, PactStatus, Strategy } from '../../shared/types/demo'
+import type { AgentGasStatus, Pact, Strategy, YieldPositionSnapshot } from '../../shared/types/demo'
 import { extractApiErrorMessage } from '~/utils/api-error'
 import { useAgentGasFunding } from '~/composables/useAgentGasFunding'
+import {
+  isPactFilterTab,
+  pactListFetchStatus,
+  pactMatchesFilter,
+  type PactFilterTab,
+} from '~/utils/pact-filter'
 
-export type PactFilterTab = 'all' | 'awaiting-approval' | 'active' | 'ended'
+export type { PactFilterTab } from '~/utils/pact-filter'
 
 const POLL_MS = 4000
 const MAX_POLL_ATTEMPTS = 75
@@ -19,6 +25,9 @@ export function usePactManagement() {
   const actionBanner = ref<{ tone: 'success' | 'error' | 'info'; message: string } | null>(null)
   const executeError = ref('')
   const executing = ref(false)
+  const redeeming = ref(false)
+  const redeemError = ref('')
+  const yieldPosition = ref<(YieldPositionSnapshot & { redeemCompleted?: boolean }) | null>(null)
   const pollAttempt = ref(0)
   const waitingSeconds = ref(0)
   const autoExecuteAttempted = ref(false)
@@ -29,26 +38,16 @@ export function usePactManagement() {
 
   const statusFilter = computed<PactFilterTab>(() => {
     const q = route.query.status
-    if (q === 'awaiting-approval' || q === 'active' || q === 'ended') return q
-    return 'all'
+    if (isPactFilterTab(q)) return q
+    return 'active'
   })
 
-  const filteredPacts = computed(() => {
-    const list = store.pacts
-    switch (statusFilter.value) {
-      case 'awaiting-approval':
-        return list.filter((p) => p.status === 'awaiting-approval')
-      case 'active':
-        return list.filter((p) => p.status === 'active')
-      case 'ended':
-        return list.filter((p) => p.status === 'terminated' || p.status === 'completed')
-      default:
-        return list
-    }
-  })
+  const filteredPacts = computed(() =>
+    store.pacts.filter((p) => pactMatchesFilter(p, statusFilter.value)),
+  )
 
   const awaitingCount = computed(() =>
-    store.pacts.filter((p) => p.status === 'awaiting-approval').length,
+    store.pacts.filter((p) => pactMatchesFilter(p, 'awaiting-approval')).length,
   )
 
   const selectedId = computed({
@@ -226,10 +225,7 @@ export function usePactManagement() {
     try {
       await store.fetchPreparation().catch(() => {})
       await store.fetchStrategies()
-      const serverStatus = statusFilter.value === 'ended' || statusFilter.value === 'all'
-        ? undefined
-        : statusFilter.value
-      await store.fetchPacts(serverStatus, { sync: options?.sync ?? true })
+      await store.fetchPacts(pactListFetchStatus(statusFilter.value), { sync: options?.sync ?? true })
 
       const qid = route.query.id
       if (typeof qid === 'string') {
@@ -258,11 +254,7 @@ export function usePactManagement() {
     store.clearError()
     try {
       const pact = await store.syncPact(selectedId.value)
-      await store.fetchPacts(
-        statusFilter.value === 'ended' || statusFilter.value === 'all'
-          ? undefined
-          : statusFilter.value,
-      )
+      await store.fetchPacts(pactListFetchStatus(statusFilter.value))
       if (pact?.status === 'active') {
         actionBanner.value = {
           tone: 'success',
@@ -294,6 +286,41 @@ export function usePactManagement() {
       }
     } finally {
       busy.value = false
+    }
+  }
+
+  async function refreshYieldPosition(pactId?: string) {
+    const id = pactId ?? selectedId.value
+    if (!id) {
+      yieldPosition.value = null
+      return
+    }
+    try {
+      const snapshot = await store.fetchPactPosition(id)
+      yieldPosition.value = snapshot
+    } catch {
+      yieldPosition.value = null
+    }
+  }
+
+  async function runRedeemFunds() {
+    if (!selectedId.value) return
+    redeeming.value = true
+    redeemError.value = ''
+    try {
+      const result = await store.redeemPact(selectedId.value)
+      await refreshYieldPosition(selectedId.value)
+      actionBanner.value = {
+        tone: result.amountUsdc > 0 ? 'success' : 'info',
+        message: result.amountUsdc > 0
+          ? `已赎回 ${result.amountUsdc} USDC 至 Agent Wallet，tx：${result.txHash || '已提交'}`
+          : result.action,
+      }
+    } catch (e: unknown) {
+      redeemError.value = extractApiErrorMessage(e, '赎回失败')
+      actionBanner.value = { tone: 'error', message: redeemError.value }
+    } finally {
+      redeeming.value = false
     }
   }
 
@@ -408,6 +435,7 @@ export function usePactManagement() {
     clearPollTimer()
     autoExecuteAttempted.value = false
     executeError.value = ''
+    redeemError.value = ''
     actionBanner.value = null
     selectedId.value = id
     const pact = store.pacts.find((p) => p.id === id)
@@ -418,11 +446,21 @@ export function usePactManagement() {
     if (pact?.status === 'awaiting-approval' && !pollTimer && !pollAborted) {
       maybeStartPolling(pact)
     }
+    if (pact?.firstExecutionCompleted && pact.firstExecutionTxHash) {
+      void refreshYieldPosition(pact.id)
+    } else {
+      yieldPosition.value = null
+    }
     if (pact?.status === 'active') {
       void refreshGasStatus()
     } else {
       gasStatus.value = null
     }
+  })
+
+  watch(statusFilter, (next, prev) => {
+    if (next === prev) return
+    void load()
   })
 
   onMounted(() => load({ sync: true }))
@@ -452,11 +490,15 @@ export function usePactManagement() {
     approveLocalDraft,
     retryExecute,
     runFundAgentGas,
+    runRedeemFunds,
     simulateDenial,
     terminateSelected,
     selectPact,
     gasStatus,
     fundingGas,
     eoaConnected,
+    yieldPosition,
+    redeeming,
+    redeemError,
   }
 }

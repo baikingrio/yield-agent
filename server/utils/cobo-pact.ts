@@ -407,7 +407,7 @@ export async function submitYieldPactToCobo(
 }
 
 export const COBO_OWNER_REVOKE_MESSAGE =
-  '生效中的 Cobo Pact 只能由钱包主人在 Cobo Agentic Wallet App 内撤销（Agent API Key 无 revoke 权限）。请打开 App → 该 Pact → 撤销，然后回到本页点击「刷新状态」同步。'
+  '生效中的 Cobo Pact 只能由钱包主人在 Cobo Agentic Wallet App 内撤销（Agent API Key 无 revoke 权限）。若已执行存入，请先在网页点击「赎回至 Agent Wallet」，再在 App 撤销；撤销后资金不会自动从 Compound/Aave 返回。'
 
 export type CoboTerminateAction =
   | { type: 'withdraw' }

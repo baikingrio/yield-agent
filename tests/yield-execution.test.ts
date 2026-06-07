@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Pact } from '../shared/types/demo'
 import {
   buildExecutionRequestId,
+  buildRedeemRequestId,
   formatTransactionFailureMessage,
   isStaleFirstExecution,
   isTerminalTransactionFailure,
@@ -62,6 +63,10 @@ describe('yield-execution helpers', () => {
 
   it('formats transaction failure with step label', () => {
     expect(formatTransactionFailureMessage('USDC 授权 Aave', 'Failed', 901)).toContain('USDC 授权 Aave失败')
+  })
+
+  it('builds redeem request ids', () => {
+    expect(buildRedeemRequestId('pact-1', 1)).toBe('yieldagent-pact-1-redeem-a1')
   })
 
   it('routes Base Sepolia Circle USDC to Compound instead of Aave', () => {

@@ -2,19 +2,32 @@ import { Configuration, TransactionRecordsApi, TransactionsApi } from '@cobo/age
 import type { UserTransactionRead } from '@cobo/agentic-wallet'
 import { createPublicClient, encodeFunctionData, erc20Abi, http } from 'viem'
 import { arbitrumSepolia, baseSepolia } from 'viem/chains'
-import type { DemoState, NetworkId, Pact, PactDenialResult, PactExecutionResult } from '../../shared/types/demo'
+import type {
+  DemoState,
+  NetworkId,
+  Pact,
+  PactDenialResult,
+  PactExecutionResult,
+  PactRedeemResult,
+} from '../../shared/types/demo'
 import { assertAgentWalletHasGas, getAgentNativeEthBalance, resolveContractCallSponsor } from './agent-gas'
 import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
 import { extractCoboErrorMessage } from './cobo-client'
+import { syncWalletSummaryFromCobo } from './cobo-preparation'
+import { resolveRedeemApiKey } from './pact-redeem-credentials'
 import { resolvePactExecutionApiKey } from './pact-credentials'
+import { readYieldSuppliedAmount } from './yield-position'
 import {
   buildExecutionRequestId,
+  buildRedeemRequestId,
   encodeYieldSupplyCalldata,
+  encodeYieldWithdrawCalldata,
   formatTransactionFailureMessage,
   isStaleFirstExecution,
   isTerminalTransactionFailure,
   isTerminalTransactionSuccess,
   nextFirstExecutionAttempt,
+  nextRedeemAttempt,
   resolveFirstSupplyAmountUsdc,
   resolveFirstYieldSupplyRoute,
   toUsdcBaseUnits,
@@ -284,6 +297,120 @@ export async function executeFirstPactRecipe(
       action,
       '',
       err instanceof Error ? err.message : '执行失败',
+    )
+    throw new Error(extractCoboErrorMessage(err))
+  }
+}
+
+export async function redeemPactFunds(
+  state: DemoState,
+  pactId: string,
+): Promise<PactRedeemResult> {
+  const pact = findPact(state, pactId)
+  if (!pact) throw new Error('Pact not found')
+
+  if (!pact.firstExecutionCompleted || !pact.firstExecutionTxHash?.trim()) {
+    throw new Error('此 Pact 尚未完成首次存入，无需赎回')
+  }
+  if (pact.redeemCompleted && pact.redeemTxHash?.trim()) {
+    return {
+      txHash: pact.redeemTxHash,
+      status: '已完成',
+      amountUsdc: 0,
+      action: '资金已赎回',
+    }
+  }
+
+  const apiKey = await resolveRedeemApiKey(state, pact)
+  if (!apiKey) {
+    throw new Error(
+      pact.status === 'active'
+        ? '未找到 pact-scoped 执行凭证，请同步 Pact 状态后重试'
+        : 'Pact 已撤销且缺少 Agent 主 API Key，无法代为赎回。请在设置页配置 Cobo API Key 后重试。',
+    )
+  }
+
+  const walletId = state.walletPreparation.agentWallet.coboWalletId
+  const walletAddress = state.walletPreparation.agentWallet.address
+  if (!walletId || !walletAddress) throw new Error('Agent Wallet 未就绪')
+
+  const strategy = state.strategies.find((item) => item.id === pact.strategyId)
+  const network = (strategy?.network ?? state.walletPreparation.network) as NetworkId
+  const chainConfig = getNetworkChainConfig(network)
+  const supplyRoute = resolveFirstYieldSupplyRoute(chainConfig)
+
+  await assertAgentWalletHasGas(network, walletAddress)
+  const nativeEth = await getAgentNativeEthBalance(network, walletAddress as `0x${string}`)
+  const sponsor = resolveContractCallSponsor(nativeEth)
+
+  const suppliedRaw = await readYieldSuppliedAmount(
+    network,
+    chainConfig,
+    walletAddress as `0x${string}`,
+  )
+  if (suppliedRaw <= 0n) {
+    pact.redeemCompleted = true
+    return {
+      txHash: pact.redeemTxHash || '',
+      status: '无仓位',
+      amountUsdc: 0,
+      action: '链上无待赎回仓位（可能已赎回）',
+    }
+  }
+
+  const amountUsdc = Number(suppliedRaw) / 10 ** chainConfig.usdcDecimals
+  const attempt = nextRedeemAttempt(pact)
+  pact.redeemAttempt = attempt
+
+  const transactionsApi = createPactScopedTransactionsApi(apiKey)
+  const recordsApi = createPactScopedTransactionRecordsApi(apiKey)
+  const requestId = buildRedeemRequestId(pact.id, attempt)
+  const networkLabel = network === 'arbitrum-sepolia' ? 'Arbitrum Sepolia' : 'Base Sepolia'
+  const action = `${supplyRoute.protocolLabel} 赎回 ${amountUsdc} USDC 至 Agent Wallet（${networkLabel}）`
+
+  const withdrawCalldata = encodeYieldWithdrawCalldata(
+    supplyRoute,
+    suppliedRaw,
+    walletAddress as `0x${string}`,
+  )
+
+  try {
+    const redeemTx = await submitContractCallAndWait(
+      transactionsApi,
+      recordsApi,
+      walletId,
+      walletAddress,
+      sponsor,
+      {
+        chainId: chainConfig.coboChainId,
+        contractAddr: supplyRoute.contractAddr,
+        calldata: withdrawCalldata,
+        requestId,
+        description: `YieldAgent ${supplyRoute.protocolLabel} withdraw (${amountUsdc} USDC)`,
+        stepLabel: `${supplyRoute.protocolLabel} 赎回`,
+      },
+    )
+
+    const txHash = redeemTx.transaction_hash || ''
+    pact.redeemCompleted = true
+    pact.redeemTxHash = txHash
+
+    appendExecutionLog(state, pact.id, action, txHash, redeemTx.status_display || 'Success')
+    await syncWalletSummaryFromCobo(state)
+
+    return {
+      txHash,
+      status: redeemTx.status_display || 'Success',
+      amountUsdc,
+      action,
+    }
+  } catch (err) {
+    appendExecutionLog(
+      state,
+      pact.id,
+      action,
+      '',
+      err instanceof Error ? err.message : '赎回失败',
     )
     throw new Error(extractCoboErrorMessage(err))
   }

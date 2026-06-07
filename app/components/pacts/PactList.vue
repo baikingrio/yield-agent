@@ -10,21 +10,7 @@ const emit = defineEmits<{
   select: [id: string]
 }>()
 
-const STATUS_LABELS: Record<Pact['status'], string> = {
-  pending: '待处理',
-  active: '生效中',
-  completed: '已完成',
-  terminated: '已终止',
-  'awaiting-approval': '待审批',
-}
-
-const STATUS_TONE: Record<Pact['status'], 'active' | 'pending' | 'paused' | 'error' | 'neutral'> = {
-  pending: 'pending',
-  active: 'active',
-  completed: 'neutral',
-  terminated: 'error',
-  'awaiting-approval': 'paused',
-}
+import { pactDisplayStatusLabel, pactDisplayStatusTone } from '~/utils/pact-filter'
 </script>
 
 <template>
@@ -44,7 +30,7 @@ const STATUS_TONE: Record<Pact['status'], 'active' | 'pending' | 'paused' | 'err
       >
         <p class="line-clamp-2 text-sm text-on-dark">{{ p.intent }}</p>
         <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <UiStatusChip :label="STATUS_LABELS[p.status]" :tone="STATUS_TONE[p.status]" />
+          <UiStatusChip :label="pactDisplayStatusLabel(p)" :tone="pactDisplayStatusTone(p)" />
           <span class="font-mono text-xs text-muted">≤ {{ p.maxSpend }} USDC</span>
         </div>
         <p class="mt-1 text-[0.65rem] text-muted">

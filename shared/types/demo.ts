@@ -54,6 +54,47 @@ export interface Pact {
   approvalId?: string
   coboStatus?: string
   submissionMessage?: string
+  /** 服务端已缓存 pact-scoped key，不暴露具体 key */
+  executionCredentialStored?: boolean
+  firstExecutionAt?: string
+  firstExecutionTxHash?: string
+  firstExecutionCompleted?: boolean
+  /** 每次重试递增，用于生成新的 Cobo request_id */
+  firstExecutionAttempt?: number
+}
+
+export interface StrategyParseLimits {
+  availableUsdc: number
+  network: NetworkId
+}
+
+export interface StrategyProposal {
+  network: NetworkId
+  asset: string
+  targetApy?: string
+  riskLevel: string
+  maxSpend: string
+  agentFee: string
+  userSplit: string
+}
+
+export interface StrategyParseResponse {
+  proposal: StrategyProposal
+  explanation: string
+  warnings: string[]
+}
+
+export interface PactExecutionResult {
+  txHash: string
+  status: string
+  coboTransactionId?: string
+  action: string
+}
+
+export interface PactDenialResult {
+  action: string
+  reason: string
+  status: string
 }
 
 export interface LogEntry {
@@ -63,6 +104,7 @@ export interface LogEntry {
   type: LogType
   txHash: string
   status: string
+  pactId?: string
 }
 
 export interface YieldPoint {
@@ -161,6 +203,26 @@ export interface DepositInfo {
   coboChainId: string
   coboTokenId: string
   minAmount: number
+}
+
+export interface AgentGasWrongChainHint {
+  chainLabel: string
+  tokenLabel: string
+  balance: string
+  message: string
+}
+
+export interface AgentGasStatus {
+  network: NetworkId
+  networkLabel: string
+  nativeTokenLabel: string
+  agentAddress: string
+  ethBalance: string
+  ready: boolean
+  minEth: number
+  recommendedFundEth: number
+  faucetUrl: string
+  wrongChainHint?: AgentGasWrongChainHint | null
 }
 
 export interface AgentBootstrapState {

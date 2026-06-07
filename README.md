@@ -42,7 +42,7 @@ Aave / Compound / testnet yield action
 - 执行层：CAW（Cobo Agentic Wallet）/ Pact
 - Agent / 策略层：当前 Hermes Agent 主机上的 Hermes runtime（替代 Z.AI API，用于自然语言策略解析与风险解释）
 - 执行 runtime：TSS Node + Hermes 均运行在当前 Hermes Agent 主机，Vercel 通过远程 API / tunnel 调用
-- 数据库与日志：SQLite（待接入；当前为内存 Demo store）
+- 数据库与日志：SQLite（`.data/yieldagent.db`，持久化策略 / Pact / 审计日志）
 - 部署：Vercel 前端 + 远程 Hermes Agent 主机后端 runtime
 - 当前原型依赖：Pinia、Zod、Chart.js、vue-chartjs、@cobo/agentic-wallet
 
@@ -179,7 +179,7 @@ HERMES_PROFILE=default
 
 ## Demo 数据与接口
 
-当前版本使用服务端 mock / 内存数据模拟策略、Pact、日志和收益曲线，并已开始接入真实测试网钱包准备流程：
+当前版本使用 SQLite 持久化策略、Pact 与审计日志，并接入真实测试网钱包准备与 Cobo Pact 提交流程：
 
 - `GET /api/wallet`：Agent Wallet 摘要
 - `GET /api/wallet/preparation`：钱包准备状态
@@ -188,16 +188,40 @@ HERMES_PROFILE=default
 - `GET /api/wallet/preparation/deposit-info`：获取测试网 USDC 转入信息
 - `POST /api/wallet/preparation/deposit`：校验转入 tx hash 并同步余额
 - `GET /api/strategies`：策略列表
-- `POST /api/strategies`：创建策略
-- `GET /api/pacts`：Pact 列表
-- `GET /api/pacts/:id`：Pact 详情
-- `POST /api/pacts/:id/approve`：批准 Pact（Demo flow）
-- `POST /api/pacts/:id/terminate`：终止 Pact
+- `POST /api/strategies`：创建策略并提交 Cobo Pact（失败返回 502，不再播放前端 mock 流水线）
+- `POST /api/strategy-agent/parse`：Hermes 自然语言策略解析 + 确定性校验
+- `GET /api/pacts`：Pact 列表（`?sync=true` 批量同步 Cobo 状态）
+- `GET /api/pacts/:id`：Pact 详情（`?sync=true` 同步 Cobo 状态）
+- `POST /api/pacts/:id/approve`：Cobo 模式仅同步状态；local-draft 模式可本地批准
+- `POST /api/pacts/:id/terminate`：终止 Pact（Cobo 模式调用 revoke）
+- `POST /api/pacts/:id/execute`：Pact 激活后执行首次 Recipe（pact-scoped key）
+- `POST /api/pacts/:id/simulate-denial`：服务端模拟越权请求并记录拒绝原因
 - `GET /api/logs`：执行 / 审计日志
 - `GET /api/yield-series`：收益曲线
 - `GET /api/settings` / `PUT /api/settings`：测试网设置
 
-后续接入 SQLite 后，`server/utils/demo-store.ts` 中的内存状态应迁移为 SQLite 持久化读写，并保留审计日志的可追溯性。
+### 创建策略生产路径
+
+```text
+资金准备完成 → 填写参数（可选 Hermes 解析）→ POST /api/strategies
+  → Cobo App 审批（前端轮询 sync）→ Pact ACTIVE
+  → POST /api/pacts/:id/execute → 真实 tx hash 写入 logs
+```
+
+### Pact 管理生产路径
+
+```text
+/pacts（进入时 GET /api/pacts?sync=true）
+  → 待审批：PactAppApprovalGuide 引导去 Cobo App 批准
+  → 每 4s 轮询 GET /api/pacts/:id?sync=true
+  → active：自动尝试 POST /api/pacts/:id/execute（失败可手动重试）
+  → 模拟越权：POST /api/pacts/:id/simulate-denial → logs（?pactId= 可筛选）
+  → 终止：POST /api/pacts/:id/terminate（Cobo revoke + 状态回读）
+```
+
+Dashboard 策略卡片在 `awaiting-approval` 时显示「待 Cobo App 审批」，点击跳转 `/pacts?id=`。
+
+开发降级：设置 `CAW_FORCE_LOCAL_DRAFT=true` 可在 Cobo 不可用时回退 local-draft（无法执行 Recipe）。
 
 ## 开发任务拆解
 
@@ -209,7 +233,7 @@ HERMES_PROFILE=default
 2. 修复 pnpm / Vercel 构建问题；
 3. 将 Pact Preview 映射为真实 CAW Pact；
 4. 接入当前 Hermes Agent 主机上的 Hermes 做策略解析，Vercel 通过远程 API / tunnel 调用，并加入确定性校验；
-5. 将内存 Demo store 迁移到 SQLite；
+5. 完善测试网 Aave/Compound supply calldata（当前首次执行为 USDC balanceOf 预检）；
 6. 准备评委 Demo 路径和演示稿。
 
 ## 安全边界

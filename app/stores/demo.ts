@@ -20,12 +20,10 @@ import type {
   DepositInfo,
 } from '../../shared/types/demo'
 
+import { extractApiErrorMessage } from '~/utils/api-error'
+
 function apiErrorMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'data' in err) {
-    const data = (err as { data?: { error?: string } }).data
-    if (data?.error) return data.error
-  }
-  return '请求失败，请稍后重试'
+  return extractApiErrorMessage(err)
 }
 
 export const useDemoStore = defineStore('demo', () => {
@@ -96,7 +94,7 @@ export const useDemoStore = defineStore('demo', () => {
     return selectedPact.value
   }
 
-  async function fetchLogs(params?: { type?: LogType; limit?: number }) {
+  async function fetchLogs(params?: { type?: LogType; limit?: number; pactId?: string }) {
     try {
       logs.value = await $fetch<LogEntry[]>('/api/logs', { query: params })
     } catch (e) {
@@ -241,9 +239,37 @@ export const useDemoStore = defineStore('demo', () => {
   }
 
   async function createStrategy(payload: CreateStrategyPayload) {
-    return $fetch<{ strategy: Strategy; pact: Pact }>('/api/strategies', {
+    const result = await $fetch<{ strategy: Strategy; pact: Pact }>('/api/strategies', {
       method: 'POST',
       body: payload,
+    })
+    strategies.value = [result.strategy, ...strategies.value.filter((s) => s.id !== result.strategy.id)]
+    pacts.value = [result.pact, ...pacts.value.filter((p) => p.id !== result.pact.id)]
+    await fetchLogs({ limit: 10 })
+    return result
+  }
+
+  async function executePact(id: string) {
+    const result = await $fetch<import('../../shared/types/demo').PactExecutionResult>(`/api/pacts/${id}/execute`, {
+      method: 'POST',
+    })
+    await fetchPact(id)
+    await fetchLogs({ limit: 10, pactId: id })
+    return result
+  }
+
+  async function simulatePactDenial(id: string) {
+    const result = await $fetch<import('../../shared/types/demo').PactDenialResult>(`/api/pacts/${id}/simulate-denial`, {
+      method: 'POST',
+    })
+    await fetchLogs({ limit: 10, pactId: id })
+    return result
+  }
+
+  async function parseStrategyText(text: string, limits: import('../../shared/types/demo').StrategyParseLimits) {
+    return $fetch<import('../../shared/types/demo').StrategyParseResponse>('/api/strategy-agent/parse', {
+      method: 'POST',
+      body: { text, limits },
     })
   }
 
@@ -330,6 +356,10 @@ export const useDemoStore = defineStore('demo', () => {
     })
   }
 
+  async function fetchAgentGasStatus() {
+    return $fetch<import('../../shared/types/demo').AgentGasStatus>('/api/wallet/preparation/gas-status')
+  }
+
   async function resetPreparation() {
     preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/reset', {
       method: 'POST',
@@ -378,6 +408,9 @@ export const useDemoStore = defineStore('demo', () => {
     approvePact,
     terminatePact,
     createStrategy,
+    executePact,
+    simulatePactDenial,
+    parseStrategyText,
     fetchPreparation,
     connectEoa,
     disconnectEoa,
@@ -386,6 +419,7 @@ export const useDemoStore = defineStore('demo', () => {
     importAgentWalletFromCli,
     depositToAgentWallet,
     fetchDepositInfo,
+    fetchAgentGasStatus,
     resetPreparation,
     clearError,
   }

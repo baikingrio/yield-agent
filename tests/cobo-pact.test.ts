@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { DemoState, Pact } from '../shared/types/demo'
-import { applyCoboPactStatusToState, mapCoboPactStatus, syncCoboPactStatus } from '../server/utils/cobo-pact'
+import {
+  applyCoboPactStatusToState,
+  mapCoboPactStatus,
+  resolveCoboPactSubmissionMessage,
+  syncCoboPactStatus,
+} from '../server/utils/cobo-pact'
 
 function createStateWithPact(status: Pact['status'] = 'awaiting-approval'): DemoState {
   return {
@@ -64,6 +69,8 @@ function createStateWithPact(status: Pact['status'] = 'awaiting-approval'): Demo
 describe('Cobo Pact status mapping', () => {
   it('maps Cobo lifecycle statuses into local Pact statuses', () => {
     expect(mapCoboPactStatus('PENDING_APPROVAL')).toBe('awaiting-approval')
+    expect(mapCoboPactStatus('pending_approval')).toBe('awaiting-approval')
+    expect(mapCoboPactStatus('active')).toBe('active')
     expect(mapCoboPactStatus('ACTIVE')).toBe('active')
     expect(mapCoboPactStatus('COMPLETED')).toBe('completed')
     expect(mapCoboPactStatus('REJECTED')).toBe('terminated')
@@ -123,6 +130,19 @@ describe('applyCoboPactStatusToState', () => {
     expect(pact.status).toBe('terminated')
     expect(state.strategies[0]?.status).toBe('paused')
     expect(state.logs[0]?.status).toBe('已终止')
+  })
+
+  it('replaces stale submissionMessage when Cobo reports REVOKED without message', () => {
+    const state = createStateWithPact('active')
+    state.pacts[0]!.submissionMessage = 'Pact submitted. Awaiting owner approval in CAW App.'
+    state.pacts[0]!.executionCredentialStored = true
+
+    const pact = applyCoboPactStatusToState(state, 'pact-1', 'REVOKED')
+
+    expect(pact.status).toBe('terminated')
+    expect(pact.coboStatus).toBe('REVOKED')
+    expect(pact.submissionMessage).toBe(resolveCoboPactSubmissionMessage('REVOKED'))
+    expect(pact.executionCredentialStored).toBe(false)
   })
 
   it('does not append duplicate logs when the mapped status did not change', () => {

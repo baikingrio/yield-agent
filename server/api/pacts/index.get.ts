@@ -1,5 +1,5 @@
 import type { PactStatus } from '../../../shared/types/demo'
-import { getState } from '../../utils/demo-store'
+import { getState, persistCurrentState } from '../../utils/demo-store'
 import { refreshCoboPactStatus } from '../../utils/cobo-pact'
 
 const STATUSES: PactStatus[] = ['pending', 'active', 'completed', 'terminated', 'awaiting-approval']
@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
           }
         }),
     )
+    persistCurrentState()
   }
 
   let pacts = state.pacts

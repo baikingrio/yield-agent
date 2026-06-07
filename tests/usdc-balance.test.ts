@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { fetchUsdcBalanceOnChain } from '../server/utils/cobo-preparation'
 
-describe('fetchUsdcBalanceOnChain', () => {
+const hasNetwork = process.env.VITEST_INTEGRATION === '1'
+
+describe.skipIf(!hasNetwork)('fetchUsdcBalanceOnChain', () => {
   it('reads the known Base Sepolia USDC balance for the demo agent wallet', async () => {
     const balance = await fetchUsdcBalanceOnChain(
       'base-sepolia',

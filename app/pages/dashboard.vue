@@ -19,6 +19,7 @@ async function loadDashboard() {
     await Promise.all([
       store.fetchWallet(),
       store.fetchStrategies(),
+      store.fetchPacts(),
       store.fetchLogs({ limit: 10 }),
       store.fetchYieldSeries(),
     ])
@@ -69,7 +70,11 @@ onMounted(async () => {
 
     <DashboardWalletBar :wallet="store.wallet" :loading="initialLoading" />
 
-    <DashboardStrategyList :strategies="store.strategies" :loading="initialLoading" />
+    <DashboardStrategyList
+      :strategies="store.strategies"
+      :pacts="store.pacts"
+      :loading="initialLoading"
+    />
 
     <DashboardRecentLogsTable :logs="store.logs" :loading="initialLoading" />
 

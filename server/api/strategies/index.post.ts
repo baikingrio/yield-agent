@@ -1,9 +1,9 @@
 import { z } from 'zod'
 import type { Pact, Strategy } from '../../../shared/types/demo'
-import { DEMO_TX_HASH } from '../../fixtures/initial-state'
-import { getState } from '../../utils/demo-store'
+import { getState, persistCurrentState } from '../../utils/demo-store'
 import { buildYieldPactDraft, strategyWhitelist, submitYieldPactToCobo } from '../../utils/cobo-pact'
 import type { CoboPactSubmitResult } from '../../utils/cobo-pact'
+import { validateStrategyPayload } from '../../utils/strategy-validator'
 
 const RISK_NAMES: Record<string, string> = {
   conservative: '保守型收益',
@@ -34,9 +34,6 @@ export default defineEventHandler(async (event) => {
 
   const state = getState()
   const data = parsed.data
-  const maxSpend = Number(data.maxSpend)
-  const agentFee = Number(data.agentFee)
-  const userSplit = Number(data.userSplit)
 
   if (!state.walletPreparation.ready) {
     throw createError({
@@ -45,31 +42,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const available = state.walletPreparation.funding.availableUsdc
-
-  if (
-    Number.isNaN(maxSpend)
-    || maxSpend < 10
-    || maxSpend > 1_000_000
-    || Number.isNaN(agentFee)
-    || agentFee < 0
-    || agentFee > 30
-    || Number.isNaN(userSplit)
-    || userSplit < 0
-    || userSplit > 100
-  ) {
+  const validation = validateStrategyPayload(state, data)
+  if (!validation.valid) {
+    const first = Object.values(validation.errors)[0] || '请求参数无效'
     throw createError({
       statusCode: 400,
-      data: { error: '金额或分成比例超出允许范围' },
+      data: { error: first, code: 'VALIDATION_ERROR' },
     })
   }
 
-  if (maxSpend > available) {
-    throw createError({
-      statusCode: 400,
-      data: { error: `支出上限不能超过 Agent Wallet 可用余额（${available} USDC）` },
-    })
-  }
+  const maxSpend = Number(data.maxSpend)
+  const agentFee = Number(data.agentFee)
+  const userSplit = Number(data.userSplit)
 
   const ts = Date.now()
   const strategyId = `str-${ts}`
@@ -77,7 +61,8 @@ export default defineEventHandler(async (event) => {
 
   const riskLabel = RISK_NAMES[data.riskLevel] ?? data.riskLevel
   const draft = buildYieldPactDraft(data)
-  const whitelist = strategyWhitelist(data.riskLevel)
+  const whitelist = strategyWhitelist(data.riskLevel, data.network)
+
   let submitResult: CoboPactSubmitResult
   try {
     submitResult = await submitYieldPactToCobo(state, data, pactId)
@@ -115,6 +100,8 @@ export default defineEventHandler(async (event) => {
     approvalId: submitResult.approvalId,
     coboStatus: submitResult.coboStatus,
     submissionMessage: submitResult.message,
+    executionCredentialStored: submitResult.status === 'active',
+    firstExecutionCompleted: false,
   }
 
   state.strategies.push(strategy)
@@ -124,12 +111,14 @@ export default defineEventHandler(async (event) => {
     timestamp: new Date().toISOString(),
     action: submitResult.mode === 'cobo'
       ? 'Pact 已提交到 Cobo，等待 App 审批'
-      : 'Pact draft 已创建，等待接入 Cobo 提交',
-    type: 'supply',
-    txHash: DEMO_TX_HASH,
+      : 'Pact draft 已创建（本地降级模式）',
+    type: 'pact',
+    txHash: '',
     status: submitResult.status === 'active' ? '已激活' : '待审批',
+    pactId: pact.id,
   })
 
+  persistCurrentState()
   setResponseStatus(event, 201)
   return { strategy, pact }
 })

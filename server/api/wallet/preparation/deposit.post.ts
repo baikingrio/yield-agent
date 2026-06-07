@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { getState } from '../../../utils/demo-store'
+import { getState, persistCurrentState } from '../../../utils/demo-store'
 import { confirmUsdcDeposit } from '../../../utils/cobo-preparation'
 
 const TX_HASH_RE = /^0x[a-fA-F0-9]{64}$/
@@ -31,6 +31,7 @@ export default defineEventHandler(async (event) => {
       status: '成功',
     })
 
+    persistCurrentState()
     return result
   } catch (e) {
     const msg = e instanceof Error ? e.message : '转入失败，请重试'

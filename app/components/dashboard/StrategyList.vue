@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import type { Strategy } from '../../../shared/types/demo'
+import type { Pact, Strategy } from '../../../shared/types/demo'
 
-defineProps<{
+const props = defineProps<{
   strategies: Strategy[]
+  pacts?: Pact[]
   loading?: boolean
 }>()
+
+function pactForStrategy(strategy: Strategy): Pact | undefined {
+  return props.pacts?.find((p) => p.id === strategy.pactId || p.coboPactId === strategy.pactId)
+}
 
 const STATUS_LABELS: Record<Strategy['status'], string> = {
   active: '运行中',
@@ -58,7 +63,14 @@ function goToPact(pactId: string) {
         >
           <div class="flex flex-wrap items-start justify-between gap-2">
             <span class="text-sm font-medium text-on-dark">{{ s.name }}</span>
-            <UiStatusChip :label="STATUS_LABELS[s.status]" :tone="STATUS_TONE[s.status]" />
+            <div class="flex flex-wrap items-center gap-2">
+              <UiStatusChip
+                v-if="pactForStrategy(s)?.status === 'awaiting-approval'"
+                label="待 Cobo App 审批"
+                tone="pending"
+              />
+              <UiStatusChip :label="STATUS_LABELS[s.status]" :tone="STATUS_TONE[s.status]" />
+            </div>
           </div>
           <p class="mt-2 font-mono text-xs text-muted">
             {{ NETWORK_LABELS[s.network] }} · 上限 {{ s.maxSpend }} {{ s.asset }}

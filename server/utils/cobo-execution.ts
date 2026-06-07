@@ -1,0 +1,361 @@
+import { Configuration, TransactionRecordsApi, TransactionsApi } from '@cobo/agentic-wallet'
+import type { UserTransactionRead } from '@cobo/agentic-wallet'
+import { createPublicClient, encodeFunctionData, erc20Abi, http } from 'viem'
+import { arbitrumSepolia, baseSepolia } from 'viem/chains'
+import type { DemoState, NetworkId, Pact, PactDenialResult, PactExecutionResult } from '../../shared/types/demo'
+import { assertAgentWalletHasGas, getAgentNativeEthBalance, resolveContractCallSponsor } from './agent-gas'
+import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
+import { extractCoboErrorMessage } from './cobo-client'
+import { resolvePactExecutionApiKey } from './pact-credentials'
+import {
+  buildExecutionRequestId,
+  encodeYieldSupplyCalldata,
+  formatTransactionFailureMessage,
+  isStaleFirstExecution,
+  isTerminalTransactionFailure,
+  isTerminalTransactionSuccess,
+  nextFirstExecutionAttempt,
+  resolveFirstSupplyAmountUsdc,
+  resolveFirstYieldSupplyRoute,
+  toUsdcBaseUnits,
+} from './yield-execution'
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function chainForNetwork(network: NetworkId) {
+  return network === 'base-sepolia' ? baseSepolia : arbitrumSepolia
+}
+
+function createPactScopedTransactionsApi(apiKey: string): TransactionsApi {
+  return new TransactionsApi(new Configuration({
+    apiKey,
+    basePath: getCoboBasePath(),
+    baseOptions: { timeout: 60_000 },
+  }))
+}
+
+function createPactScopedTransactionRecordsApi(apiKey: string): TransactionRecordsApi {
+  return new TransactionRecordsApi(new Configuration({
+    apiKey,
+    basePath: getCoboBasePath(),
+    baseOptions: { timeout: 60_000 },
+  }))
+}
+
+function findPact(state: DemoState, pactId: string): Pact | undefined {
+  return state.pacts.find((item) => item.id === pactId || item.coboPactId === pactId)
+}
+
+async function readUsdcAllowance(
+  network: NetworkId,
+  owner: `0x${string}`,
+  spender: `0x${string}`,
+  usdcContract: `0x${string}`,
+): Promise<bigint> {
+  const client = createPublicClient({
+    chain: chainForNetwork(network),
+    transport: http(),
+  })
+  return client.readContract({
+    address: usdcContract,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: [owner, spender],
+  })
+}
+
+async function waitForTransactionResult(
+  recordsApi: TransactionRecordsApi,
+  walletId: string,
+  requestId: string,
+  stepLabel: string,
+): Promise<UserTransactionRead> {
+  const maxAttempts = 45
+  const delayMs = 2000
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const resp = await recordsApi.getUserTransactionByRequestId(walletId, requestId)
+    const tx = resp.data.result
+    if (!tx) throw new Error('未找到交易记录，请稍后重试')
+
+    if (isTerminalTransactionSuccess(tx.status, tx.status_display)) return tx
+    if (isTerminalTransactionFailure(tx.status, tx.status_display)) {
+      throw new Error(formatTransactionFailureMessage(
+        stepLabel,
+        tx.status_display,
+        tx.status,
+        tx.data?.failed_reason,
+      ))
+    }
+
+    if (attempt < maxAttempts - 1) await sleep(delayMs)
+  }
+
+  throw new Error(`${stepLabel}确认超时，请稍后在历史记录查看状态后重试`)
+}
+
+async function submitContractCallAndWait(
+  transactionsApi: TransactionsApi,
+  recordsApi: TransactionRecordsApi,
+  walletId: string,
+  walletAddress: string,
+  sponsor: boolean,
+  params: {
+    chainId: string
+    contractAddr: `0x${string}`
+    calldata: `0x${string}`
+    requestId: string
+    description: string
+    stepLabel: string
+  },
+): Promise<UserTransactionRead> {
+  const resp = await transactionsApi.contractCall(walletId, {
+    chain_id: params.chainId,
+    contract_addr: params.contractAddr,
+    calldata: params.calldata,
+    src_addr: walletAddress,
+    request_id: params.requestId,
+    sponsor,
+    description: params.description,
+  })
+
+  const submit = resp.data.result
+  if (submit.pending_operation_id || submit.approval_id) {
+    throw new Error('合约调用待额外审批，请在 Cobo App 完成审批后重试')
+  }
+
+  if (isTerminalTransactionFailure(submit.status, submit.status_display)) {
+    throw new Error(formatTransactionFailureMessage(
+      params.stepLabel,
+      submit.status_display,
+      submit.status,
+    ))
+  }
+
+  if (isTerminalTransactionSuccess(submit.status, submit.status_display) && submit.transaction_hash) {
+    const byRequest = await recordsApi.getUserTransactionByRequestId(walletId, params.requestId)
+    return byRequest.data.result
+  }
+
+  return waitForTransactionResult(recordsApi, walletId, params.requestId, params.stepLabel)
+}
+
+function appendExecutionLog(
+  state: DemoState,
+  pactId: string,
+  action: string,
+  txHash: string,
+  status: string,
+) {
+  state.logs.unshift({
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    action,
+    type: 'supply',
+    txHash,
+    status,
+    pactId,
+  })
+}
+
+export async function executeFirstPactRecipe(
+  state: DemoState,
+  pactId: string,
+): Promise<PactExecutionResult> {
+  const pact = findPact(state, pactId)
+  if (!pact) throw new Error('Pact not found')
+  if (pact.status !== 'active') {
+    throw new Error(pact.status === 'completed'
+      ? 'Pact 已在 Cobo 侧完成（可能因失败重试触发了交易次数上限）。请同步状态后重新创建策略与 Pact。'
+      : 'Pact 尚未激活，无法执行 Recipe')
+  }
+
+  if (pact.firstExecutionCompleted && pact.firstExecutionTxHash?.trim()) {
+    return {
+      txHash: pact.firstExecutionTxHash,
+      status: '已完成',
+      coboTransactionId: undefined,
+      action: '首次 Recipe 已执行',
+    }
+  }
+
+  if (isStaleFirstExecution(pact)) {
+    pact.firstExecutionCompleted = false
+    pact.firstExecutionAt = undefined
+  }
+
+  const apiKey = resolvePactExecutionApiKey(state, pact.id)
+  if (!apiKey) throw new Error('未找到 pact-scoped 执行凭证，请同步 Pact 状态后重试')
+
+  const walletId = state.walletPreparation.agentWallet.coboWalletId
+  const walletAddress = state.walletPreparation.agentWallet.address
+  if (!walletId || !walletAddress) throw new Error('Agent Wallet 未就绪')
+
+  const strategy = state.strategies.find((item) => item.id === pact.strategyId)
+  const network = (strategy?.network ?? state.walletPreparation.network) as NetworkId
+  const chainConfig = getNetworkChainConfig(network)
+
+  await assertAgentWalletHasGas(network, walletAddress)
+  const nativeEth = await getAgentNativeEthBalance(network, walletAddress as `0x${string}`)
+  const sponsor = resolveContractCallSponsor(nativeEth)
+
+  const supplyUsdc = resolveFirstSupplyAmountUsdc(
+    state.walletPreparation.funding.availableUsdc,
+    pact.maxSpend,
+  )
+  if (supplyUsdc <= 0) {
+    throw new Error('Agent Wallet 无可用 USDC，请先完成充值后再执行存入')
+  }
+
+  const attempt = nextFirstExecutionAttempt(pact)
+  pact.firstExecutionAttempt = attempt
+
+  const amount = toUsdcBaseUnits(supplyUsdc, chainConfig.usdcDecimals)
+  const supplyRoute = resolveFirstYieldSupplyRoute(chainConfig)
+  const transactionsApi = createPactScopedTransactionsApi(apiKey)
+  const recordsApi = createPactScopedTransactionRecordsApi(apiKey)
+
+  const approveRequestId = buildExecutionRequestId(pact.id, 'approve', attempt)
+  const supplyRequestId = buildExecutionRequestId(pact.id, 'supply', attempt)
+  const networkLabel = network === 'arbitrum-sepolia' ? 'Arbitrum Sepolia' : 'Base Sepolia'
+  const action = `${supplyRoute.protocolLabel} 存入 ${supplyUsdc} USDC（${networkLabel} 测试网）`
+
+  try {
+    const allowance = await readUsdcAllowance(
+      network,
+      walletAddress as `0x${string}`,
+      supplyRoute.approveSpender,
+      chainConfig.usdcContract,
+    )
+
+    if (allowance < amount) {
+      const approveCalldata = encodeFunctionData({
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [supplyRoute.approveSpender, amount],
+      })
+
+      await submitContractCallAndWait(transactionsApi, recordsApi, walletId, walletAddress, sponsor, {
+        chainId: chainConfig.coboChainId,
+        contractAddr: chainConfig.usdcContract,
+        calldata: approveCalldata,
+        requestId: approveRequestId,
+        description: `YieldAgent approve USDC for ${supplyRoute.protocolLabel} (${supplyUsdc} USDC)`,
+        stepLabel: `USDC 授权 ${supplyRoute.protocolLabel}`,
+      })
+    }
+
+    const supplyCalldata = encodeYieldSupplyCalldata(
+      supplyRoute,
+      amount,
+      walletAddress as `0x${string}`,
+    )
+
+    const supplyTx = await submitContractCallAndWait(transactionsApi, recordsApi, walletId, walletAddress, sponsor, {
+      chainId: chainConfig.coboChainId,
+      contractAddr: supplyRoute.contractAddr,
+      calldata: supplyCalldata,
+      requestId: supplyRequestId,
+      description: `YieldAgent ${supplyRoute.protocolLabel} supply (${supplyUsdc} USDC)`,
+      stepLabel: `${supplyRoute.protocolLabel} 存入`,
+    })
+
+    const txHash = supplyTx.transaction_hash || ''
+    const status = supplyTx.status_display || 'Success'
+
+    pact.firstExecutionCompleted = true
+    pact.firstExecutionAt = new Date().toISOString()
+    pact.firstExecutionTxHash = txHash
+
+    appendExecutionLog(state, pact.id, action, txHash, status)
+
+    return {
+      txHash,
+      status,
+      coboTransactionId: supplyTx.id,
+      action,
+    }
+  } catch (err) {
+    pact.firstExecutionCompleted = false
+    pact.firstExecutionTxHash = ''
+    appendExecutionLog(
+      state,
+      pact.id,
+      action,
+      '',
+      err instanceof Error ? err.message : '执行失败',
+    )
+    throw new Error(extractCoboErrorMessage(err))
+  }
+}
+
+export async function simulatePactDenial(
+  state: DemoState,
+  pactId: string,
+): Promise<PactDenialResult> {
+  const pact = findPact(state, pactId)
+  if (!pact) throw new Error('Pact not found')
+
+  const apiKey = resolvePactExecutionApiKey(state, pact.id)
+    || state.settings.coboApiKey
+    || process.env.AGENT_WALLET_API_KEY
+
+  if (!apiKey?.trim()) throw new Error('缺少执行凭证，无法模拟越权请求')
+
+  const walletId = state.walletPreparation.agentWallet.coboWalletId
+  if (!walletId) throw new Error('Agent Wallet 未就绪')
+
+  const strategy = state.strategies.find((item) => item.id === pact.strategyId)
+  const network = (strategy?.network ?? state.walletPreparation.network) as NetworkId
+  const chainConfig = getNetworkChainConfig(network)
+  const transactionsApi = createPactScopedTransactionsApi(apiKey.trim())
+
+  const walletAddress = state.walletPreparation.agentWallet.address
+  if (!walletAddress) throw new Error('Agent Wallet 未就绪')
+
+  const deniedContract = '0x000000000000000000000000000000000000dEaD'
+  const action = `Agent 尝试调用非白名单合约 ${deniedContract.slice(0, 10)}…（模拟越权）`
+
+  try {
+    await transactionsApi.contractCall(walletId, {
+      chain_id: chainConfig.coboChainId,
+      contract_addr: deniedContract,
+      calldata: '0x',
+      src_addr: walletAddress,
+      sponsor: true,
+      request_id: `yieldagent-denial-${pact.id}-${Date.now()}`,
+    })
+
+    const reason = '请求意外被接受：请检查 Pact policy 配置'
+    state.logs.unshift({
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      action,
+      type: 'pact',
+      txHash: '',
+      status: 'Denied',
+      pactId: pact.id,
+    })
+
+    return { action, reason, status: 'Denied' }
+  } catch (err) {
+    const reason = extractCoboErrorMessage(err)
+    state.logs.unshift({
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      action,
+      type: 'pact',
+      txHash: '',
+      status: 'Denied',
+      pactId: pact.id,
+    })
+
+    return {
+      action,
+      reason: reason.includes('deny') || reason.includes('拒绝') || reason.includes('not allowed')
+        ? reason
+        : `Denied：${reason}`,
+      status: 'Denied',
+    }
+  }
+}

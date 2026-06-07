@@ -1,4 +1,4 @@
-import { getState } from '../../utils/demo-store'
+import { getState, persistCurrentState } from '../../utils/demo-store'
 import { refreshCoboPactStatus } from '../../utils/cobo-pact'
 
 export default defineEventHandler(async (event) => {
@@ -13,7 +13,9 @@ export default defineEventHandler(async (event) => {
 
   if (query.sync === 'true' && pact.submissionMode === 'cobo') {
     try {
-      return await refreshCoboPactStatus(state, pact.id)
+      const synced = await refreshCoboPactStatus(state, pact.id)
+      persistCurrentState()
+      return synced
     } catch (err) {
       throw createError({
         statusCode: 502,

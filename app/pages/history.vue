@@ -5,16 +5,25 @@ type LogFilter = LogType | 'all'
 
 useHead({ title: '交易历史 · YieldAgent' })
 
+const route = useRoute()
 const store = useDemoStore()
 const filter = ref<LogFilter>('all')
 const loading = ref(true)
+
+const pactIdFilter = computed(() => {
+  const q = route.query.pactId
+  return typeof q === 'string' ? q : undefined
+})
 
 async function loadLogs() {
   loading.value = true
   store.clearError()
   try {
-    const query =
-      filter.value === 'all' ? { limit: 100 } : { type: filter.value, limit: 100 }
+    const query = {
+      limit: 100,
+      ...(filter.value === 'all' ? {} : { type: filter.value }),
+      ...(pactIdFilter.value ? { pactId: pactIdFilter.value } : {}),
+    }
     await store.fetchLogs(query)
   } finally {
     loading.value = false
@@ -22,6 +31,7 @@ async function loadLogs() {
 }
 
 watch(filter, loadLogs)
+watch(pactIdFilter, loadLogs)
 
 onMounted(loadLogs)
 </script>
@@ -31,6 +41,10 @@ onMounted(loadLogs)
     <header class="mb-6">
       <h1 class="text-2xl font-semibold text-on-dark">交易历史</h1>
       <p class="mt-2 text-sm text-muted">可审计执行轨迹，与控制台近期日志同源。</p>
+      <p v-if="pactIdFilter" class="mt-2 font-mono text-xs text-muted">
+        筛选 Pact：{{ pactIdFilter }}
+        <NuxtLink to="/history" class="ml-2 text-primary hover:underline">清除筛选</NuxtLink>
+      </p>
     </header>
 
     <UiPageAlert v-if="store.error" :message="store.error" @retry="loadLogs" />

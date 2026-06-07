@@ -1,3 +1,5 @@
+import { extractApiErrorMessage } from '~/utils/api-error'
+
 export type NetworkId = 'base-sepolia' | 'arbitrum-sepolia'
 export type RiskLevel = 'conservative' | 'balanced' | 'aggressive'
 
@@ -86,6 +88,7 @@ export function useCreateStrategy() {
       ? (queryTemplate as StrategyTemplateKey)
       : 'conservative-usdc'
 
+  const selectedTemplateKey = ref<StrategyTemplateKey>(initialTemplate)
   const form = reactive<StrategyForm>({ ...TEMPLATE_PRESETS[initialTemplate].form })
   const nlOpen = ref(initialTemplate !== 'custom')
   const nlText = ref(TEMPLATE_PRESETS[initialTemplate].nlText)
@@ -97,6 +100,10 @@ export function useCreateStrategy() {
   const pipelineError = ref('')
   const pactSubmissionMessage = ref('')
   const coboPactId = ref('')
+  const createdPactId = ref('')
+  const approvalId = ref('')
+  const approvalRefreshing = ref(false)
+  const nlParsing = ref(false)
 
   const agentSplit = computed(() => {
     const user = Number(form.userSplit)
@@ -140,11 +147,21 @@ export function useCreateStrategy() {
     return `${prep.funding.availableUsdc.toLocaleString('zh-CN')} ${form.asset}`
   })
 
+  const preparationNetworkLabel = computed(() => {
+    const prep = store.preparation
+    if (!prep?.ready) return null
+    return NETWORK_LABELS[prep.network]
+  })
+
+  const networkMismatch = computed(() => {
+    const prep = store.preparation
+    return !!prep?.ready && form.network !== prep.network
+  })
+
   const previewLines = computed(() => [
     { label: '意图', value: intentSummary.value },
     { label: '资金来源', value: fundingSourceLabel.value },
     { label: 'Agent Wallet 余额', value: availableBalanceLabel.value },
-    { label: 'Pact 可用预算', value: `${form.maxSpend || '—'} ${form.asset}` },
     { label: '支出上限', value: `${form.maxSpend || '—'} ${form.asset}` },
     { label: '网络', value: NETWORK_LABELS[form.network] },
     {
@@ -182,6 +199,10 @@ export function useCreateStrategy() {
     const spend = Number(form.maxSpend)
     const fee = Number(form.agentFee)
     const user = Number(form.userSplit)
+
+    if (store.preparation?.ready && form.network !== store.preparation.network) {
+      next.maxSpend = '策略网络必须与 Agent Wallet 注资网络一致'
+    }
 
     if (!form.maxSpend || Number.isNaN(spend) || spend < 10 || spend > 1_000_000) {
       next.maxSpend = '请输入 10–1,000,000 USDC'
@@ -223,41 +244,35 @@ export function useCreateStrategy() {
     { deep: true },
   )
 
-  function parseNlIntoForm() {
-    const text = nlText.value.toLowerCase()
-
-    if (
-      text.includes('aggressive')
-      || text.includes('激进')
-    ) {
-      form.riskLevel = 'aggressive'
-    } else if (text.includes('balanced') || text.includes('平衡')) {
-      form.riskLevel = 'balanced'
-    } else if (text.includes('conservative') || text.includes('保守')) {
-      form.riskLevel = 'conservative'
+  async function parseNlIntoForm() {
+    if (!nlText.value.trim() || nlParsing.value) return
+    nlParsing.value = true
+    try {
+      const limits = {
+        availableUsdc: store.preparation?.funding.availableUsdc ?? 0,
+        network: store.preparation?.network ?? form.network,
+      }
+      const result = await store.parseStrategyText(nlText.value, limits)
+      form.network = result.proposal.network
+      form.asset = result.proposal.asset
+      form.targetApy = result.proposal.targetApy ?? ''
+      form.riskLevel = result.proposal.riskLevel as StrategyForm['riskLevel']
+      form.maxSpend = result.proposal.maxSpend
+      form.agentFee = result.proposal.agentFee
+      form.userSplit = result.proposal.userSplit
+      nlFilled.value = true
+      validateForm(true)
+      pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
+    } catch (e: unknown) {
+      errors.maxSpend = extractApiErrorMessage(e, '自然语言解析失败')
+      pipeline.value = 'configure'
+    } finally {
+      nlParsing.value = false
     }
-
-    const amount = text.match(/(\d+)\s*usdc/i) || text.match(/(\d+)\s*(?:枚|个)?\s*usdc?/i)
-    const amountValue = amount?.[1]
-    if (amountValue) form.maxSpend = amountValue
-
-    const apy =
-      text.match(/(\d+(?:\.\d+)?)\s*%?\s*apy/i)
-      || text.match(/apy\s*(\d+)/i)
-      || text.match(/目标\s*(\d+(?:\.\d+)?)\s*%/)
-      || text.match(/(\d+(?:\.\d+)?)\s*%\s*收益/)
-    const apyValue = apy?.[1]
-    if (apyValue) form.targetApy = apyValue
-
-    if (text.includes('arbitrum') || text.includes('仲裁')) form.network = 'arbitrum-sepolia'
-    if (text.includes('base') || text.includes('基地')) form.network = 'base-sepolia'
-
-    nlFilled.value = true
-    validateForm(true)
-    pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
   }
 
   function applyTemplate(key: StrategyTemplateKey) {
+    selectedTemplateKey.value = key
     const preset = TEMPLATE_PRESETS[key]
     Object.assign(form, { ...preset.form })
     nlText.value = preset.nlText
@@ -274,11 +289,15 @@ export function useCreateStrategy() {
     pipeline.value = 'configure'
   }
 
-  let timers: ReturnType<typeof setTimeout>[] = []
+  let pollTimer: ReturnType<typeof setTimeout> | null = null
+  let pollAborted = false
 
-  function clearTimers() {
-    timers.forEach(clearTimeout)
-    timers = []
+  function clearPollTimer() {
+    if (pollTimer) {
+      clearTimeout(pollTimer)
+      pollTimer = null
+    }
+    pollAborted = true
   }
 
   const executionSteps = [
@@ -288,19 +307,77 @@ export function useCreateStrategy() {
     'Revenue Agent 写入收益与分账日志',
   ] as const
 
+  async function runFirstExecution(pactId: string) {
+    pipeline.value = 'executing'
+    executionStep.value = 0
+    try {
+      executionStep.value = 1
+      const result = await store.executePact(pactId)
+      executionStep.value = executionSteps.length - 1
+      demoTxHash.value = result.txHash
+      pipeline.value = 'success'
+      await store.fetchLogs({ limit: 10 })
+    } catch (e: unknown) {
+      pipeline.value = 'failed'
+      pipelineError.value = extractApiErrorMessage(e, 'Recipe 执行失败')
+    }
+  }
+
+  function schedulePactPoll(pactId: string, attempt = 0) {
+    const maxAttempts = 75
+    pollAborted = false
+
+    const poll = async () => {
+      if (pollAborted) return
+      if (attempt >= maxAttempts) {
+        pipeline.value = 'failed'
+        pipelineError.value = '等待 Cobo 审批超时，请在 Cobo App 完成审批后从 Pact 管理页同步状态。'
+        return
+      }
+
+      try {
+        const pact = await store.syncPact(pactId)
+        if (pact.status === 'active') {
+          await runFirstExecution(pactId)
+          return
+        }
+        if (pact.status === 'terminated') {
+          pipeline.value = 'failed'
+          pipelineError.value = pact.submissionMessage || 'Pact 已被拒绝或终止。'
+          return
+        }
+        pipeline.value = 'awaiting-approval'
+        pollTimer = setTimeout(() => schedulePactPoll(pactId, attempt + 1), 4000)
+      } catch {
+        pollTimer = setTimeout(() => schedulePactPoll(pactId, attempt + 1), 4000)
+      }
+    }
+
+    void poll()
+  }
+
   async function submitPact() {
     if (!validateForm(true) || pipeline.value === 'submitting') return
 
-    clearTimers()
+    clearPollTimer()
+    pollAborted = false
     pipeline.value = 'submitting'
     pipelineError.value = ''
     pactSubmissionMessage.value = ''
     coboPactId.value = ''
+    createdPactId.value = ''
+    approvalId.value = ''
     demoTxHash.value = ''
 
     if (!store.preparation?.ready) {
       pipeline.value = 'failed'
       pipelineError.value = '请先完成资金准备，再创建 Pact 策略。'
+      return
+    }
+
+    if (networkMismatch.value) {
+      pipeline.value = 'failed'
+      pipelineError.value = '策略网络必须与 Agent Wallet 注资网络一致。'
       return
     }
 
@@ -316,66 +393,82 @@ export function useCreateStrategy() {
       })
       pactSubmissionMessage.value = result.pact.submissionMessage ?? ''
       coboPactId.value = result.pact.coboPactId ?? result.pact.id
+      createdPactId.value = result.pact.id
+      approvalId.value = result.pact.approvalId ?? ''
 
-      if (result.pact.submissionMode === 'cobo') {
-        pipeline.value = result.pact.status === 'active' ? 'executing' : 'awaiting-approval'
+      if (result.pact.submissionMode === 'local-draft') {
+        pipeline.value = 'failed'
+        pipelineError.value = result.pact.submissionMessage
+          || '当前为本地 draft 模式，未接 Cobo，无法完成生产流程。请配置 CAW 后重试。'
         return
       }
+
+      if (result.pact.status === 'active') {
+        await runFirstExecution(result.pact.id)
+        return
+      }
+
+      pipeline.value = 'awaiting-approval'
+      schedulePactPoll(result.pact.id)
     } catch (e: unknown) {
       pipeline.value = 'failed'
-      if (e && typeof e === 'object' && 'data' in e) {
-        const data = (e as { data?: { error?: string } }).data
-        pipelineError.value = data?.error ?? '创建策略失败，请重试。'
-      } else {
-        pipelineError.value = '创建策略失败，请重试。'
+      pipelineError.value = extractApiErrorMessage(e, '创建策略失败，请重试。')
+    }
+  }
+
+  async function refreshApprovalStatus() {
+    const pactId = createdPactId.value || coboPactId.value
+    if (!pactId || approvalRefreshing.value) return
+
+    approvalRefreshing.value = true
+    try {
+      const pact = await store.syncPact(pactId)
+      if (!pact) return
+      pactSubmissionMessage.value = pact.submissionMessage ?? pactSubmissionMessage.value
+      if (pact.status === 'active') {
+        await runFirstExecution(pactId)
+        return
       }
+      if (pact.status === 'terminated') {
+        pipeline.value = 'failed'
+        pipelineError.value = pact.submissionMessage || 'Pact 已被拒绝或终止。'
+        return
+      }
+      pipeline.value = 'awaiting-approval'
+    } catch (e: unknown) {
+      pipelineError.value = extractApiErrorMessage(e, '同步审批状态失败，请稍后重试。')
+    } finally {
+      approvalRefreshing.value = false
+    }
+  }
+
+  async function simulateFailure() {
+    const pactId = createdPactId.value || coboPactId.value
+    if (!pactId) {
+      pipeline.value = 'failed'
+      pipelineError.value = '请先创建 Pact，再模拟越权请求。'
       return
     }
 
-    await new Promise((r) => setTimeout(r, 800))
-    pipeline.value = 'awaiting-approval'
-
-    timers.push(
-      setTimeout(() => {
-        pipeline.value = 'executing'
-        executionStep.value = 0
-        let i = 0
-        const tick = () => {
-          executionStep.value = i
-          i += 1
-          if (i < executionSteps.length) {
-            timers.push(setTimeout(tick, 1200))
-          } else {
-            timers.push(
-              setTimeout(() => {
-                demoTxHash.value =
-                  '0x8f3a91c2e4b1076d5a9c3f812e7b4c9a1d0e5f6a8b2c3d4e5f60718293a4b5c6'
-                pipeline.value = 'success'
-                navigateTo('/dashboard?created=1')
-              }, 900),
-            )
-          }
-        }
-        timers.push(setTimeout(tick, 600))
-      }, 2000),
-    )
-  }
-
-  function simulateFailure() {
-    clearTimers()
-    pipeline.value = 'failed'
-    pipelineError.value = 'Denied：Agent 尝试 Swap 500 USDC into unknown token。原因：Recipe not allowed by current Pact。'
-    pactSubmissionMessage.value = ''
-    coboPactId.value = ''
-    demoTxHash.value = ''
+    try {
+      const result = await store.simulatePactDenial(pactId)
+      pipeline.value = 'failed'
+      pipelineError.value = result.reason
+      await store.fetchLogs({ limit: 10 })
+    } catch (e: unknown) {
+      pipeline.value = 'failed'
+      pipelineError.value = extractApiErrorMessage(e, '越权模拟失败')
+    }
   }
 
   function resetToEdit() {
-    clearTimers()
+    clearPollTimer()
     pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
     pipelineError.value = ''
     pactSubmissionMessage.value = ''
     coboPactId.value = ''
+    createdPactId.value = ''
+    approvalId.value = ''
     demoTxHash.value = ''
     executionStep.value = 0
   }
@@ -389,7 +482,7 @@ export function useCreateStrategy() {
     } catch { /* page shows gate */ }
   })
 
-  onUnmounted(clearTimers)
+  onUnmounted(clearPollTimer)
 
   const preparationReady = computed(() => store.preparation?.ready ?? false)
 
@@ -405,14 +498,19 @@ export function useCreateStrategy() {
     pipelineError,
     pactSubmissionMessage,
     coboPactId,
+    approvalId,
+    approvalRefreshing,
     agentSplit,
     intentSummary,
     previewLines,
     allowedActions,
     deniedActions,
     strategyTemplates: STRATEGY_TEMPLATES,
+    selectedTemplateKey,
     preparationReady,
     availableBalanceLabel,
+    preparationNetworkLabel,
+    networkMismatch,
     fundingSourceLabel,
     isFormValid,
     stepIndex,
@@ -422,7 +520,9 @@ export function useCreateStrategy() {
     applyTemplate,
     clearNlFill,
     submitPact,
+    refreshApprovalStatus,
     simulateFailure,
     resetToEdit,
+    nlParsing,
   }
 }

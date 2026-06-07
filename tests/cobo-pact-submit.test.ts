@@ -3,10 +3,15 @@ import type { DemoState } from '../shared/types/demo'
 
 const submitPact = vi.hoisted(() => vi.fn())
 
+vi.mock('../server/utils/cobo-api-key', () => ({
+  refreshApiKeyFromCli: vi.fn().mockResolvedValue(false),
+}))
+
 vi.mock('../server/utils/cobo-client', () => ({
   createCoboPactsApi: () => ({ submitPact }),
   extractCoboErrorMessage: (err: unknown) => err instanceof Error ? err.message : 'Cobo Pact 提交失败',
   isCoboConfigured: (state: DemoState) => Boolean(state.settings.coboApiKey),
+  isInvalidApiKeyError: () => false,
 }))
 
 function createReadyState(): DemoState {
@@ -43,6 +48,7 @@ function createReadyState(): DemoState {
 
 describe('submitYieldPactToCobo fallback behavior', () => {
   it('keeps strategy creation usable as a local draft when Cobo Pact submission is not authorized', async () => {
+    process.env.CAW_FORCE_LOCAL_DRAFT = 'true'
     submitPact.mockRejectedValueOnce(new Error('API key pact authorization is not authorized for this wallet'))
     const { submitYieldPactToCobo } = await import('../server/utils/cobo-pact')
 
@@ -59,5 +65,22 @@ describe('submitYieldPactToCobo fallback behavior', () => {
     expect(result.mode).toBe('local-draft')
     expect(result.pactId).toBe('pact-local-1')
     expect(result.message).toContain('Cobo Pact 提交暂不可用')
+    delete process.env.CAW_FORCE_LOCAL_DRAFT
+  })
+
+  it('throws when Cobo submission fails and local draft is not forced', async () => {
+    delete process.env.CAW_FORCE_LOCAL_DRAFT
+    submitPact.mockRejectedValueOnce(new Error('API key pact authorization is not authorized for this wallet'))
+    const { submitYieldPactToCobo } = await import('../server/utils/cobo-pact')
+
+    await expect(submitYieldPactToCobo(createReadyState(), {
+      network: 'base-sepolia',
+      asset: 'USDC',
+      targetApy: '8',
+      riskLevel: 'conservative',
+      maxSpend: '500',
+      agentFee: '15',
+      userSplit: '85',
+    }, 'pact-local-2')).rejects.toThrow('API key pact authorization is not authorized')
   })
 })

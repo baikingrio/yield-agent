@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import type { Pact, Strategy } from '../../../shared/types/demo'
-import { getState, persistCurrentState } from '../../utils/demo-store'
+import type { Pact, Strategy } from '../../../shared/types/app'
+import { getState, persistCurrentState } from '../../utils/app-store'
 import { buildYieldPactDraft, strategyWhitelist, submitYieldPactToCobo } from '../../utils/cobo-pact'
 import type { CoboPactSubmitResult } from '../../utils/cobo-pact'
 import { validateStrategyPayload } from '../../utils/strategy-validator'

@@ -1,6 +1,6 @@
 import { useWriteContract } from '@wagmi/vue'
 import { erc20Abi } from 'viem'
-import type { DepositInfo } from '../../shared/types/demo'
+import type { DepositInfo } from '#shared/types/app'
 
 function useUsdcTransferClient() {
   const writeMutation = useWriteContract()

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { DemoState } from '../shared/types/demo'
+import type { AppState } from '../shared/types/app'
 import { validateStrategyPayload } from '../server/utils/strategy-validator'
 
-function createState(): DemoState {
+function createState(): AppState {
   return {
     wallet: { address: '0x1', totalAssetsUsdc: 100, currentApy: 0, cumulativeYieldUsdc: 0 },
     walletPreparation: {
@@ -49,5 +49,53 @@ describe('validateStrategyPayload', () => {
     })
 
     expect(result.valid).toBe(true)
+  })
+
+  it('accepts small testnet maxSpend from parse limits', () => {
+    const result = validateStrategyPayload(
+      createState(),
+      {
+        network: 'base-sepolia',
+        asset: 'USDC',
+        riskLevel: 'aggressive',
+        maxSpend: '7',
+        agentFee: '15',
+        userSplit: '85',
+      },
+      { availableUsdc: 9.999999 },
+    )
+
+    expect(result.valid).toBe(true)
+  })
+
+  it('accepts zero agentFee and percent-formatted userSplit', () => {
+    const result = validateStrategyPayload(createState(), {
+      network: 'base-sepolia',
+      asset: 'USDC',
+      riskLevel: 'balanced',
+      maxSpend: '7',
+      agentFee: '0',
+      userSplit: '100%',
+    })
+
+    expect(result.valid).toBe(true)
+  })
+
+  it('rejects maxSpend above parse limits availableUsdc', () => {
+    const result = validateStrategyPayload(
+      createState(),
+      {
+        network: 'base-sepolia',
+        asset: 'USDC',
+        riskLevel: 'conservative',
+        maxSpend: '50',
+        agentFee: '15',
+        userSplit: '85',
+      },
+      { availableUsdc: 9.999999 },
+    )
+
+    expect(result.valid).toBe(false)
+    expect(result.errors.maxSpend).toContain('9.999999')
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { LogEntry, LogType } from '../shared/types/demo'
+import type { LogEntry, LogType } from '../shared/types/app'
 
 const LOG_TYPES: LogType[] = ['swap', 'supply', 'revenue', 'pact']
 

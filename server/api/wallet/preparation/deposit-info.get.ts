@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { getState } from '../../../utils/demo-store'
+import { getState } from '../../../utils/app-store'
 import { getNetworkChainConfig } from '../../../utils/cobo-config'
 import { isCoboConfigured } from '../../../utils/cobo-client'
 

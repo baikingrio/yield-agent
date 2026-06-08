@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { DemoState } from '../shared/types/demo'
+import type { AppState } from '../shared/types/app'
 
 const provisionCawPrincipal = vi.hoisted(() => vi.fn())
 
@@ -9,7 +9,7 @@ vi.mock('../server/utils/caw-provision', () => ({
 
 import * as bootstrap from '../server/utils/caw-wallet-bootstrap'
 
-function createState(): DemoState {
+function createState(): AppState {
   return {
     wallet: { address: '', totalAssetsUsdc: 0, currentApy: 0, cumulativeYieldUsdc: 0 },
     walletPreparation: {

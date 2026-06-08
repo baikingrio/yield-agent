@@ -1,0 +1,5 @@
+export const DASHBOARD_HOME = '/dashboard'
+export const DASHBOARD_CREATE_STRATEGY = '/dashboard/create-strategy'
+export const DASHBOARD_PACTS = '/dashboard/pacts'
+export const DASHBOARD_HISTORY = '/dashboard/history'
+export const DASHBOARD_SETTINGS = '/dashboard/settings'

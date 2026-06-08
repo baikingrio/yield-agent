@@ -1,6 +1,6 @@
 import { createPublicClient, http } from 'viem'
 import { arbitrumSepolia, baseSepolia } from 'viem/chains'
-import type { NetworkId, YieldPositionSnapshot } from '../../shared/types/demo'
+import type { NetworkId, YieldPositionSnapshot } from '../../shared/types/app'
 import type { NetworkChainConfig } from './cobo-config'
 import { resolveFirstYieldSupplyRoute } from './yield-execution'
 

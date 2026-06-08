@@ -1,12 +1,12 @@
 const POLL_MS = 15_000
 
 export function useDashboardPoll() {
-  const store = useDemoStore()
+  const store = useAppStore()
   let timer: ReturnType<typeof setInterval> | null = null
 
   function poll() {
     store.fetchLogs({ limit: 10 }).catch(() => {})
-    store.fetchYieldSeries().catch(() => {})
+    store.fetchYieldSeries(undefined, { sync: true }).catch(() => {})
   }
 
   onMounted(() => {

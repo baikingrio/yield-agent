@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Pact } from '../shared/types/demo'
+import type { Pact } from '../shared/types/app'
 import {
   isPactFilterTab,
   pactListFetchStatus,

@@ -46,15 +46,23 @@ Aave / Compound / testnet yield action
 - 部署：Vercel 前端 + 远程 Hermes Agent 主机后端 runtime
 - 当前原型依赖：Pinia、Zod、Chart.js、vue-chartjs、@cobo/agentic-wallet
 
-## 已实现页面
+## 路由与 Layout
 
-- `/`：产品落地页，解释 YieldAgent 的 Pact-first 价值和测试网路径
-- `/wallet`：资金准备页（wagmi 连接 EOA → 创建 Agent Wallet → 转入测试网 USDC）
-- `/create-strategy`：创建策略页，支持策略模板、自然语言输入、Pact Preview、允许/禁止动作说明
-- `/dashboard`：控制台，展示 Agent Wallet、策略、执行日志和收益图
-- `/pacts`：Pact 管理页，查看 Pact 状态与权限边界
-- `/history`：交易历史 / Audit Trail
-- `/settings`：网络、分账、Cobo API Key 等测试网设置
+应用使用两套 layout：
+
+- **`default`**：落地页（`/`），顶栏含 Logo、控制台入口与钱包状态，无侧栏
+- **`dashboard`**：控制台（`/dashboard/*`），顶栏仅 Logo 与钱包状态，左侧 `DashboardSidebar` + 右侧子页面内容
+
+| 路径 | Layout | 说明 |
+|------|--------|------|
+| `/` | `default` | 产品落地页；Header / Hero 提供「连接钱包」入口 |
+| `/dashboard` | `dashboard` | 控制台概览；未完成 Agent Wallet 设置时仅展示引导流（无侧栏） |
+| `/dashboard/create-strategy` | `dashboard` | 创建策略：模板、自然语言、Pact Preview |
+| `/dashboard/pacts` | `dashboard` | Pact 管理：状态与权限边界 |
+| `/dashboard/history` | `dashboard` | 交易历史 / Audit Trail |
+| `/dashboard/settings` | `dashboard` | 网络、分账、Cobo API Key 等测试网设置 |
+
+旧顶层路径（`/wallet`、`/create-strategy`、`/pacts`、`/history`、`/settings`）保留为薄重定向，透传 query 至对应 `/dashboard/*` 路由。
 
 ## 文档
 
@@ -87,10 +95,14 @@ Aave / Compound / testnet yield action
 │   │   ├── useWalletPreparation.ts # 钱包准备流程状态
 │   │   ├── useCreateStrategy.ts    # 创建策略流程
 │   │   └── useDashboardPoll.ts     # 控制台轮询
-│   ├── layouts/default.vue
+│   ├── layouts/
+│   │   ├── default.vue             # 落地页 layout
+│   │   └── dashboard.vue           # 控制台 layout（侧栏 + 内容区）
 │   ├── pages/
+│   │   ├── dashboard.vue           # 控制台父路由（onboarding 门禁）
+│   │   └── dashboard/              # 概览、创建策略、Pact、历史、设置子页
 │   ├── plugins/wagmi.client.ts
-│   └── stores/demo.ts
+│   └── stores/app.ts
 ├── server/
 │   ├── api/
 │   │   ├── wallet.get.ts
@@ -102,14 +114,14 @@ Aave / Compound / testnet yield action
 │   │   └── yield-series.get.ts
 │   ├── fixtures/initial-state.ts
 │   └── utils/
-│       ├── demo-store.ts
+│       ├── app-store.ts
 │       ├── wallet-preparation.ts
 │       ├── cobo-client.ts
 │       ├── cobo-config.ts
 │       ├── cobo-preparation.ts
 │       ├── deposit-verify.ts
 │       └── settings.ts
-├── shared/types/demo.ts
+├── shared/types/app.ts
 ├── docs/
 ├── nuxt.config.ts
 ├── tailwind.config.ts
@@ -192,18 +204,21 @@ HERMES_PROFILE=default
 - `POST /api/strategy-agent/parse`：Hermes 自然语言策略解析 + 确定性校验
 - `GET /api/pacts`：Pact 列表（`?sync=true` 批量同步 Cobo 状态）
 - `GET /api/pacts/:id`：Pact 详情（`?sync=true` 同步 Cobo 状态）
-- `POST /api/pacts/:id/approve`：Cobo 模式仅同步状态；local-draft 模式可本地批准
+- `POST /api/pacts/:id/approve`：Cobo 模式同步审批状态
 - `POST /api/pacts/:id/terminate`：终止 Pact（Cobo 模式调用 revoke）
-- `POST /api/pacts/:id/execute`：Pact 激活后执行首次 Recipe（pact-scoped key）
+- `POST /api/pacts/:id/execute`：Pact 激活后执行首次 Recipe（Compound/Aave supply）
+- `GET /api/pacts/:id/position`：链上协议仓位快照
+- `POST /api/pacts/:id/redeem`：从 Compound/Aave 赎回至 Agent Wallet
 - `POST /api/pacts/:id/simulate-denial`：服务端模拟越权请求并记录拒绝原因
+- `GET /api/wallet/preparation/gas-status`：Agent Wallet Gas 预检
 - `GET /api/logs`：执行 / 审计日志
-- `GET /api/yield-series`：收益曲线
+- `GET /api/yield-series`：收益曲线（`?sync=true` 读取 Compound 仓位并累计利息增量；7 日滚动）
 - `GET /api/settings` / `PUT /api/settings`：测试网设置
 
 ### 创建策略生产路径
 
 ```text
-资金准备完成 → 填写参数（可选 Hermes 解析）→ POST /api/strategies
+连接 EOA（首页/Header）→ 控制台完成 Agent Wallet 设置 → 填写参数（可选 Hermes 解析）→ POST /api/strategies
   → Cobo App 审批（前端轮询 sync）→ Pact ACTIVE
   → POST /api/pacts/:id/execute → 真实 tx hash 写入 logs
 ```
@@ -216,12 +231,13 @@ HERMES_PROFILE=default
   → 每 4s 轮询 GET /api/pacts/:id?sync=true
   → active：自动尝试 POST /api/pacts/:id/execute（失败可手动重试）
   → 模拟越权：POST /api/pacts/:id/simulate-denial → logs（?pactId= 可筛选）
+  → 赎回：GET /api/pacts/:id/position → POST /api/pacts/:id/redeem
   → 终止：POST /api/pacts/:id/terminate（Cobo revoke + 状态回读）
 ```
 
 Dashboard 策略卡片在 `awaiting-approval` 时显示「待 Cobo App 审批」，点击跳转 `/pacts?id=`。
 
-开发降级：设置 `CAW_FORCE_LOCAL_DRAFT=true` 可在 Cobo 不可用时回退 local-draft（无法执行 Recipe）。
+用户主路径需配置 Cobo API Key。仅本地开发可在 `.env` 设置 `CAW_FORCE_LOCAL_DRAFT=true` 回退 local-draft（无法执行链上 Recipe）。
 
 ## 开发任务拆解
 
@@ -233,8 +249,8 @@ Dashboard 策略卡片在 `awaiting-approval` 时显示「待 Cobo App 审批」
 2. 修复 pnpm / Vercel 构建问题；
 3. 将 Pact Preview 映射为真实 CAW Pact；
 4. 接入当前 Hermes Agent 主机上的 Hermes 做策略解析，Vercel 通过远程 API / tunnel 调用，并加入确定性校验；
-5. 完善测试网 Aave/Compound supply calldata（当前首次执行为 USDC balanceOf 预检）；
-6. 准备评委 Demo 路径和演示稿。
+5. 可选：Compound 仓位快照写入收益曲线（当前 Dashboard 在无数据时显示说明）；
+6. 准备演示路径和文档。
 
 ## 安全边界
 

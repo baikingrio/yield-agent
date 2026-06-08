@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { HermesStrategyPingResult, StrategyAgentReadiness } from '../../../shared/types/demo'
+import type { HermesStrategyPingResult, StrategyAgentReadiness } from '../../../shared/types/app'
 
 function yesNo(value: boolean) {
   return value ? '已就绪' : '未就绪'

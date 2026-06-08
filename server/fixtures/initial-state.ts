@@ -1,7 +1,7 @@
-import type { DemoState } from '../../shared/types/demo'
+import type { AppState } from '../../shared/types/app'
 import { createInitialWalletPreparation } from '../utils/wallet-preparation'
 
-export function createInitialState(): DemoState {
+export function createInitialState(): AppState {
   return {
     wallet: {
       address: '',

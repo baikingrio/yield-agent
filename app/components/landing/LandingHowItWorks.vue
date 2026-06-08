@@ -1,27 +1,33 @@
 <script setup lang="ts">
+import {
+  DASHBOARD_CREATE_STRATEGY,
+  DASHBOARD_HOME,
+  DASHBOARD_PACTS,
+} from '#shared/constants/dashboard-routes'
+
 const steps = [
   {
     title: '准备 Agent 资金',
-    body: '连接 EOA，创建 Agent Wallet，转入用于自动化的 USDC。资金与主钱包隔离。',
-    href: '/wallet',
-    linkLabel: '前往资金准备',
+    body: '连接 EOA，在控制台创建 Agent Wallet 并转入用于自动化的 USDC。资金与主钱包隔离。',
+    href: DASHBOARD_HOME,
+    linkLabel: '前往控制台',
   },
   {
     title: '定义收益策略',
     body: '从保守型、平衡型模板出发，或用自然语言描述目标。提交前可预览完整 Pact 条款。',
-    href: '/create-strategy?template=conservative-usdc',
+    href: `${DASHBOARD_CREATE_STRATEGY}?template=conservative-usdc`,
     linkLabel: '创建策略',
   },
   {
     title: '审批 Pact',
     body: '在 Cobo Agentic Wallet App 中由钱包主人签署。未审批前 Agent 不会动用预算。',
-    href: '/pacts',
+    href: DASHBOARD_PACTS,
     linkLabel: '管理 Pact',
   },
   {
     title: '执行与监控',
     body: 'Agent 在授权范围内自动执行 Recipe。你在控制台查看仓位、日志，必要时赎回或结束策略。',
-    href: '/dashboard',
+    href: DASHBOARD_HOME,
     linkLabel: '打开控制台',
   },
 ]

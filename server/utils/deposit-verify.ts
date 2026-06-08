@@ -1,6 +1,6 @@
 import { createPublicClient, erc20Abi, http, parseEventLogs } from 'viem'
 import { arbitrumSepolia, baseSepolia } from 'viem/chains'
-import type { NetworkId } from '../../shared/types/demo'
+import type { NetworkId } from '../../shared/types/app'
 import { getNetworkChainConfig } from './cobo-config'
 
 export async function verifyUsdcDeposit(params: {

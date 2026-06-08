@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CawOnboardStatus } from '../../../shared/types/demo'
+import type { CawOnboardStatus } from '../../../shared/types/app'
 
 const props = defineProps<{
   status: CawOnboardStatus | null

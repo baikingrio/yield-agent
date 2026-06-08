@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LogType } from '../../../shared/types/demo'
+import type { LogType } from '../../../shared/types/app'
 
 export type LogFilter = LogType | 'all'
 

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { DemoState, Pact } from '../shared/types/demo'
-import { resolveRedeemApiKey } from '../server/utils/pact-redeem-credentials'
+import type { AppState, Pact } from '../shared/types/app'
+import { resolveRedeemApiKey } from '../server/utils/pact-credentials'
 import { storePactCredential } from '../server/db/repository'
 
-function makeState(pact: Partial<Pact> & { id: string }): DemoState {
+function makeState(pact: Partial<Pact> & { id: string }): AppState {
   return {
     wallet: { address: '0xAgent', totalAssetsUsdc: 10, currentApy: 0, cumulativeYieldUsdc: 0 },
     walletPreparation: {

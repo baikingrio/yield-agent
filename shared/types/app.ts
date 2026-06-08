@@ -1,4 +1,14 @@
 export type NetworkId = 'base-sepolia' | 'arbitrum-sepolia'
+
+export const NETWORK_LABELS: Record<NetworkId, string> = {
+  'base-sepolia': 'Base Sepolia',
+  'arbitrum-sepolia': 'Arbitrum Sepolia',
+}
+
+/** 测试网允许小额策略；maxSpend 为 Pact 总支出上限（非单日）。 */
+export const MIN_MAX_SPEND_USDC = 1
+export const MAX_MAX_SPEND_USDC = 1_000_000
+
 export type PrepStep = 'eoa' | 'agent_wallet' | 'funding'
 export type PrepStepStatus = 'pending' | 'in_progress' | 'completed'
 export type AgentBootstrapMode = 'cli-onboard' | 'sdk-create' | null
@@ -134,7 +144,7 @@ export interface YieldSeries {
   totalUsdc: number
 }
 
-export interface DemoSettings {
+export interface AppSettings {
   network: NetworkId
   apiKeyConfigured: boolean
   defaultAgentFee: number
@@ -295,7 +305,7 @@ export interface CreateStrategyPayload {
   userSplit: string
 }
 
-export interface DemoState {
+export interface AppState {
   wallet: WalletSummary
   walletPreparation: WalletPreparation
   strategies: Strategy[]
@@ -303,5 +313,7 @@ export interface DemoState {
   logs: LogEntry[]
   yieldSeries7d: YieldPoint[]
   yieldSeries30d: YieldPoint[]
-  settings: DemoSettings
+  /** 上次链上协议仓位（USDC），用于计算利息增量 */
+  yieldSnapshotLastSuppliedUsdc?: number | null
+  settings: AppSettings
 }

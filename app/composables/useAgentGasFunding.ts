@@ -1,7 +1,7 @@
 import { useConnection, useSendTransaction, useSwitchChain } from '@wagmi/vue'
 import { arbitrumSepolia, baseSepolia } from '@wagmi/vue/chains'
 import { createPublicClient, http, parseEther } from 'viem'
-import type { NetworkId } from '../../shared/types/demo'
+import type { NetworkId } from '#shared/types/app'
 
 const CHAIN_BY_NETWORK = {
   'base-sepolia': baseSepolia,

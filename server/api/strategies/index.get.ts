@@ -1,4 +1,4 @@
-import { getState } from '../../utils/demo-store'
+import { getState } from '../../utils/app-store'
 
 export default defineEventHandler(() => {
   return getState().strategies

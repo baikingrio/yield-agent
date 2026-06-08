@@ -1,7 +1,13 @@
-import type { NetworkId, StrategyParseLimits, StrategyParseResponse, StrategyProposal } from '../../shared/types/demo'
+import type {
+  NetworkId,
+  StrategyParseLimits,
+  StrategyParseResponse,
+  StrategyProposal,
+} from '../../shared/types/app'
+import { normalizeNumericField } from '../../shared/utils/numeric-field'
 import { callHermesStrategyAgent } from './hermes-strategy-client'
 import { normalizeStrategyProposal, validateStrategyPayload } from './strategy-validator'
-import type { DemoState } from '../../shared/types/demo'
+import type { AppState } from '../../shared/types/app'
 
 const SYSTEM_PROMPT = `You are YieldAgent strategy parser. Reply with JSON only, no markdown.
 Schema:
@@ -15,7 +21,13 @@ Schema:
   "userSplit": string,
   "explanation": string,
   "warnings": string[]
-}`
+}
+
+Rules:
+- maxSpend is the TOTAL USDC cap for the entire Pact (not a daily limit).
+- If the user gives a per-day amount and a duration (e.g. 1 USDC/day for one week), multiply them for maxSpend (e.g. 7).
+- maxSpend must be between 1 and the provided availableUsdc.
+- Buying/swapping into ETH or other assets implies riskLevel "aggressive" or "balanced", not conservative.`
 
 function extractJsonObject(text: string): Record<string, unknown> | null {
   const trimmed = text.trim()
@@ -31,6 +43,31 @@ function extractJsonObject(text: string): Record<string, unknown> | null {
   }
 }
 
+function parseDurationDays(text: string): number | null {
+  if (/一周|1\s*周|七天|7\s*天/.test(text)) return 7
+  const dayMatch = text.match(/(\d+)\s*天/)
+  if (dayMatch?.[1]) return Number(dayMatch[1])
+  return null
+}
+
+function inferMaxSpendFromText(text: string): string | null {
+  const dailyMatch =
+    text.match(/每[日天][^。，,]*?(\d+(?:\.\d+)?)\s*USDC/i)
+    || text.match(/每[日天][^。，,]*?最多\s*(\d+(?:\.\d+)?)\s*USDC/i)
+  if (dailyMatch?.[1]) {
+    const daily = Number(dailyMatch[1])
+    const days = parseDurationDays(text) ?? 7
+    if (!Number.isNaN(daily) && daily > 0 && days > 0) {
+      return String(daily * days)
+    }
+  }
+
+  const amount =
+    text.match(/(\d+(?:\.\d+)?)\s*usdc/i)
+    || text.match(/(\d+(?:\.\d+)?)\s*(?:枚|个)?\s*usdc?/i)
+  return amount?.[1] ?? null
+}
+
 function fallbackRegexParse(text: string, limits: StrategyParseLimits): StrategyProposal | null {
   const lower = text.toLowerCase()
   const proposal: Partial<StrategyProposal> = {
@@ -44,9 +81,10 @@ function fallbackRegexParse(text: string, limits: StrategyParseLimits): Strategy
   if (lower.includes('aggressive') || lower.includes('激进')) proposal.riskLevel = 'aggressive'
   else if (lower.includes('balanced') || lower.includes('平衡')) proposal.riskLevel = 'balanced'
   else if (lower.includes('conservative') || lower.includes('保守')) proposal.riskLevel = 'conservative'
+  else if (/买入\s*eth|买\s*eth|swap|兑换/i.test(text)) proposal.riskLevel = 'aggressive'
 
-  const amount = text.match(/(\d+)\s*usdc/i) || text.match(/(\d+)\s*(?:枚|个)?\s*usdc?/i)
-  if (amount?.[1]) proposal.maxSpend = amount[1]
+  const maxSpend = inferMaxSpendFromText(text)
+  if (maxSpend) proposal.maxSpend = maxSpend
 
   const apy =
     text.match(/(\d+(?:\.\d+)?)\s*%?\s*apy/i)
@@ -60,8 +98,22 @@ function fallbackRegexParse(text: string, limits: StrategyParseLimits): Strategy
   return normalizeStrategyProposal(proposal, limits.network)
 }
 
+function validationOptions(limits: StrategyParseLimits) {
+  return { availableUsdc: limits.availableUsdc }
+}
+
+function firstValidationError(
+  state: AppState,
+  proposal: StrategyProposal,
+  limits: StrategyParseLimits,
+): string | null {
+  const validation = validateStrategyPayload(state, proposal, validationOptions(limits))
+  if (validation.valid) return null
+  return Object.values(validation.errors)[0] || '参数校验失败'
+}
+
 export async function parseStrategyNaturalLanguage(
-  state: DemoState,
+  state: AppState,
   text: string,
   limits: StrategyParseLimits,
 ): Promise<StrategyParseResponse & { fallbackAvailable?: boolean }> {
@@ -80,11 +132,8 @@ export async function parseStrategyNaturalLanguage(
       err.fallbackAvailable = true
       throw err
     }
-    const validation = validateStrategyPayload(state, proposal)
-    if (!validation.valid) {
-      const first = Object.values(validation.errors)[0] || '参数校验失败'
-      throw new Error(first)
-    }
+    const validationError = firstValidationError(state, proposal, limits)
+    if (validationError) throw new Error(validationError)
     return {
       proposal,
       explanation: '已使用本地规则解析（Hermes 未配置）。',
@@ -92,6 +141,11 @@ export async function parseStrategyNaturalLanguage(
       fallbackAvailable: true,
     }
   }
+
+  let hermesError: Error | null = null
+  let hermesProposal: StrategyProposal | null = null
+  let hermesExplanation = '已根据自然语言生成策略提案。'
+  let hermesWarnings: string[] = []
 
   try {
     const result = await callHermesStrategyAgent({
@@ -110,49 +164,53 @@ export async function parseStrategyNaturalLanguage(
     const parsed = extractJsonObject(result.content)
     if (!parsed) throw new Error('Hermes 返回的内容无法解析为 JSON')
 
-    const proposal = normalizeStrategyProposal(
+    hermesProposal = normalizeStrategyProposal(
       {
         network: parsed.network as NetworkId,
         asset: String(parsed.asset ?? 'USDC'),
         targetApy: parsed.targetApy ? String(parsed.targetApy) : undefined,
         riskLevel: String(parsed.riskLevel ?? 'conservative'),
-        maxSpend: String(parsed.maxSpend ?? ''),
-        agentFee: String(parsed.agentFee ?? '15'),
-        userSplit: String(parsed.userSplit ?? '85'),
+        maxSpend: normalizeNumericField(parsed.maxSpend as string | number | undefined, ''),
+        agentFee: normalizeNumericField(parsed.agentFee as string | number | undefined, '15'),
+        userSplit: normalizeNumericField(parsed.userSplit as string | number | undefined, '85'),
       },
       limits.network,
     )
 
-    if (!proposal) throw new Error('Hermes 未返回有效的 maxSpend')
+    if (!hermesProposal) throw new Error('Hermes 未返回有效的 maxSpend')
 
-    const validation = validateStrategyPayload(state, proposal)
-    if (!validation.valid) {
-      const first = Object.values(validation.errors)[0] || '参数校验失败'
-      throw new Error(first)
-    }
-
-    return {
-      proposal,
-      explanation: String(parsed.explanation ?? '已根据自然语言生成策略提案。'),
-      warnings: Array.isArray(parsed.warnings)
-        ? parsed.warnings.map((item) => String(item))
-        : [],
-    }
+    hermesExplanation = String(parsed.explanation ?? hermesExplanation)
+    hermesWarnings = Array.isArray(parsed.warnings)
+      ? parsed.warnings.map((item) => String(item))
+      : []
   } catch (err) {
-    const proposal = fallbackRegexParse(trimmed, limits)
-    if (proposal) {
-      const validation = validateStrategyPayload(state, proposal)
-      if (validation.valid) {
-        return {
-          proposal,
-          explanation: 'Hermes 调用失败，已回退到本地规则解析。',
-          warnings: [err instanceof Error ? err.message : 'Hermes 调用失败'],
-          fallbackAvailable: true,
-        }
-      }
+    hermesError = err instanceof Error ? err : new Error('Hermes 策略解析失败')
+  }
+
+  if (hermesProposal) {
+    const validationError = firstValidationError(state, hermesProposal, limits)
+    if (validationError) throw new Error(validationError)
+    return {
+      proposal: hermesProposal,
+      explanation: hermesExplanation,
+      warnings: hermesWarnings,
     }
-    const error = err instanceof Error ? err : new Error('Hermes 策略解析失败')
-    ;(error as Error & { fallbackAvailable?: boolean }).fallbackAvailable = true
-    throw error
+  }
+
+  const proposal = fallbackRegexParse(trimmed, limits)
+  if (!proposal) {
+    const err = hermesError ?? new Error('无法从描述中提取有效参数')
+    ;(err as Error & { fallbackAvailable?: boolean }).fallbackAvailable = true
+    throw err
+  }
+
+  const validationError = firstValidationError(state, proposal, limits)
+  if (validationError) throw new Error(validationError)
+
+  return {
+    proposal,
+    explanation: 'Hermes 调用失败，已回退到本地规则解析。',
+    warnings: [hermesError?.message ?? 'Hermes 调用失败'],
+    fallbackAvailable: true,
   }
 }

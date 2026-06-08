@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { DemoState } from '../shared/types/demo'
+import type { AppState } from '../shared/types/app'
 import { buildCawReadiness } from '../server/utils/caw-readiness'
 import { getCoboBasePath, getCoboEnvironment } from '../server/utils/cobo-config'
 
@@ -10,8 +10,8 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-function createState(overrides: Partial<DemoState> = {}): DemoState {
-  const base: DemoState = {
+function createState(overrides: Partial<AppState> = {}): AppState {
+  const base: AppState = {
     wallet: {
       address: '',
       totalAssetsUsdc: 0,
@@ -113,7 +113,7 @@ describe('buildCawReadiness', () => {
         funding: { status: 'ready', depositedUsdc: 100, availableUsdc: 100, lastTxHash: '0xTx' },
         steps: { eoa: 'completed', agent_wallet: 'completed', funding: 'completed' },
         ready: true,
-      } as DemoState['walletPreparation'],
+      } as AppState['walletPreparation'],
     })
 
     const readiness = buildCawReadiness(state)

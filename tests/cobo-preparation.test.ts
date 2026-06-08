@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { DemoState, WalletPreparation } from '../shared/types/demo'
+import type { AppState, WalletPreparation } from '../shared/types/app'
 
 const startAgentBootstrap = vi.fn()
 const pollAgentBootstrap = vi.fn()
@@ -21,8 +21,8 @@ vi.mock('../server/utils/caw-wallet-bootstrap', () => ({
   syncPreparationFromCawCli,
 }))
 
-function createState(overrides: Partial<DemoState> = {}): DemoState {
-  const base: DemoState = {
+function createState(overrides: Partial<AppState> = {}): AppState {
+  const base: AppState = {
     wallet: { address: '', totalAssetsUsdc: 0, currentApy: 0, cumulativeYieldUsdc: 0 },
     walletPreparation: {
       network: 'base-sepolia',

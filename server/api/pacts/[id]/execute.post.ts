@@ -1,9 +1,10 @@
-import { getState, persistCurrentState } from '../../../utils/demo-store'
+import { getState, persistCurrentState } from '../../../utils/app-store'
 import { extractCoboErrorMessage } from '../../../utils/cobo-client'
 import { refreshCoboPactStatus } from '../../../utils/cobo-pact'
 import { executeFirstPactRecipe } from '../../../utils/cobo-execution'
 import { isCoboSubmittedPact, pactExecutionBlockedReason } from '../../../utils/pact-execution-guard'
 import { resolvePactExecutionApiKey } from '../../../utils/pact-credentials'
+import { findPactById } from '../../../utils/pact-lookup'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
@@ -12,7 +13,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const state = getState()
-  const pact = state.pacts.find((p) => p.id === id || p.coboPactId === id)
+  const pact = findPactById(state, id)
   if (!pact) {
     throw createError({ statusCode: 404, data: { error: 'Pact not found' } })
   }

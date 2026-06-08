@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CawReadiness } from '../../../shared/types/demo'
+import type { CawReadiness } from '../../../shared/types/app'
 
 const props = defineProps<{
   readiness: CawReadiness | null

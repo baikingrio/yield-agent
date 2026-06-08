@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import type { NetworkId, WalletPreparation } from '../../../shared/types/demo'
-
-const NETWORK_LABELS: Record<NetworkId, string> = {
-  'base-sepolia': 'Base Sepolia 测试网',
-  'arbitrum-sepolia': 'Arbitrum Sepolia 测试网',
-}
+import { NETWORK_LABELS } from '#shared/types/app'
+import type { WalletPreparation } from '#shared/types/app'
 
 defineProps<{
   prep: WalletPreparation | null

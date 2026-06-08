@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { getState } from '../../utils/demo-store'
+import { getState } from '../../utils/app-store'
 import { parseStrategyNaturalLanguage } from '../../utils/hermes-strategy-parser'
 
 const schema = z.object({

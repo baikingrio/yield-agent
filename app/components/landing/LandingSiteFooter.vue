@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import {
+  DASHBOARD_CREATE_STRATEGY,
+  DASHBOARD_HISTORY,
+  DASHBOARD_HOME,
+  DASHBOARD_PACTS,
+} from '#shared/constants/dashboard-routes'
+
 const links = [
-  { to: '/wallet', label: '资金准备' },
-  { to: '/create-strategy', label: '创建策略' },
-  { to: '/pacts', label: 'Pact 管理' },
-  { to: '/history', label: '交易历史' },
+  { to: DASHBOARD_HOME, label: '控制台' },
+  { to: DASHBOARD_CREATE_STRATEGY, label: '创建策略' },
+  { to: DASHBOARD_PACTS, label: 'Pact 管理' },
+  { to: DASHBOARD_HISTORY, label: '交易历史' },
 ]
 </script>
 

@@ -1,6 +1,6 @@
-import type { DemoState } from '../../shared/types/demo'
+import type { AppState } from '../../shared/types/app'
 import { getCoboBasePath } from './cobo-config'
-import { schedulePersistDemoState } from './demo-state-persistence'
+import { schedulePersistAppState } from './app-state-persistence'
 
 interface ProvisionResponse {
   success?: boolean
@@ -44,7 +44,7 @@ async function defaultFetcher(url: string, init: Parameters<ProvisionFetcher>[1]
 }
 
 export async function provisionCawPrincipal(
-  state: DemoState,
+  state: AppState,
   options: ProvisionCawPrincipalOptions,
 ): Promise<ProvisionCawPrincipalResult> {
   const name = options.name.trim()
@@ -72,7 +72,7 @@ export async function provisionCawPrincipal(
   state.settings.agentId = agentId
   state.settings.coboApiKey = apiKey
   state.settings.apiKeyConfigured = true
-  schedulePersistDemoState(state)
+  schedulePersistAppState(state)
 
   return { agentId, status }
 }

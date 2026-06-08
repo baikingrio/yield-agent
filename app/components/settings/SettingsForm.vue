@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { DemoSettings, NetworkId } from '../../../shared/types/demo'
+import type { AppSettings, NetworkId } from '../../../shared/types/app'
 
 const props = defineProps<{
-  settings: DemoSettings | null
+  settings: AppSettings | null
   saving?: boolean
 }>()
 

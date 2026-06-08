@@ -1,11 +1,12 @@
-import { getState, persistCurrentState } from '../../utils/demo-store'
+import { getState, persistCurrentState } from '../../utils/app-store'
 import { refreshCoboPactStatus } from '../../utils/cobo-pact'
+import { findPactById } from '../../utils/pact-lookup'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   const query = getQuery(event)
   const state = getState()
-  const pact = state.pacts.find((p) => p.id === id || p.coboPactId === id)
+  const pact = id ? findPactById(state, id) : undefined
 
   if (!pact) {
     throw createError({ statusCode: 404, statusMessage: 'Pact not found', data: { error: 'Pact not found' } })

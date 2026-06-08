@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { NetworkId, Pact } from '../../../shared/types/demo'
+import { DASHBOARD_HOME, DASHBOARD_PACTS } from '#shared/constants/dashboard-routes'
+import type { NetworkId, Pact } from '../../../shared/types/app'
 import type { PipelineStage } from '~/composables/useCreateStrategy'
 
 const props = defineProps<{
@@ -38,7 +39,7 @@ const showPipelinePanel = computed(() =>
 
 const statusChip = computed(() => {
   if (!props.preparationReady && !showPipelinePanel.value) {
-    return { label: '待资金准备', class: 'text-[var(--color-status-pending)]' }
+    return { label: '待 Agent 设置', class: 'text-[var(--color-status-pending)]' }
   }
 
   switch (props.pipeline) {
@@ -118,7 +119,7 @@ const approvalGuidePact = computed((): Pact => ({
         class="mt-2 text-xs text-body"
       >
         表单已填写，但需先完成
-        <NuxtLink to="/wallet" class="text-primary no-underline hover:underline">资金准备</NuxtLink>
+        <NuxtLink :to="DASHBOARD_HOME" class="text-primary no-underline hover:underline">控制台 Agent 设置</NuxtLink>
         后才能提交 Pact。
       </p>
     </div>
@@ -235,7 +236,7 @@ const approvalGuidePact = computed((): Pact => ({
       </template>
       <template v-else-if="props.pipeline === 'success'">
         <NuxtLink
-          to="/dashboard"
+          :to="DASHBOARD_HOME"
           class="flex h-11 w-full items-center justify-center rounded-md bg-primary text-sm font-semibold text-on-primary no-underline hover:bg-primary-active"
         >
           返回控制台
@@ -267,7 +268,7 @@ const approvalGuidePact = computed((): Pact => ({
           {{ props.approvalRefreshing ? '刷新中…' : '我已批准，刷新状态' }}
         </button>
         <NuxtLink
-          :to="props.coboPactId ? `/pacts?id=${props.coboPactId}` : '/pacts'"
+          :to="props.coboPactId ? `${DASHBOARD_PACTS}?id=${props.coboPactId}` : DASHBOARD_PACTS"
           class="flex h-11 w-full items-center justify-center rounded-md border border-hairline text-sm font-medium text-body no-underline hover:bg-surface-elevated"
         >
           在 Pact 管理页查看

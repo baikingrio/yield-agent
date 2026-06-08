@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import {
+  DASHBOARD_CREATE_STRATEGY,
+  DASHBOARD_HOME,
+} from '#shared/constants/dashboard-routes'
+
+definePageMeta({ layout: 'default' })
+
 useHead({
   title: 'YieldAgent · 链上 USDC 收益自动化',
   meta: [
@@ -9,8 +16,9 @@ useHead({
   ],
 })
 
-const store = useDemoStore()
+const store = useAppStore()
 const prepLoading = ref(true)
+const { isConnected, busy, connectWallet } = useWalletConnect()
 
 onMounted(async () => {
   try {
@@ -23,7 +31,7 @@ onMounted(async () => {
 })
 
 const preparationReady = computed(() => Boolean(store.preparation?.ready))
-const createStrategyHref = '/create-strategy?template=conservative-usdc'
+const createStrategyHref = `${DASHBOARD_CREATE_STRATEGY}?template=conservative-usdc`
 </script>
 
 <template>
@@ -49,40 +57,57 @@ const createStrategyHref = '/create-strategy?template=conservative-usdc'
           </p>
         </div>
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <NuxtLink
-            to="/wallet"
-            class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-on-primary no-underline transition-colors duration-150 hover:bg-primary-active"
-          >
-            开始使用
-          </NuxtLink>
+        <ClientOnly>
+          <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <button
+              v-if="!isConnected"
+              type="button"
+              class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-on-primary transition-colors duration-150 hover:bg-primary-active disabled:opacity-50"
+              :disabled="busy"
+              @click="connectWallet()"
+            >
+              {{ busy ? '连接中…' : '连接钱包' }}
+            </button>
 
-          <NuxtLink
-            v-if="preparationReady"
-            :to="createStrategyHref"
-            class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-5 text-sm font-semibold text-on-dark no-underline transition-colors duration-150 hover:bg-surface-elevated"
-          >
-            创建首个策略
-          </NuxtLink>
+            <NuxtLink
+              v-else
+              :to="DASHBOARD_HOME"
+              class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-on-primary no-underline transition-colors duration-150 hover:bg-primary-active"
+            >
+              进入控制台
+            </NuxtLink>
 
-          <NuxtLink
-            to="/dashboard"
-            class="inline-flex h-10 items-center justify-center px-2 text-sm font-medium text-primary no-underline hover:text-primary-active"
-          >
-            进入控制台
-          </NuxtLink>
-        </div>
+            <NuxtLink
+              v-if="preparationReady"
+              :to="createStrategyHref"
+              class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-5 text-sm font-semibold text-on-dark no-underline transition-colors duration-150 hover:bg-surface-elevated"
+            >
+              创建首个策略
+            </NuxtLink>
+          </div>
 
-        <p
-          v-if="!preparationReady && !prepLoading"
-          class="text-sm text-[var(--color-muted-strong)]"
-        >
-          首次使用请先完成
-          <NuxtLink to="/wallet" class="font-medium text-primary no-underline hover:text-primary-active">
-            资金准备
-          </NuxtLink>
-          ，再创建并审批 Pact。
-        </p>
+          <template #fallback>
+            <div class="h-10 w-32 animate-pulse rounded-md bg-surface" />
+          </template>
+        </ClientOnly>
+
+        <ClientOnly>
+          <p
+            v-if="!preparationReady && !prepLoading"
+            class="text-sm text-[var(--color-muted-strong)]"
+          >
+            <template v-if="!isConnected">
+              连接钱包后，在控制台完成 Agent Wallet 设置，再创建并审批 Pact。
+            </template>
+            <template v-else>
+              钱包已连接。请在
+              <NuxtLink :to="DASHBOARD_HOME" class="font-medium text-primary no-underline hover:text-primary-active">
+                控制台
+              </NuxtLink>
+              完成 Agent Wallet 创建与注资。
+            </template>
+          </p>
+        </ClientOnly>
       </div>
 
       <LandingProductPreview />
@@ -101,15 +126,30 @@ const createStrategyHref = '/create-strategy?template=conservative-usdc'
         <div class="mx-auto max-w-2xl text-center">
           <h2 class="text-base font-semibold text-on-dark">开始管理你的第一条自动化收益策略</h2>
           <p class="mt-2 text-sm text-[var(--color-muted-strong)]">
-            三步即可上线：准备资金、创建策略、审批 Pact。推荐从保守型 USDC 模板开始。
+            连接钱包、在控制台完成 Agent 设置、创建策略并审批 Pact。推荐从保守型 USDC 模板开始。
           </p>
           <div class="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <NuxtLink
-              to="/wallet"
-              class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-6 text-sm font-semibold text-on-primary no-underline transition-colors duration-150 hover:bg-primary-active sm:w-auto"
-            >
-              开始使用
-            </NuxtLink>
+            <ClientOnly>
+              <button
+                v-if="!isConnected"
+                type="button"
+                class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-6 text-sm font-semibold text-on-primary transition-colors duration-150 hover:bg-primary-active disabled:opacity-50 sm:w-auto"
+                :disabled="busy"
+                @click="connectWallet()"
+              >
+                {{ busy ? '连接中…' : '连接钱包' }}
+              </button>
+              <NuxtLink
+                v-else
+                :to="DASHBOARD_HOME"
+                class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-6 text-sm font-semibold text-on-primary no-underline transition-colors duration-150 hover:bg-primary-active sm:w-auto"
+              >
+                进入控制台
+              </NuxtLink>
+              <template #fallback>
+                <div class="h-10 w-32 animate-pulse rounded-md bg-surface" />
+              </template>
+            </ClientOnly>
             <NuxtLink
               :to="createStrategyHref"
               class="inline-flex h-10 w-full items-center justify-center rounded-md border border-hairline px-6 text-sm font-semibold text-on-dark no-underline transition-colors duration-150 hover:bg-surface-elevated sm:w-auto"

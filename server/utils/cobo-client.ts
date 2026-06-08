@@ -1,5 +1,5 @@
 import { BalanceApi, Configuration, PactsApi, WalletsApi } from '@cobo/agentic-wallet'
-import type { DemoState } from '../../shared/types/demo'
+import type { AppState } from '../../shared/types/app'
 import { getCoboBasePath } from './cobo-config'
 
 export class CoboNotConfiguredError extends Error {
@@ -8,13 +8,13 @@ export class CoboNotConfiguredError extends Error {
   }
 }
 
-export function getCoboApiKey(state: DemoState): string {
+export function getCoboApiKey(state: AppState): string {
   const key = state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim()
   if (!key) throw new CoboNotConfiguredError()
   return key
 }
 
-export function isCoboConfigured(state: DemoState): boolean {
+export function isCoboConfigured(state: AppState): boolean {
   try {
     getCoboApiKey(state)
     return true
@@ -63,7 +63,7 @@ export async function withCoboRetry<T>(
   throw lastErr
 }
 
-function createConfiguration(state: DemoState): Configuration {
+function createConfiguration(state: AppState): Configuration {
   return new Configuration({
     apiKey: getCoboApiKey(state),
     basePath: getCoboBasePath(),
@@ -73,15 +73,15 @@ function createConfiguration(state: DemoState): Configuration {
   })
 }
 
-export function createCoboWalletsApi(state: DemoState): WalletsApi {
+export function createCoboWalletsApi(state: AppState): WalletsApi {
   return new WalletsApi(createConfiguration(state))
 }
 
-export function createCoboBalanceApi(state: DemoState): BalanceApi {
+export function createCoboBalanceApi(state: AppState): BalanceApi {
   return new BalanceApi(createConfiguration(state))
 }
 
-export function createCoboPactsApi(state: DemoState): PactsApi {
+export function createCoboPactsApi(state: AppState): PactsApi {
   return new PactsApi(createConfiguration(state))
 }
 

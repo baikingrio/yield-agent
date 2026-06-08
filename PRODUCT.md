@@ -39,10 +39,11 @@ The product must not drop a new visitor directly into a data dashboard. First-ti
 ### Entry Principles
 
 - `/` is a standalone product landing page, not the operational dashboard.
-- The primary CTA is **Connect Wallet / Prepare Funds** → `/wallet`.
-- Secondary CTA: **Create Strategy** (gated until wallet preparation is complete).
-- Users do **not** skip wallet preparation before creating a Pact-backed strategy.
-- Testnet only: no mainnet funds; EOA connection is real (wagmi); Agent Wallet funding uses Nitro API simulation on testnet.
+- The primary CTA on `/` is **Connect Wallet** (wagmi); after connect, users land on `/dashboard`.
+- Agent Wallet setup (create wallet + fund) happens inside the dashboard onboarding flow, not a separate nav page.
+- Secondary CTA: **Create Strategy** (gated until Agent Wallet preparation is complete).
+- Users do **not** skip Agent Wallet setup before creating a Pact-backed strategy.
+- Testnet only: no mainnet funds; EOA connection is real (wagmi); Agent Wallet funding uses EOA ERC20 transfer with on-chain verification and Cobo balance sync.
 - Users start from a template before free-form natural language.
 
 ### Wallet Login and Funding Model

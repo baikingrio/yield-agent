@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-dvh bg-canvas">
-    <AppNav />
+    <AppNav variant="landing" />
     <slot />
   </div>
 </template>

@@ -7,9 +7,9 @@ import type {
   AgentBootstrapPhase,
   AgentBootstrapState,
   AgentBootstrapStatusResponse,
-  DemoState,
+  AppState,
   WalletPreparation,
-} from '../../shared/types/demo'
+} from '../../shared/types/app'
 import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
 import {
   createCoboWalletsApi,
@@ -18,7 +18,7 @@ import {
 } from './cobo-client'
 import { runCawOnboardStep } from './caw-onboard'
 import { provisionCawPrincipal } from './caw-provision'
-import { schedulePersistDemoState } from './demo-state-persistence'
+import { schedulePersistAppState } from './app-state-persistence'
 import {
   markAgentWalletCreated,
   markAgentWalletPreparing,
@@ -58,7 +58,7 @@ function getBootstrapState(prep: WalletPreparation): AgentBootstrapState {
   return prep.agentBootstrap ?? defaultBootstrapState()
 }
 
-function setBootstrapState(state: DemoState, patch: Partial<AgentBootstrapState>): AgentBootstrapState {
+function setBootstrapState(state: AppState, patch: Partial<AgentBootstrapState>): AgentBootstrapState {
   const prep = state.walletPreparation
   const next = { ...getBootstrapState(prep), ...patch }
   prep.agentBootstrap = next
@@ -160,7 +160,7 @@ export async function detectBootstrapMode(
 }
 
 export async function checkTssReadiness(
-  state: DemoState,
+  state: AppState,
   walletId?: string | null,
   runner: CawCliRunner = defaultCawRunner,
 ): Promise<{ online: boolean; nodeId: string | null; source: 'cli-local' | 'sdk-remote' | 'none'; message: string }> {
@@ -212,12 +212,12 @@ export async function checkTssReadiness(
   }
 }
 
-function currentCoboApiKey(state: DemoState): string | null {
+function currentCoboApiKey(state: AppState): string | null {
   return state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim() || null
 }
 
 export async function syncCredentialsFromCli(
-  state: DemoState,
+  state: AppState,
   runner: CawCliRunner = defaultCawRunner,
 ): Promise<boolean> {
   if (currentCoboApiKey(state)) return true
@@ -230,14 +230,14 @@ export async function syncCredentialsFromCli(
     state.settings.coboApiKey = apiKey
     state.settings.apiKeyConfigured = true
     if (agentId) state.settings.agentId = agentId
-    schedulePersistDemoState(state)
+    schedulePersistAppState(state)
     return true
   } catch {
     return false
   }
 }
 
-export async function ensureCawCredentials(state: DemoState): Promise<void> {
+export async function ensureCawCredentials(state: AppState): Promise<void> {
   if (currentCoboApiKey(state)) return
   if (await syncCredentialsFromCli(state)) return
   if (state.settings.agentId) return
@@ -257,7 +257,7 @@ interface PairInitiateResponse {
 }
 
 async function initiateWalletPairingApi(
-  state: DemoState,
+  state: AppState,
   walletId: string,
 ): Promise<{ status: 'pairing'; code: string | null; expiresAt: string | null } | undefined> {
   const apiKey = currentCoboApiKey(state)
@@ -335,7 +335,7 @@ async function pollPairStatusCli(
 }
 
 async function pollPairStatusApi(
-  state: DemoState,
+  state: AppState,
   walletId: string,
 ): Promise<'paired' | 'pairing' | 'unpaired'> {
   const apiKey = currentCoboApiKey(state)
@@ -359,7 +359,7 @@ async function pollPairStatusApi(
 }
 
 async function pollPairStatus(
-  state: DemoState,
+  state: AppState,
   walletId: string,
   runner: CawCliRunner = defaultCawRunner,
 ): Promise<'paired' | 'pairing' | 'unpaired'> {
@@ -372,7 +372,7 @@ async function pollPairStatus(
 }
 
 async function resolvePairingStatus(
-  state: DemoState,
+  state: AppState,
   walletUuid: string,
   runner: CawCliRunner = defaultCawRunner,
 ): Promise<PairingInfo> {
@@ -395,7 +395,7 @@ async function resolvePairingStatus(
   return initiated ?? { status: 'unpaired', code: null, expiresAt: null }
 }
 
-async function pollPairingForReadyWallet(state: DemoState): Promise<AgentBootstrapStatusResponse> {
+async function pollPairingForReadyWallet(state: AppState): Promise<AgentBootstrapStatusResponse> {
   const prep = state.walletPreparation
   const walletUuid = prep.agentWallet.coboWalletId
   const address = prep.agentWallet.address
@@ -417,7 +417,7 @@ async function pollPairingForReadyWallet(state: DemoState): Promise<AgentBootstr
 }
 
 async function resolveEvmAddressFromCli(
-  state: DemoState,
+  state: AppState,
   walletUuid: string,
   runner: CawCliRunner,
 ): Promise<string | null> {
@@ -445,7 +445,7 @@ async function resolveEvmAddressFromCli(
 }
 
 async function resolveEvmAddressFromSdk(
-  state: DemoState,
+  state: AppState,
   walletUuid: string,
 ): Promise<string | null> {
   const networkConfig = getNetworkChainConfig(state.walletPreparation.network)
@@ -472,7 +472,7 @@ async function resolveEvmAddressFromSdk(
   }
 }
 
-async function getWalletStatusFromSdk(state: DemoState, walletUuid: string): Promise<string | null> {
+async function getWalletStatusFromSdk(state: AppState, walletUuid: string): Promise<string | null> {
   try {
     const walletsApi = createCoboWalletsApi(state)
     const detail = (await withCoboRetry(() => walletsApi.getWallet(walletUuid))).data.result
@@ -482,13 +482,13 @@ async function getWalletStatusFromSdk(state: DemoState, walletUuid: string): Pro
   }
 }
 
-function rememberPendingAgentWallet(state: DemoState, walletUuid: string): void {
+function rememberPendingAgentWallet(state: AppState, walletUuid: string): void {
   const prep = state.walletPreparation
   prep.agentWallet.coboWalletId = walletUuid
   touchPreparation(prep, state)
 }
 
-async function bootstrapViaSdkCreate(state: DemoState): Promise<void> {
+async function bootstrapViaSdkCreate(state: AppState): Promise<void> {
   const prep = state.walletPreparation
   if (prep.agentWallet.coboWalletId) return
 
@@ -504,7 +504,7 @@ async function bootstrapViaSdkCreate(state: DemoState): Promise<void> {
   rememberPendingAgentWallet(state, createResp.data.result.uuid)
 }
 
-async function bootstrapViaCliOnboardStep(state: DemoState): Promise<void> {
+async function bootstrapViaCliOnboardStep(state: AppState): Promise<void> {
   const prep = state.walletPreparation
   const bootstrap = getBootstrapState(prep)
   const result = await runCawOnboardStep({
@@ -526,7 +526,7 @@ async function bootstrapViaCliOnboardStep(state: DemoState): Promise<void> {
 }
 
 export async function syncPreparationFromCawCli(
-  state: DemoState,
+  state: AppState,
   runner: CawCliRunner = defaultCawRunner,
 ): Promise<WalletPreparation> {
   const prep = state.walletPreparation
@@ -561,7 +561,7 @@ export async function syncPreparationFromCawCli(
   })
 }
 
-function buildStatusResponse(state: DemoState, done?: boolean): AgentBootstrapStatusResponse {
+function buildStatusResponse(state: AppState, done?: boolean): AgentBootstrapStatusResponse {
   const prep = state.walletPreparation
   return {
     preparation: prep,
@@ -570,7 +570,7 @@ function buildStatusResponse(state: DemoState, done?: boolean): AgentBootstrapSt
   }
 }
 
-export async function startAgentBootstrap(state: DemoState): Promise<AgentBootstrapStatusResponse> {
+export async function startAgentBootstrap(state: AppState): Promise<AgentBootstrapStatusResponse> {
   const prep = state.walletPreparation
   if (prep.steps.eoa !== 'completed') throw new Error('EOA_NOT_CONNECTED')
 
@@ -603,7 +603,7 @@ export async function startAgentBootstrap(state: DemoState): Promise<AgentBootst
   return pollAgentBootstrap(state)
 }
 
-export async function pollAgentBootstrap(state: DemoState): Promise<AgentBootstrapStatusResponse> {
+export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstrapStatusResponse> {
   const prep = state.walletPreparation
   const bootstrap = getBootstrapState(prep)
 
@@ -736,7 +736,7 @@ export async function pollAgentBootstrap(state: DemoState): Promise<AgentBootstr
   }
 }
 
-export async function regenerateAgentPairing(state: DemoState): Promise<WalletPreparation> {
+export async function regenerateAgentPairing(state: AppState): Promise<WalletPreparation> {
   const prep = state.walletPreparation
   if (!prep.agentWallet.coboWalletId || !prep.agentWallet.address) {
     throw new Error('AGENT_WALLET_NOT_READY')

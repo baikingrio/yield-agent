@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { CawOnboardPrompt, CawOnboardStatus } from '../../shared/types/demo'
+import type { CawOnboardPrompt, CawOnboardStatus } from '../../shared/types/app'
 
 const execFileAsync = promisify(execFile)
 

@@ -1,3 +1,5 @@
+> **历史文档（MVP mock 阶段），勿作当前实现依据。** 见 `2026-06-04-project-simplification-design.md`。
+
 # YieldAgent Collective · 前端 MVP 设计规格
 
 **日期：** 2026-06-03  

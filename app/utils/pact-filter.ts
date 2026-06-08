@@ -1,4 +1,4 @@
-import type { Pact } from '../../shared/types/demo'
+import type { Pact } from '../../shared/types/app'
 
 export type PactFilterTab =
   | 'active'

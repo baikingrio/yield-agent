@@ -145,7 +145,6 @@ const monoControlClass = `${controlClass} font-mono`
               <p v-if="props.errors.targetApy" id="target-apy-error" class="mt-1 text-xs text-trading-down">
                 {{ props.errors.targetApy }}
               </p>
-              <p v-else id="target-apy-hint" class="mt-1 text-xs text-muted">次要指标，不作为页面主视觉。</p>
             </div>
           </div>
         </section>
@@ -198,9 +197,8 @@ const monoControlClass = `${controlClass} font-mono`
             >
               {{ props.errors.maxSpend }}
             </p>
-            <p v-else id="max-spend-hint" class="mt-2 rounded-md bg-canvas px-3 py-2 text-xs text-muted-strong">
-              Agent Wallet 可用余额：
-              <span class="font-mono text-on-dark">{{ props.availableBalanceLabel }}</span>
+            <p v-else id="max-spend-hint" class="mt-1 text-xs text-muted">
+              Agent Wallet 可用余额：{{ props.availableBalanceLabel }}
             </p>
           </div>
         </section>

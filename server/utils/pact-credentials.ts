@@ -3,11 +3,11 @@ import {
   getPactCredential,
   storePactCredential,
 } from '../db/repository'
-import type { DemoState } from '../../shared/types/demo'
-import { createCoboPactsApi } from './cobo-client'
+import type { AppState, Pact } from '../../shared/types/app'
+import { createCoboPactsApi, getCoboApiKey } from './cobo-client'
 
 export function cachePactCredentialFromCobo(
-  state: DemoState,
+  state: AppState,
   pactId: string,
   coboPactId: string,
   apiKey?: string,
@@ -22,7 +22,7 @@ export function cachePactCredentialFromCobo(
 }
 
 export async function refreshPactCredentialFromCobo(
-  state: DemoState,
+  state: AppState,
   pactId: string,
 ): Promise<string | null> {
   const pact = state.pacts.find((item) => item.id === pactId || item.coboPactId === pactId)
@@ -38,10 +38,33 @@ export async function refreshPactCredentialFromCobo(
   return getPactCredential(pact.id)
 }
 
-export function resolvePactExecutionApiKey(state: DemoState, pactId: string): string | null {
+export function resolvePactExecutionApiKey(state: AppState, pactId: string): string | null {
   return getPactCredential(pactId)
 }
 
 export function revokeStoredPactCredential(pactId: string): void {
   deletePactCredential(pactId)
+}
+
+export async function resolveRedeemApiKey(state: AppState, pact: Pact): Promise<string | null> {
+  if (pact.status === 'active') {
+    const cached = resolvePactExecutionApiKey(state, pact.id)
+    if (cached) return cached
+    try {
+      return await refreshPactCredentialFromCobo(state, pact.id)
+    } catch {
+      return null
+    }
+  }
+
+  if (pact.status === 'terminated' || pact.status === 'completed') {
+    try {
+      return getCoboApiKey(state)
+    } catch {
+      const env = process.env.AGENT_WALLET_API_KEY?.trim()
+      return env || null
+    }
+  }
+
+  return null
 }

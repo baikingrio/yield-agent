@@ -1,5 +1,5 @@
-import type { PactStatus } from '../../../shared/types/demo'
-import { getState, persistCurrentState } from '../../utils/demo-store'
+import type { PactStatus } from '../../../shared/types/app'
+import { getState, persistCurrentState } from '../../utils/app-store'
 import { refreshCoboPactStatus } from '../../utils/cobo-pact'
 
 const STATUSES: PactStatus[] = ['pending', 'active', 'completed', 'terminated', 'awaiting-approval']

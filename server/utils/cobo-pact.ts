@@ -6,7 +6,7 @@ import type {
   PactSubmitRequest,
   PactSpecInput,
 } from '@cobo/agentic-wallet'
-import type { CreateStrategyPayload, DemoState, NetworkId, Pact, PactStatus } from '../../shared/types/demo'
+import type { CreateStrategyPayload, AppState, NetworkId, Pact, PactStatus } from '../../shared/types/app'
 import { createCoboPactsApi, extractCoboErrorMessage, isCoboConfigured, isInvalidApiKeyError } from './cobo-client'
 import { refreshApiKeyFromCli } from './cobo-api-key'
 import { buildYieldContractCallTargets, getNetworkChainConfig } from './cobo-config'
@@ -122,7 +122,7 @@ function localStatusLabel(status: PactStatus): string {
 }
 
 export function applyCoboPactStatusToState(
-  state: DemoState,
+  state: AppState,
   pactId: string,
   coboStatus?: CoboPactStatus | string,
   message?: string,
@@ -178,7 +178,7 @@ export interface CoboPactStatusPayload {
 export type CoboPactStatusFetcher = (pactId: string) => Promise<CoboPactStatusPayload>
 
 export async function syncCoboPactStatus(
-  state: DemoState,
+  state: AppState,
   pactId: string,
   fetchStatus: CoboPactStatusFetcher,
 ) {
@@ -196,7 +196,7 @@ export async function syncCoboPactStatus(
   return applyCoboPactStatusToState(state, pact.id, latest.status, latest.message)
 }
 
-export async function refreshCoboPactStatus(state: DemoState, pactId: string) {
+export async function refreshCoboPactStatus(state: AppState, pactId: string) {
   const localPact = state.pacts.find((item) => item.id === pactId || item.coboPactId === pactId)
   const localPactId = localPact?.id ?? pactId
 
@@ -326,7 +326,7 @@ export function buildYieldPactDraft(data: CreateStrategyPayload): PactSubmitDraf
 }
 
 export async function submitYieldPactToCobo(
-  state: DemoState,
+  state: AppState,
   data: CreateStrategyPayload,
   fallbackPactId: string,
 ): Promise<CoboPactSubmitResult> {
@@ -337,7 +337,9 @@ export async function submitYieldPactToCobo(
 
   if (!prep.agentWallet.coboWalletId || !isCoboConfigured(state)) {
     if (!forceLocalDraft) {
-      throw new Error('Cobo API Key 或 Agent Wallet UUID 未配置，无法提交 Pact')
+      throw new Error(
+        'Cobo API 未配置。请在设置页填写 Cobo API Key，或配置 AGENT_WALLET_API_KEY。本地开发可设置 CAW_FORCE_LOCAL_DRAFT=true。',
+      )
     }
     return {
       mode: 'local-draft',

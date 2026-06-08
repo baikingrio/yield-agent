@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AgentBootstrapState, WalletPreparation } from '../../../shared/types/demo'
+import type { AgentBootstrapState, WalletPreparation } from '../../../shared/types/app'
 
 const props = defineProps<{
   prep: WalletPreparation | null

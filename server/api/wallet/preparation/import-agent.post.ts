@@ -1,4 +1,4 @@
-import { getState } from '../../../utils/demo-store'
+import { getState } from '../../../utils/app-store'
 import { importCoboAgentWalletFromCli } from '../../../utils/cobo-preparation'
 
 const IMPORT_ERROR_MESSAGES: Record<string, string> = {

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { DemoState } from '../shared/types/demo'
+import type { AppState } from '../shared/types/app'
 import { provisionCawPrincipal } from '../server/utils/caw-provision'
 
-function createState(): DemoState {
+function createState(): AppState {
   return {
     wallet: { address: '', totalAssetsUsdc: 0, currentApy: 0, cumulativeYieldUsdc: 0 },
     walletPreparation: {

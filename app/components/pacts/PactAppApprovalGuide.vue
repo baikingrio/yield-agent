@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { Pact } from '../../../shared/types/demo'
+import { DASHBOARD_HOME } from '#shared/constants/dashboard-routes'
+import type { Pact } from '../../../shared/types/app'
 
 const props = defineProps<{
   pact: Pact
@@ -53,8 +54,8 @@ async function copyText(label: string, value: string) {
       role="alert"
     >
       Agent Wallet 尚未与 App 配对。
-      <NuxtLink to="/wallet" class="font-medium text-primary hover:underline">
-        请先完成 App 配对
+      <NuxtLink :to="DASHBOARD_HOME" class="font-medium text-primary hover:underline">
+        请先在控制台完成 App 配对
       </NuxtLink>
     </p>
 

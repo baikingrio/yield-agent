@@ -1,6 +1,18 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { fileURLToPath } from 'node:url'
+
+const sharedDir = fileURLToPath(new URL('./shared', import.meta.url))
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
+  alias: {
+    '#shared': sharedDir,
+  },
+  nitro: {
+    alias: {
+      '#shared': sharedDir,
+    },
+  },
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],
   runtimeConfig: {

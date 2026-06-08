@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LogEntry } from '../../../shared/types/demo'
+import type { LogEntry } from '../../../shared/types/app'
 
 defineProps<{
   logs: LogEntry[]

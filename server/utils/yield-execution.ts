@@ -1,5 +1,5 @@
 import { encodeFunctionData } from 'viem'
-import type { Pact } from '../../shared/types/demo'
+import type { Pact } from '../../shared/types/app'
 import type { NetworkChainConfig } from './cobo-config'
 
 export function resolveFirstSupplyAmountUsdc(availableUsdc: number, maxSpend: number): number {

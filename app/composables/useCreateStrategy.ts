@@ -1,3 +1,5 @@
+import { MAX_MAX_SPEND_USDC, MIN_MAX_SPEND_USDC, NETWORK_LABELS } from '#shared/types/app'
+import { parseNumericField } from '#shared/utils/numeric-field'
 import { extractApiErrorMessage } from '~/utils/api-error'
 
 export type NetworkId = 'base-sepolia' | 'arbitrum-sepolia'
@@ -22,11 +24,6 @@ export interface StrategyForm {
   maxSpend: string
   agentFee: string
   userSplit: string
-}
-
-const NETWORK_LABELS: Record<NetworkId, string> = {
-  'base-sepolia': 'Base Sepolia 测试网',
-  'arbitrum-sepolia': 'Arbitrum Sepolia 测试网',
 }
 
 const RISK_LABELS: Record<RiskLevel, string> = {
@@ -79,7 +76,7 @@ const STRATEGY_TEMPLATES = Object.entries(TEMPLATE_PRESETS).map(([key, value]) =
 
 export function useCreateStrategy() {
   const route = useRoute()
-  const store = useDemoStore()
+  const store = useAppStore()
   const queryTemplate = Array.isArray(route.query.template)
     ? route.query.template[0]
     : route.query.template
@@ -137,7 +134,7 @@ export function useCreateStrategy() {
 
   const fundingSourceLabel = computed(() => {
     const prep = store.preparation
-    if (!prep?.ready) return '未完成资金准备'
+    if (!prep?.ready) return '未完成 Agent Wallet 设置'
     return 'EOA → Agent Wallet（测试网）'
   })
 
@@ -196,31 +193,31 @@ export function useCreateStrategy() {
 
   function validateForm(setErrors = true): boolean {
     const next: Partial<Record<keyof StrategyForm, string>> = {}
-    const spend = Number(form.maxSpend)
-    const fee = Number(form.agentFee)
-    const user = Number(form.userSplit)
+    const spend = parseNumericField(form.maxSpend)
+    const fee = parseNumericField(form.agentFee)
+    const user = parseNumericField(form.userSplit)
 
     if (store.preparation?.ready && form.network !== store.preparation.network) {
       next.maxSpend = '策略网络必须与 Agent Wallet 注资网络一致'
     }
 
-    if (!form.maxSpend || Number.isNaN(spend) || spend < 10 || spend > 1_000_000) {
-      next.maxSpend = '请输入 10–1,000,000 USDC'
+    if (spend === null || spend < MIN_MAX_SPEND_USDC || spend > MAX_MAX_SPEND_USDC) {
+      next.maxSpend = `请输入 ${MIN_MAX_SPEND_USDC}–${MAX_MAX_SPEND_USDC.toLocaleString('en-US')} USDC`
     } else if (store.preparation?.ready) {
       const available = store.preparation.funding.availableUsdc
       if (spend > available) {
         next.maxSpend = `不能超过 Agent Wallet 可用余额（${available} USDC）`
       }
     }
-    if (!form.agentFee || Number.isNaN(fee) || fee < 0 || fee > 30) {
+    if (fee === null || fee < 0 || fee > 30) {
       next.agentFee = '请输入 0–30%'
     }
-    if (!form.userSplit || Number.isNaN(user) || user < 0 || user > 100) {
+    if (user === null || user < 0 || user > 100) {
       next.userSplit = '请输入 0–100%'
     }
     if (form.targetApy.trim()) {
-      const apy = Number(form.targetApy)
-      if (Number.isNaN(apy) || apy < 0 || apy > 100) {
+      const apy = parseNumericField(form.targetApy)
+      if (apy === null || apy < 0 || apy > 100) {
         next.targetApy = '请输入 0–100，或留空'
       }
     }
@@ -371,7 +368,7 @@ export function useCreateStrategy() {
 
     if (!store.preparation?.ready) {
       pipeline.value = 'failed'
-      pipelineError.value = '请先完成资金准备，再创建 Pact 策略。'
+      pipelineError.value = '请先在控制台完成 Agent Wallet 设置，再创建 Pact 策略。'
       return
     }
 

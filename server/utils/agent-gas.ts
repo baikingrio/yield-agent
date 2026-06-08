@@ -1,16 +1,14 @@
 import { createPublicClient, formatEther, http } from 'viem'
 import { arbitrumSepolia, baseSepolia, sepolia } from 'viem/chains'
-import type { AgentGasWrongChainHint, NetworkId } from '../../shared/types/demo'
+import { NETWORK_LABELS } from '../../shared/types/app'
+import type { AgentGasWrongChainHint, NetworkId } from '../../shared/types/app'
+
+export { NETWORK_LABELS }
 
 export const MIN_NATIVE_ETH = 0.0001
 export const RECOMMENDED_FUND_ETH = 0.001
 
 const MIN_NATIVE_ETH_WEI = BigInt(Math.floor(MIN_NATIVE_ETH * 1e18))
-
-export const NETWORK_LABELS: Record<NetworkId, string> = {
-  'base-sepolia': 'Base Sepolia',
-  'arbitrum-sepolia': 'Arbitrum Sepolia',
-}
 
 export const NATIVE_TOKEN_LABELS: Record<NetworkId, string> = {
   'base-sepolia': 'Base Sepolia ETH',

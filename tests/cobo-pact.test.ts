@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { DemoState, Pact } from '../shared/types/demo'
+import type { AppState, Pact } from '../shared/types/app'
 import {
   applyCoboPactStatusToState,
   mapCoboPactStatus,
@@ -7,7 +7,7 @@ import {
   syncCoboPactStatus,
 } from '../server/utils/cobo-pact'
 
-function createStateWithPact(status: Pact['status'] = 'awaiting-approval'): DemoState {
+function createStateWithPact(status: Pact['status'] = 'awaiting-approval'): AppState {
   return {
     wallet: {
       address: '0xDemo',

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { Pact } from '../shared/types/demo'
+import type { Pact } from '../shared/types/app'
 import {
   buildExecutionRequestId,
   buildRedeemRequestId,
+  encodeYieldWithdrawCalldata,
+  nextRedeemAttempt,
   formatTransactionFailureMessage,
   isStaleFirstExecution,
   isTerminalTransactionFailure,
@@ -67,6 +69,14 @@ describe('yield-execution helpers', () => {
 
   it('builds redeem request ids', () => {
     expect(buildRedeemRequestId('pact-1', 1)).toBe('yieldagent-pact-1-redeem-a1')
+    expect(nextRedeemAttempt(makePact({ redeemAttempt: 2 }))).toBe(3)
+  })
+
+  it('encodes Compound withdraw calldata', () => {
+    const route = resolveFirstYieldSupplyRoute(getNetworkChainConfig('base-sepolia'))
+    const calldata = encodeYieldWithdrawCalldata(route, 1_000_000n, '0xabc0000000000000000000000000000000000000')
+    expect(calldata.startsWith('0x')).toBe(true)
+    expect(calldata.length).toBeGreaterThan(10)
   })
 
   it('routes Base Sepolia Circle USDC to Compound instead of Aave', () => {

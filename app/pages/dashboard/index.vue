@@ -1,0 +1,86 @@
+<script setup lang="ts">
+import type { YieldRange } from '#shared/types/app'
+
+useHead({ title: '控制台 · YieldAgent' })
+
+const route = useRoute()
+const router = useRouter()
+const store = useAppStore()
+
+const showCreated = ref(false)
+const initialLoading = ref(true)
+
+async function loadDashboard() {
+  store.clearError()
+  store.loading = true
+  try {
+    await Promise.all([
+      store.fetchWallet(),
+      store.fetchStrategies(),
+      store.fetchPacts(),
+      store.fetchLogs({ limit: 10 }),
+      store.fetchYieldSeries(undefined, { sync: true }),
+    ])
+  } finally {
+    store.loading = false
+    initialLoading.value = false
+  }
+}
+
+async function onRangeChange(range: YieldRange) {
+  await store.fetchYieldSeries(range)
+}
+
+onMounted(async () => {
+  await loadDashboard()
+  if (route.query.created === '1') {
+    showCreated.value = true
+    router.replace({ query: {} })
+  }
+})
+</script>
+
+<template>
+  <div class="mx-auto max-w-5xl space-y-8">
+    <header class="space-y-2">
+      <div class="inline-flex rounded-full border border-hairline bg-surface px-3 py-1 font-mono text-xs text-muted-strong">
+        测试网 · Agent Wallet
+      </div>
+      <h1 class="text-2xl font-semibold text-on-dark">控制台</h1>
+      <p class="mt-2 max-w-prose text-sm text-muted">
+        展示 CAW Agent Wallet 余额、Active Pact、执行日志与 tx hash。收益图为辅助信息；越权拒绝会出现在审计轨迹中。
+      </p>
+    </header>
+
+    <div
+      v-if="showCreated"
+      class="rounded-md border border-trading-up/30 bg-surface px-4 py-3 text-sm text-trading-up"
+      role="status"
+    >
+      策略已创建，可在下方列表或 Pact 管理中查看。
+    </div>
+
+    <UiPageAlert
+      v-if="store.error"
+      :message="store.error"
+      @retry="loadDashboard"
+    />
+
+    <DashboardWalletBar :wallet="store.wallet" :loading="initialLoading" />
+
+    <DashboardStrategyList
+      :strategies="store.strategies"
+      :pacts="store.pacts"
+      :loading="initialLoading"
+    />
+
+    <DashboardRecentLogsTable :logs="store.logs" :loading="initialLoading" />
+
+    <DashboardYieldChart
+      :series="store.yieldSeries"
+      :loading="initialLoading"
+      :range="store.yieldRange"
+      @update:range="onRangeChange"
+    />
+  </div>
+</template>

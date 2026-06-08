@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { getState, persistCurrentState } from '../../../utils/demo-store'
+import { getState, persistCurrentState } from '../../../utils/app-store'
 import { confirmUsdcDeposit } from '../../../utils/cobo-preparation'
 
 const TX_HASH_RE = /^0x[a-fA-F0-9]{64}$/

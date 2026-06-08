@@ -1,5 +1,5 @@
 import { formatEther } from 'viem'
-import { getState } from '../../../utils/demo-store'
+import { getState } from '../../../utils/app-store'
 import {
   FAUCET_HINTS,
   MIN_NATIVE_ETH,

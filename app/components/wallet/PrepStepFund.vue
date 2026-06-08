@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { WalletPreparation } from '../../../shared/types/demo'
+import { DASHBOARD_SETTINGS } from '#shared/constants/dashboard-routes'
+import type { WalletPreparation } from '../../../shared/types/app'
 
 const props = defineProps<{
   prep: WalletPreparation | null
@@ -58,7 +59,7 @@ async function copyAddress(addr: string) {
       class="mt-4 rounded-md border border-trading-down/30 bg-canvas px-3 py-2 text-xs text-trading-down"
     >
       需要 Cobo API Key 才能校验余额。
-      <NuxtLink to="/settings" class="font-medium text-primary hover:underline">前往设置</NuxtLink>
+      <NuxtLink :to="DASHBOARD_SETTINGS" class="font-medium text-primary hover:underline">前往设置</NuxtLink>
     </p>
 
     <div v-if="prep?.funding.status === 'ready'" class="mt-4 space-y-2 text-sm">

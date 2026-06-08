@@ -3,7 +3,7 @@ import type {
   CreateStrategyPayload,
   CawReadiness,
   CawOnboardStatus,
-  DemoSettings,
+  AppSettings,
   HermesStrategyPingResult,
   StrategyAgentReadiness,
   LogEntry,
@@ -18,7 +18,7 @@ import type {
   YieldRange,
   YieldSeries,
   DepositInfo,
-} from '../../shared/types/demo'
+} from '../../shared/types/app'
 
 import { extractApiErrorMessage } from '~/utils/api-error'
 
@@ -26,7 +26,7 @@ function apiErrorMessage(err: unknown): string {
   return extractApiErrorMessage(err)
 }
 
-export const useDemoStore = defineStore('demo', () => {
+export const useAppStore = defineStore('app', () => {
   const wallet = ref<WalletSummary | null>(null)
   const strategies = ref<Strategy[]>([])
   const pacts = ref<Pact[]>([])
@@ -34,7 +34,7 @@ export const useDemoStore = defineStore('demo', () => {
   const logs = ref<LogEntry[]>([])
   const yieldSeries = ref<YieldSeries | null>(null)
   const yieldRange = ref<YieldRange>('7d')
-  const settings = ref<DemoSettings | null>(null)
+  const settings = ref<AppSettings | null>(null)
   const preparation = ref<WalletPreparation | null>(null)
   const agentBootstrap = ref<AgentBootstrapState | null>(null)
   const cawReadiness = ref<CawReadiness | null>(null)
@@ -103,10 +103,15 @@ export const useDemoStore = defineStore('demo', () => {
     }
   }
 
-  async function fetchYieldSeries(range?: YieldRange) {
+  async function fetchYieldSeries(range?: YieldRange, options?: { sync?: boolean }) {
     const r = range ?? yieldRange.value
     try {
-      yieldSeries.value = await $fetch<YieldSeries>('/api/yield-series', { query: { range: r } })
+      yieldSeries.value = await $fetch<YieldSeries>('/api/yield-series', {
+        query: {
+          range: r,
+          ...(options?.sync ? { sync: 'true' } : {}),
+        },
+      })
       yieldRange.value = r
     } catch (e) {
       error.value = apiErrorMessage(e)
@@ -116,7 +121,7 @@ export const useDemoStore = defineStore('demo', () => {
 
   async function fetchSettings() {
     try {
-      settings.value = await $fetch<DemoSettings>('/api/settings')
+      settings.value = await $fetch<AppSettings>('/api/settings')
     } catch (e) {
       error.value = apiErrorMessage(e)
       throw e
@@ -218,7 +223,7 @@ export const useDemoStore = defineStore('demo', () => {
     userSplit?: number
     apiKey?: string
   }) {
-    settings.value = await $fetch<DemoSettings>('/api/settings', { method: 'PUT', body })
+    settings.value = await $fetch<AppSettings>('/api/settings', { method: 'PUT', body })
   }
 
   async function approvePact(id: string) {
@@ -250,7 +255,7 @@ export const useDemoStore = defineStore('demo', () => {
   }
 
   async function executePact(id: string) {
-    const result = await $fetch<import('../../shared/types/demo').PactExecutionResult>(`/api/pacts/${id}/execute`, {
+    const result = await $fetch<import('../../shared/types/app').PactExecutionResult>(`/api/pacts/${id}/execute`, {
       method: 'POST',
     })
     await fetchPact(id)
@@ -259,7 +264,7 @@ export const useDemoStore = defineStore('demo', () => {
   }
 
   async function simulatePactDenial(id: string) {
-    const result = await $fetch<import('../../shared/types/demo').PactDenialResult>(`/api/pacts/${id}/simulate-denial`, {
+    const result = await $fetch<import('../../shared/types/app').PactDenialResult>(`/api/pacts/${id}/simulate-denial`, {
       method: 'POST',
     })
     await fetchLogs({ limit: 10, pactId: id })
@@ -267,7 +272,7 @@ export const useDemoStore = defineStore('demo', () => {
   }
 
   async function redeemPact(id: string) {
-    const result = await $fetch<import('../../shared/types/demo').PactRedeemResult>(`/api/pacts/${id}/redeem`, {
+    const result = await $fetch<import('../../shared/types/app').PactRedeemResult>(`/api/pacts/${id}/redeem`, {
       method: 'POST',
     })
     await Promise.all([
@@ -279,7 +284,7 @@ export const useDemoStore = defineStore('demo', () => {
   }
 
   async function fetchPactPosition(id: string) {
-    return $fetch<import('../../shared/types/demo').YieldPositionSnapshot & {
+    return $fetch<import('../../shared/types/app').YieldPositionSnapshot & {
       pactId: string
       status: string
       firstExecutionCompleted: boolean
@@ -287,8 +292,8 @@ export const useDemoStore = defineStore('demo', () => {
     }>(`/api/pacts/${id}/position`)
   }
 
-  async function parseStrategyText(text: string, limits: import('../../shared/types/demo').StrategyParseLimits) {
-    return $fetch<import('../../shared/types/demo').StrategyParseResponse>('/api/strategy-agent/parse', {
+  async function parseStrategyText(text: string, limits: import('../../shared/types/app').StrategyParseLimits) {
+    return $fetch<import('../../shared/types/app').StrategyParseResponse>('/api/strategy-agent/parse', {
       method: 'POST',
       body: { text, limits },
     })
@@ -378,7 +383,7 @@ export const useDemoStore = defineStore('demo', () => {
   }
 
   async function fetchAgentGasStatus() {
-    return $fetch<import('../../shared/types/demo').AgentGasStatus>('/api/wallet/preparation/gas-status')
+    return $fetch<import('../../shared/types/app').AgentGasStatus>('/api/wallet/preparation/gas-status')
   }
 
   async function resetPreparation() {

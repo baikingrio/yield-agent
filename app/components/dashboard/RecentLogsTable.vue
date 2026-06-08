@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { LogEntry } from '../../../shared/types/demo'
+import { DASHBOARD_HISTORY } from '#shared/constants/dashboard-routes'
+import type { LogEntry } from '../../../shared/types/app'
 
 defineProps<{
   logs: LogEntry[]
@@ -27,7 +28,7 @@ function formatTime(ts: string) {
   <section aria-labelledby="recent-logs-heading">
     <div class="flex items-center justify-between gap-4">
       <h2 id="recent-logs-heading" class="text-base font-semibold text-on-dark">近期执行</h2>
-      <NuxtLink to="/history" class="text-xs font-medium text-primary no-underline hover:underline">
+      <NuxtLink :to="DASHBOARD_HISTORY" class="text-xs font-medium text-primary no-underline hover:underline">
         查看全部
       </NuxtLink>
     </div>

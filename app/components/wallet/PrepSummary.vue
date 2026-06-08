@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { WalletPreparation } from '../../../shared/types/demo'
+import type { WalletPreparation } from '../../../shared/types/app'
 
 defineProps<{
   prep: WalletPreparation | null
@@ -52,7 +52,7 @@ function shortId(id: string | null | undefined) {
         </dd>
       </div>
       <div v-if="prep?.ready" class="rounded-md border border-trading-up/30 bg-canvas px-3 py-2 text-xs text-trading-up">
-        资金准备已完成，可继续创建 Pact 策略。
+        Agent Wallet 已就绪，可继续创建 Pact 策略。
       </div>
     </dl>
     <div class="border-t border-hairline px-5 py-4">

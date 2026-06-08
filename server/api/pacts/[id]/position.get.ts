@@ -1,7 +1,8 @@
-import { getState } from '../../../utils/demo-store'
+import { getState } from '../../../utils/app-store'
 import { getNetworkChainConfig } from '../../../utils/cobo-config'
 import { fetchYieldPositionSnapshot } from '../../../utils/yield-position'
-import type { NetworkId } from '../../../../shared/types/demo'
+import { findPactById } from '../../../utils/pact-lookup'
+import type { NetworkId } from '../../../../shared/types/app'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
@@ -10,7 +11,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const state = getState()
-  const pact = state.pacts.find((p) => p.id === id || p.coboPactId === id)
+  const pact = findPactById(state, id)
   if (!pact) {
     throw createError({ statusCode: 404, data: { error: 'Pact not found' } })
   }

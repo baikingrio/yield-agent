@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { Pact, Strategy } from '../../../shared/types/demo'
+import {
+  DASHBOARD_CREATE_STRATEGY,
+  DASHBOARD_PACTS,
+} from '#shared/constants/dashboard-routes'
+import { NETWORK_LABELS } from '#shared/types/app'
+import type { Pact, Strategy } from '#shared/types/app'
 
 const props = defineProps<{
   strategies: Strategy[]
@@ -23,13 +28,8 @@ const STATUS_TONE: Record<Strategy['status'], 'active' | 'paused' | 'neutral'> =
   completed: 'neutral',
 }
 
-const NETWORK_LABELS: Record<Strategy['network'], string> = {
-  'base-sepolia': 'Base Sepolia',
-  'arbitrum-sepolia': 'Arbitrum Sepolia',
-}
-
 function goToPact(pactId: string) {
-  navigateTo(`/pacts?id=${pactId}`)
+  navigateTo(`${DASHBOARD_PACTS}?id=${pactId}`)
 }
 </script>
 
@@ -47,7 +47,7 @@ function goToPact(pactId: string) {
     >
       <p class="text-sm text-muted">尚无策略。创建第一条受 Pact 约束的策略。</p>
       <NuxtLink
-        to="/create-strategy"
+        :to="DASHBOARD_CREATE_STRATEGY"
         class="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-on-primary no-underline hover:bg-primary-active"
       >
         创建策略

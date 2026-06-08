@@ -1,6 +1,6 @@
-import type { DemoSettings } from '../../../shared/types/demo'
+import type { AppSettings } from '../../../shared/types/app'
 
-export function toPublicSettings(settings: DemoSettings): Omit<DemoSettings, 'coboApiKey'> {
+export function toPublicSettings(settings: AppSettings): Omit<AppSettings, 'coboApiKey'> {
   const { coboApiKey: _key, ...publicSettings } = settings
   return {
     ...publicSettings,

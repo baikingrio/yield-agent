@@ -1,4 +1,4 @@
-import type { CawEnvironment, NetworkId } from '../../shared/types/demo'
+import type { CawEnvironment, NetworkId } from '../../shared/types/app'
 
 export interface YieldProtocolContracts {
   /** Aave V3 Pool — supply / withdraw */

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { DemoState } from '../shared/types/demo'
+import type { AppState } from '../shared/types/app'
 import { markAgentWalletCreated } from '../server/utils/wallet-preparation'
 
-function createState(): DemoState {
+function createState(): AppState {
   return {
     wallet: { address: '', totalAssetsUsdc: 0, currentApy: 0, cumulativeYieldUsdc: 0 },
     walletPreparation: {

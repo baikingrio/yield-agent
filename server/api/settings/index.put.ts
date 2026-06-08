@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import type { NetworkId } from '../../../shared/types/demo'
-import { getState } from '../../utils/demo-store'
+import type { NetworkId } from '../../../shared/types/app'
+import { getState } from '../../utils/app-store'
 import { toPublicSettings } from '../../utils/settings'
 
 const schema = z.object({

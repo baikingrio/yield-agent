@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Pact } from '../../../shared/types/demo'
+import type { Pact } from '../../../shared/types/app'
 
 const props = defineProps<{
   pacts: Pact[]

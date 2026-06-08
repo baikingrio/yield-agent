@@ -1,4 +1,4 @@
-import { getState } from '../../../utils/demo-store'
+import { getState } from '../../../utils/app-store'
 import { detectBootstrapMode, syncPreparationFromCawCli } from '../../../utils/caw-wallet-bootstrap'
 import { syncFundingFromExistingBalance } from '../../../utils/cobo-preparation'
 import { getWalletPreparation } from '../../../utils/wallet-preparation'

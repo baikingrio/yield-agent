@@ -1,15 +1,25 @@
 <script setup lang="ts">
-import type { PrepStep, PrepStepStatus } from '../../../shared/types/demo'
+import type { PrepStep, PrepStepStatus } from '../../../shared/types/app'
 
-const props = defineProps<{
-  steps: Record<PrepStep, PrepStepStatus> | undefined
-}>()
+const props = withDefaults(
+  defineProps<{
+    steps: Record<PrepStep, PrepStepStatus> | undefined
+    variant?: 'full' | 'agent-only'
+  }>(),
+  { variant: 'full' },
+)
 
-const labels: { key: PrepStep; label: string }[] = [
+const allLabels: { key: PrepStep; label: string }[] = [
   { key: 'eoa', label: '连接 EOA' },
   { key: 'agent_wallet', label: 'Agent Wallet' },
   { key: 'funding', label: '注入资金' },
 ]
+
+const labels = computed(() =>
+  props.variant === 'agent-only'
+    ? allLabels.filter((item) => item.key !== 'eoa')
+    : allLabels,
+)
 
 function tone(status: PrepStepStatus): 'active' | 'pending' | 'neutral' {
   if (status === 'completed') return 'active'

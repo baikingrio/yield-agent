@@ -1,16 +1,17 @@
 import type {
-  DemoSettings,
-  DemoState,
+  AppSettings,
+  AppState,
   LogEntry,
   Pact,
   Strategy,
   WalletPreparation,
   WalletSummary,
   YieldPoint,
-} from '../../shared/types/demo'
+} from '../../shared/types/app'
 import { createInitialState } from '../fixtures/initial-state'
-import { loadPersistedSession } from '../utils/demo-state-persistence'
+import { loadPersistedSession } from '../utils/app-state-persistence'
 import { stripDemoSeedData } from '../utils/strip-demo-seed'
+import { stripLegacyPrepFixtures } from '../utils/strip-legacy-prep'
 import { getDatabase } from './client'
 
 const BLOB_KEYS = ['wallet', 'wallet_preparation', 'settings', 'yield_series_7d', 'yield_series_30d'] as const
@@ -70,23 +71,27 @@ export function isDatabaseInitialized(): boolean {
   return row.count > 0
 }
 
-export function loadStateFromDatabase(): DemoState | null {
+export function loadStateFromDatabase(): AppState | null {
   if (!isDatabaseInitialized()) return null
 
   const seed = createInitialState()
   return {
     wallet: readBlob<WalletSummary>('wallet', seed.wallet),
     walletPreparation: readBlob<WalletPreparation>('wallet_preparation', seed.walletPreparation),
-    settings: readBlob<DemoSettings>('settings', seed.settings),
+    settings: readBlob<AppSettings>('settings', seed.settings),
     strategies: readRows<Strategy>('strategies'),
     pacts: readRows<Pact>('pacts'),
     logs: readRows<LogEntry>('execution_logs'),
     yieldSeries7d: readBlob<YieldPoint[]>('yield_series_7d', seed.yieldSeries7d),
     yieldSeries30d: readBlob<YieldPoint[]>('yield_series_30d', seed.yieldSeries30d),
+    yieldSnapshotLastSuppliedUsdc: readBlob<number | null>(
+      'yield_snapshot_last_supplied',
+      seed.yieldSnapshotLastSuppliedUsdc ?? null,
+    ),
   }
 }
 
-function importLegacyJsonSession(state: DemoState): DemoState {
+function importLegacyJsonSession(state: AppState): AppState {
   const legacy = loadPersistedSession()
   if (!legacy) return state
   return {
@@ -97,16 +102,26 @@ function importLegacyJsonSession(state: DemoState): DemoState {
   }
 }
 
-export function hydrateInitialState(): DemoState {
+export function hydrateInitialState(): AppState {
   const fromDb = loadStateFromDatabase()
   if (fromDb) {
-    const { state, changed, removedPactIds } = stripDemoSeedData(fromDb)
-    if (changed) {
-      for (const pactId of removedPactIds) {
+    let state = fromDb
+    let dirty = false
+
+    const seedStrip = stripDemoSeedData(state)
+    state = seedStrip.state
+    if (seedStrip.changed) {
+      dirty = true
+      for (const pactId of seedStrip.removedPactIds) {
         deletePactCredential(pactId)
       }
-      saveStateToDatabase(state)
     }
+
+    const prepStrip = stripLegacyPrepFixtures(state)
+    state = prepStrip.state
+    if (prepStrip.changed) dirty = true
+
+    if (dirty) saveStateToDatabase(state)
     return state
   }
 
@@ -116,12 +131,13 @@ export function hydrateInitialState(): DemoState {
   return state
 }
 
-export function saveStateToDatabase(state: DemoState): void {
+export function saveStateToDatabase(state: AppState): void {
   writeBlob('wallet', state.wallet)
   writeBlob('wallet_preparation', state.walletPreparation)
   writeBlob('settings', state.settings)
   writeBlob('yield_series_7d', state.yieldSeries7d)
   writeBlob('yield_series_30d', state.yieldSeries30d)
+  writeBlob('yield_snapshot_last_supplied', state.yieldSnapshotLastSuppliedUsdc ?? null)
   replaceRows('strategies', state.strategies)
   replaceRows('pacts', state.pacts)
   replaceRows('execution_logs', state.logs)

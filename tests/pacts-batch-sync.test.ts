@@ -19,7 +19,7 @@ describe('pacts batch sync persistence', () => {
 
   it('persists pact status after applyCoboPactStatusToState (batch sync path)', () => {
     const state = createInitialState()
-    const pact: import('../shared/types/demo').Pact = {
+    const pact: import('../shared/types/app').Pact = {
       id: 'pact-sync-test',
       strategyId: 'str-sync-test',
       intent: '同步测试',

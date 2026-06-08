@@ -1,7 +1,7 @@
-import type { CawReadiness, DemoState } from '../../shared/types/demo'
+import type { CawReadiness, AppState } from '../../shared/types/app'
 import { getCoboBasePath, getCoboEnvironment } from './cobo-config'
 
-function apiKeySource(state: DemoState): CawReadiness['apiKeySource'] {
+function apiKeySource(state: AppState): CawReadiness['apiKeySource'] {
   if (state.settings.coboApiKey?.trim()) return 'settings'
   if (process.env.AGENT_WALLET_API_KEY?.trim()) return 'env'
   return 'missing'
@@ -35,7 +35,7 @@ function nextActionFor(missing: string[], readiness: Pick<CawReadiness, 'pactMod
   return 'CAW Pact 提交条件已满足，下一步可创建策略并提交 Cobo Pact。'
 }
 
-export function buildCawReadiness(state: DemoState): CawReadiness {
+export function buildCawReadiness(state: AppState): CawReadiness {
   const prep = state.walletPreparation
   const source = apiKeySource(state)
   const apiKeyConfigured = source !== 'missing'

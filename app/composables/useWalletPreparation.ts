@@ -1,9 +1,6 @@
-import type { AgentBootstrapPhase, NetworkId, PrepStep } from '../../shared/types/demo'
-
-const NETWORK_LABELS: Record<NetworkId, string> = {
-  'base-sepolia': 'Base Sepolia 测试网',
-  'arbitrum-sepolia': 'Arbitrum Sepolia 测试网',
-}
+import { DASHBOARD_CREATE_STRATEGY } from '#shared/constants/dashboard-routes'
+import { NETWORK_LABELS } from '#shared/types/app'
+import type { AgentBootstrapPhase, NetworkId, PrepStep } from '#shared/types/app'
 
 const BOOTSTRAP_PHASE_LABELS: Record<AgentBootstrapPhase, string> = {
   idle: '待开始',
@@ -19,7 +16,7 @@ const MAX_AGENT_POLL_ATTEMPTS = 24
 const AGENT_POLL_INTERVAL_MS = 5000
 
 export function useWalletPreparation() {
-  const store = useDemoStore()
+  const store = useAppStore()
   const { transferUsdc, isWriting, transferError } = useUsdcTransfer()
 
   const prep = computed(() => store.preparation)
@@ -200,7 +197,7 @@ export function useWalletPreparation() {
     stopAgentPolling()
   })
 
-  const continueUrl = '/create-strategy?template=conservative-usdc'
+  const continueUrl = `${DASHBOARD_CREATE_STRATEGY}?template=conservative-usdc`
 
   return {
     store,

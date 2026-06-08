@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { DemoState } from '../shared/types/demo'
+import type { AppState } from '../shared/types/app'
 
 const submitPact = vi.hoisted(() => vi.fn())
 
@@ -10,11 +10,11 @@ vi.mock('../server/utils/cobo-api-key', () => ({
 vi.mock('../server/utils/cobo-client', () => ({
   createCoboPactsApi: () => ({ submitPact }),
   extractCoboErrorMessage: (err: unknown) => err instanceof Error ? err.message : 'Cobo Pact 提交失败',
-  isCoboConfigured: (state: DemoState) => Boolean(state.settings.coboApiKey),
+  isCoboConfigured: (state: AppState) => Boolean(state.settings.coboApiKey),
   isInvalidApiKeyError: () => false,
 }))
 
-function createReadyState(): DemoState {
+function createReadyState(): AppState {
   return {
     wallet: { address: '0xAgent', totalAssetsUsdc: 500, currentApy: 0, cumulativeYieldUsdc: 0 },
     walletPreparation: {

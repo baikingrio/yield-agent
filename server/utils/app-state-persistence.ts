@@ -1,14 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { DemoState, WalletPreparation } from '../../shared/types/demo'
+import type { AppState, WalletPreparation } from '../../shared/types/app'
 import { saveStateToDatabase } from '../db/repository'
 
 const STATE_FILE = join(process.cwd(), '.data', 'demo-session.json')
 
 interface PersistedSession {
   walletPreparation: WalletPreparation
-  settings: DemoState['settings']
-  wallet: DemoState['wallet']
+  settings: AppState['settings']
+  wallet: AppState['wallet']
 }
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
@@ -33,7 +33,10 @@ export function loadPersistedSession(): PersistedSession | null {
   }
 }
 
-export function schedulePersistDemoState(state: DemoState): void {
+export function schedulePersistAppState(state: AppState): void {
+  // Vitest 单测中的 touchPreparation 不应污染本地 .data/yieldagent.db
+  if (process.env.VITEST) return
+
   if (persistTimer) clearTimeout(persistTimer)
   persistTimer = setTimeout(() => {
     persistTimer = null

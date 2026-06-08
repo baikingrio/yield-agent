@@ -1,10 +1,10 @@
 import type {
-  DemoState,
+  AppState,
   NetworkId,
   PrepStepStatus,
   WalletPreparation,
-} from '../../shared/types/demo'
-import { schedulePersistDemoState } from './demo-state-persistence'
+} from '../../shared/types/app'
+import { schedulePersistAppState } from './app-state-persistence'
 
 const EOA_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/
 
@@ -60,18 +60,18 @@ function syncReady(prep: WalletPreparation): void {
     && prep.funding.status === 'ready'
 }
 
-export function touchPreparation(prep: WalletPreparation, state?: DemoState): void {
+export function touchPreparation(prep: WalletPreparation, state?: AppState): void {
   prep.updatedAt = new Date().toISOString()
   syncReady(prep)
-  if (state) schedulePersistDemoState(state)
+  if (state) schedulePersistAppState(state)
 }
 
-export function getWalletPreparation(state: DemoState): WalletPreparation {
+export function getWalletPreparation(state: AppState): WalletPreparation {
   return state.walletPreparation
 }
 
 export function connectEoa(
-  state: DemoState,
+  state: AppState,
   params: { address: string; label?: string },
 ): WalletPreparation {
   const address = params.address.trim()
@@ -88,7 +88,7 @@ export function connectEoa(
   return prep
 }
 
-export function disconnectEoa(state: DemoState): WalletPreparation {
+export function disconnectEoa(state: AppState): WalletPreparation {
   const prep = state.walletPreparation
   prep.eoa.connected = false
   prep.eoa.address = null
@@ -111,7 +111,7 @@ export function disconnectEoa(state: DemoState): WalletPreparation {
 }
 
 export function markAgentWalletPreparing(
-  state: DemoState,
+  state: AppState,
   params: {
     coboWalletId: string
     pairing?: { status: 'unpaired' | 'pairing' | 'paired'; code: string | null; expiresAt: string | null }
@@ -130,7 +130,7 @@ export function markAgentWalletPreparing(
 }
 
 export function markAgentWalletCreated(
-  state: DemoState,
+  state: AppState,
   params: {
     address: string
     coboWalletId: string
@@ -153,7 +153,7 @@ export function markAgentWalletCreated(
 }
 
 export function applyDepositToState(
-  state: DemoState,
+  state: AppState,
   amountUsdc: number,
   txHash: string | null,
 ): WalletPreparation {
@@ -169,7 +169,7 @@ export function applyDepositToState(
   return prep
 }
 
-export function resetWalletPreparation(state: DemoState): WalletPreparation {
+export function resetWalletPreparation(state: AppState): WalletPreparation {
   const network = state.settings.network
   state.walletPreparation = createInitialWalletPreparation(network)
   state.wallet.totalAssetsUsdc = 0

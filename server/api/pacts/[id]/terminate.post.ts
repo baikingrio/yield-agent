@@ -1,4 +1,4 @@
-import { getState, persistCurrentState } from '../../../utils/demo-store'
+import { getState, persistCurrentState } from '../../../utils/app-store'
 import { createCoboPactsApi, extractCoboErrorMessage } from '../../../utils/cobo-client'
 import {
   COBO_OWNER_REVOKE_MESSAGE,
@@ -6,11 +6,15 @@ import {
   resolveCoboTerminateAction,
 } from '../../../utils/cobo-pact'
 import { revokeStoredPactCredential } from '../../../utils/pact-credentials'
+import { findPactById } from '../../../utils/pact-lookup'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
+  if (!id) {
+    throw createError({ statusCode: 400, data: { error: '缺少 Pact ID' } })
+  }
   const state = getState()
-  const pact = state.pacts.find((p) => p.id === id || p.coboPactId === id)
+  const pact = findPactById(state, id)
 
   if (!pact) {
     throw createError({ statusCode: 404, data: { error: 'Pact not found' } })

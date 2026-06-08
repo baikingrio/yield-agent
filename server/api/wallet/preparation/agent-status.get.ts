@@ -1,4 +1,4 @@
-import { getState } from '../../../utils/demo-store'
+import { getState } from '../../../utils/app-store'
 import { pollCoboAgentWalletStatus, syncFundingFromExistingBalance } from '../../../utils/cobo-preparation'
 import { getWalletPreparation } from '../../../utils/wallet-preparation'
 import { CoboNotConfiguredError } from '../../../utils/cobo-client'

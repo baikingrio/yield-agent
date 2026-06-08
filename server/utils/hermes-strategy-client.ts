@@ -1,4 +1,4 @@
-import type { HermesStrategyPingResult, StrategyAgentReadiness } from '../../shared/types/demo'
+import type { HermesStrategyPingResult, StrategyAgentReadiness } from '../../shared/types/app'
 
 interface HermesStrategyEnv {
   HERMES_API_URL?: string

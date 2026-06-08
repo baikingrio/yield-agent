@@ -1,5 +1,5 @@
-import type { LogType } from '../../../shared/types/demo'
-import { getState } from '../../utils/demo-store'
+import type { LogType } from '../../../shared/types/app'
+import { getState } from '../../utils/app-store'
 
 const LOG_TYPES: LogType[] = ['swap', 'supply', 'revenue', 'pact']
 

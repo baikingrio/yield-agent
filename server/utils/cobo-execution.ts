@@ -3,18 +3,19 @@ import type { UserTransactionRead } from '@cobo/agentic-wallet'
 import { createPublicClient, encodeFunctionData, erc20Abi, http } from 'viem'
 import { arbitrumSepolia, baseSepolia } from 'viem/chains'
 import type {
-  DemoState,
+  AppState,
   NetworkId,
   Pact,
   PactDenialResult,
   PactExecutionResult,
   PactRedeemResult,
-} from '../../shared/types/demo'
+} from '../../shared/types/app'
 import { assertAgentWalletHasGas, getAgentNativeEthBalance, resolveContractCallSponsor } from './agent-gas'
 import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
 import { extractCoboErrorMessage } from './cobo-client'
 import { syncWalletSummaryFromCobo } from './cobo-preparation'
-import { resolveRedeemApiKey } from './pact-redeem-credentials'
+import { syncYieldSnapshotFromChain } from './yield-snapshot'
+import { resolveRedeemApiKey } from './pact-credentials'
 import { resolvePactExecutionApiKey } from './pact-credentials'
 import { readYieldSuppliedAmount } from './yield-position'
 import {
@@ -55,7 +56,7 @@ function createPactScopedTransactionRecordsApi(apiKey: string): TransactionRecor
   }))
 }
 
-function findPact(state: DemoState, pactId: string): Pact | undefined {
+function findPact(state: AppState, pactId: string): Pact | undefined {
   return state.pacts.find((item) => item.id === pactId || item.coboPactId === pactId)
 }
 
@@ -154,7 +155,7 @@ async function submitContractCallAndWait(
 }
 
 function appendExecutionLog(
-  state: DemoState,
+  state: AppState,
   pactId: string,
   action: string,
   txHash: string,
@@ -172,7 +173,7 @@ function appendExecutionLog(
 }
 
 export async function executeFirstPactRecipe(
-  state: DemoState,
+  state: AppState,
   pactId: string,
 ): Promise<PactExecutionResult> {
   const pact = findPact(state, pactId)
@@ -281,6 +282,7 @@ export async function executeFirstPactRecipe(
     pact.firstExecutionTxHash = txHash
 
     appendExecutionLog(state, pact.id, action, txHash, status)
+    await syncYieldSnapshotFromChain(state).catch(() => {})
 
     return {
       txHash,
@@ -303,7 +305,7 @@ export async function executeFirstPactRecipe(
 }
 
 export async function redeemPactFunds(
-  state: DemoState,
+  state: AppState,
   pactId: string,
 ): Promise<PactRedeemResult> {
   const pact = findPact(state, pactId)
@@ -397,6 +399,7 @@ export async function redeemPactFunds(
 
     appendExecutionLog(state, pact.id, action, txHash, redeemTx.status_display || 'Success')
     await syncWalletSummaryFromCobo(state)
+    await syncYieldSnapshotFromChain(state).catch(() => {})
 
     return {
       txHash,
@@ -417,7 +420,7 @@ export async function redeemPactFunds(
 }
 
 export async function simulatePactDenial(
-  state: DemoState,
+  state: AppState,
   pactId: string,
 ): Promise<PactDenialResult> {
   const pact = findPact(state, pactId)

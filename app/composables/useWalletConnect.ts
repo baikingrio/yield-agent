@@ -1,21 +1,20 @@
 import { useConnect, useConnection, useDisconnect } from '@wagmi/vue'
 import { arbitrumSepolia, baseSepolia } from '@wagmi/vue/chains'
 import { injected } from '@wagmi/vue/connectors'
-import type { NetworkId } from '../../shared/types/demo'
+import { DASHBOARD_HOME } from '#shared/constants/dashboard-routes'
+import { NETWORK_LABELS } from '#shared/types/app'
+import type { NetworkId } from '#shared/types/app'
 
 const CHAIN_TO_NETWORK: Record<number, NetworkId> = {
   [baseSepolia.id]: 'base-sepolia',
   [arbitrumSepolia.id]: 'arbitrum-sepolia',
 }
 
-const NETWORK_LABELS: Record<NetworkId, string> = {
-  'base-sepolia': 'Base Sepolia',
-  'arbitrum-sepolia': 'Arbitrum Sepolia',
-}
-
 function useWalletConnectClient() {
-  const store = useDemoStore()
+  const store = useAppStore()
+  const route = useRoute()
   const pageError = ref<string | null>(null)
+  const shouldRedirectAfterSync = ref(false)
 
   const { address, chainId, isConnected, isConnecting, connector } = useConnection()
   const connectMutation = useConnect()
@@ -46,12 +45,28 @@ function useWalletConnectClient() {
       || isConnecting.value,
   )
 
-  async function connectWallet() {
+  function shortAddr(addr: string) {
+    return `${addr.slice(0, 6)}…${addr.slice(-4)}`
+  }
+
+  const displayAddress = computed(() => {
+    const addr = address.value ?? store.preparation?.eoa.address
+    return addr ? shortAddr(addr) : null
+  })
+
+  const displayLabel = computed(() => {
+    if (store.preparation?.eoa.label?.trim()) return store.preparation.eoa.label
+    return connector.value?.name ?? '注入式钱包'
+  })
+
+  async function connectWallet(options?: { redirect?: boolean }) {
     pageError.value = null
     store.clearError()
+    shouldRedirectAfterSync.value = options?.redirect !== false
     try {
       await connectMutation.mutateAsync({ connector: injected() })
     } catch (err) {
+      shouldRedirectAfterSync.value = false
       pageError.value = err instanceof Error ? err.message : '连接钱包失败'
     }
   }
@@ -61,10 +76,27 @@ function useWalletConnectClient() {
     if (!isConnected.value || !addr) return
     const label = connector.value?.name ?? '注入式钱包'
     const current = store.preparation?.eoa.address
-    if (current?.toLowerCase() === addr.toLowerCase()) return
+    const currentLabel = store.preparation?.eoa.label?.trim()
+    const needsSync =
+      current?.toLowerCase() !== addr.toLowerCase()
+      || currentLabel !== label
+
+    if (!needsSync) {
+      if (shouldRedirectAfterSync.value) {
+        shouldRedirectAfterSync.value = false
+        if (!route.path.startsWith(DASHBOARD_HOME)) await navigateTo(DASHBOARD_HOME)
+      }
+      return
+    }
+
     try {
       await store.connectEoa(addr, label)
+      if (shouldRedirectAfterSync.value) {
+        shouldRedirectAfterSync.value = false
+        if (!route.path.startsWith(DASHBOARD_HOME)) await navigateTo(DASHBOARD_HOME)
+      }
     } catch {
+      shouldRedirectAfterSync.value = false
       pageError.value = store.error
     }
   }
@@ -72,6 +104,7 @@ function useWalletConnectClient() {
   async function disconnectWallet() {
     pageError.value = null
     store.clearError()
+    shouldRedirectAfterSync.value = false
     try {
       if (isConnected.value) {
         await disconnectMutation.mutateAsync()
@@ -98,6 +131,8 @@ function useWalletConnectClient() {
     networkMismatch,
     busy,
     pageError,
+    displayAddress,
+    displayLabel,
     connectWallet,
     disconnectWallet,
     NETWORK_LABELS,
@@ -116,6 +151,8 @@ function useWalletConnectStub() {
     networkMismatch: computed(() => false),
     busy: computed(() => false),
     pageError,
+    displayAddress: computed(() => null),
+    displayLabel: computed(() => ''),
     connectWallet: async () => {},
     disconnectWallet: async () => {},
     NETWORK_LABELS,

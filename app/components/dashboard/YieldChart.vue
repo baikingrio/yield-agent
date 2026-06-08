@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DASHBOARD_PACTS } from '#shared/constants/dashboard-routes'
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -11,7 +12,7 @@ import {
   Tooltip,
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
-import type { YieldRange, YieldSeries } from '../../../shared/types/demo'
+import type { YieldRange, YieldSeries } from '../../../shared/types/app'
 
 ChartJS.register(
   CategoryScale,
@@ -84,6 +85,11 @@ const chartOptions = computed(() => ({
   },
 }))
 
+const hasData = computed(() => {
+  const pts = props.series?.points ?? []
+  return pts.length > 0 && pts.some((p) => p.cumulativeUsdc !== 0)
+})
+
 const srRows = computed(() => (props.series?.points ?? []).slice(-3))
 </script>
 
@@ -122,9 +128,14 @@ const srRows = computed(() => (props.series?.points ?? []).slice(-3))
 
     <div v-if="loading && !series" class="mt-4 h-48 animate-pulse rounded bg-surface-elevated" />
 
-    <p v-else-if="!series?.points.length" class="mt-6 py-8 text-center text-sm text-muted">
-      暂无收益数据
-    </p>
+    <div v-else-if="!hasData" class="mt-4 rounded-md border border-hairline bg-canvas px-4 py-5">
+      <p class="text-sm text-body">收益同步尚未开启。</p>
+      <p class="mt-2 text-sm text-[var(--color-muted-strong)]">
+        可在
+        <NuxtLink :to="DASHBOARD_PACTS" class="text-primary no-underline hover:underline">Pact 管理</NuxtLink>
+        查看链上仓位与赎回状态。
+      </p>
+    </div>
 
     <ClientOnly v-else>
       <div class="relative mt-4 h-48 w-full md:h-56">

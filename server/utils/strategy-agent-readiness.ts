@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { delimiter, isAbsolute, join } from 'node:path'
-import type { StrategyAgentMode, StrategyAgentReadiness } from '../../shared/types/demo'
+import type { StrategyAgentMode, StrategyAgentReadiness } from '../../shared/types/app'
 import { buildHermesStrategyReadinessEnv } from './hermes-strategy-client'
 
 interface StrategyAgentEnv {

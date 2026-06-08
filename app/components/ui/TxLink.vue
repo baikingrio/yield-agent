@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { NetworkId } from '../../../shared/types/demo'
+import type { NetworkId } from '../../../shared/types/app'
 
 const props = defineProps<{
   hash: string

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DASHBOARD_HISTORY, DASHBOARD_HOME } from '#shared/constants/dashboard-routes'
 import type {
   AgentGasStatus,
   LogEntry,
@@ -6,7 +7,7 @@ import type {
   Pact,
   Strategy,
   YieldPositionSnapshot,
-} from '../../../shared/types/demo'
+} from '../../../shared/types/app'
 
 const props = defineProps<{
   pact: Pact | null
@@ -37,7 +38,7 @@ const emit = defineEmits<{
 
 import { pactDisplayStatusLabel } from '~/utils/pact-filter'
 
-const store = useDemoStore()
+const store = useAppStore()
 
 const isCoboPact = computed(() => props.pact?.submissionMode === 'cobo')
 const isLocalDraft = computed(() => props.pact?.submissionMode === 'local-draft')
@@ -56,7 +57,10 @@ function copyAgentAddress() {
 
 const canRefresh = computed(() => isCoboPact.value && props.pact?.status === 'awaiting-approval')
 const canApproveLocal = computed(
-  () => isLocalDraft.value && props.pact && ['pending', 'awaiting-approval'].includes(props.pact.status),
+  () => import.meta.dev
+    && isLocalDraft.value
+    && props.pact
+    && ['pending', 'awaiting-approval'].includes(props.pact.status),
 )
 const canExecute = computed(() => {
   if (!props.pact || props.pact.submissionMode !== 'cobo' || props.pact.status !== 'active') return false
@@ -185,8 +189,8 @@ const detailLines = computed(() => {
         </div>
         <p v-if="!eoaConnected" class="text-trading-down">
           请先在
-          <NuxtLink to="/wallet" class="text-primary underline">钱包准备</NuxtLink>
-          页连接 EOA。
+          <NuxtLink :to="DASHBOARD_HOME" class="text-primary underline">控制台</NuxtLink>
+          或 Header 连接 EOA。
         </p>
       </div>
       <p v-if="executing" class="text-sm text-muted" role="status">
@@ -270,7 +274,7 @@ const detailLines = computed(() => {
         </li>
       </ul>
       <NuxtLink
-        :to="`/history?pactId=${pact.id}`"
+        :to="`${DASHBOARD_HISTORY}?pactId=${pact.id}`"
         class="mt-3 inline-block text-xs font-medium text-primary hover:underline"
       >
         查看完整历史

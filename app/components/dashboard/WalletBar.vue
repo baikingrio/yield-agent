@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { WalletSummary } from '../../../shared/types/demo'
+import type { WalletSummary } from '../../../shared/types/app'
 
 const props = defineProps<{
   wallet: WalletSummary | null

@@ -1,4 +1,5 @@
-import type { AgentGasStatus, Pact, Strategy, YieldPositionSnapshot } from '../../shared/types/demo'
+import { DASHBOARD_PACTS } from '#shared/constants/dashboard-routes'
+import type { AgentGasStatus, Pact, Strategy, YieldPositionSnapshot } from '#shared/types/app'
 import { extractApiErrorMessage } from '~/utils/api-error'
 import { useAgentGasFunding } from '~/composables/useAgentGasFunding'
 import {
@@ -16,7 +17,7 @@ const MAX_POLL_ATTEMPTS = 75
 export function usePactManagement() {
   const route = useRoute()
   const router = useRouter()
-  const store = useDemoStore()
+  const store = useAppStore()
   const { fundAgentGas, funding: fundingGas, fundingError: gasFundingError, eoaConnected } = useAgentGasFunding()
 
   const busy = ref(false)
@@ -54,7 +55,7 @@ export function usePactManagement() {
     get: () => resolveSelectedId(route.query.id, store.pacts),
     set: (id: string) => {
       router.replace({
-        path: '/pacts',
+        path: DASHBOARD_PACTS,
         query: {
           ...(statusFilter.value !== 'all' ? { status: statusFilter.value } : {}),
           id,
@@ -104,7 +105,7 @@ export function usePactManagement() {
 
   function setStatusFilter(tab: PactFilterTab) {
     router.replace({
-      path: '/pacts',
+      path: DASHBOARD_PACTS,
       query: {
         ...(tab !== 'all' ? { status: tab } : {}),
         ...(selectedId.value ? { id: selectedId.value } : {}),

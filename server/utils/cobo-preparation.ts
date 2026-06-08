@@ -1,6 +1,6 @@
 import { createPublicClient, erc20Abi, http } from 'viem'
 import { arbitrumSepolia, baseSepolia } from 'viem/chains'
-import type { DemoState, NetworkId, WalletPreparation } from '../../shared/types/demo'
+import type { AppState, NetworkId, WalletPreparation } from '../../shared/types/app'
 import { getNetworkChainConfig } from './cobo-config'
 import {
   createCoboBalanceApi,
@@ -19,7 +19,7 @@ import {
   touchPreparation,
 } from './wallet-preparation'
 
-export async function createCoboAgentWallet(state: DemoState): Promise<WalletPreparation> {
+export async function createCoboAgentWallet(state: AppState): Promise<WalletPreparation> {
   const prep = state.walletPreparation
   if (prep.steps.eoa !== 'completed') {
     throw new Error('EOA_NOT_CONNECTED')
@@ -39,14 +39,14 @@ export async function createCoboAgentWallet(state: DemoState): Promise<WalletPre
   return result.preparation
 }
 
-export async function importCoboAgentWalletFromCli(state: DemoState): Promise<WalletPreparation> {
+export async function importCoboAgentWalletFromCli(state: AppState): Promise<WalletPreparation> {
   if (state.walletPreparation.steps.eoa !== 'completed') {
     throw new Error('EOA_NOT_CONNECTED')
   }
   return syncPreparationFromCawCli(state)
 }
 
-export async function pollCoboAgentWalletStatus(state: DemoState) {
+export async function pollCoboAgentWalletStatus(state: AppState) {
   return pollAgentBootstrap(state)
 }
 
@@ -71,7 +71,7 @@ function pickUsdcAmount(
 }
 
 async function fetchUsdcBalanceFromCoboApi(
-  state: DemoState,
+  state: AppState,
   network: NetworkId,
   walletId: string,
   address: string,
@@ -127,7 +127,7 @@ export async function fetchUsdcBalanceOnChain(
 }
 
 export async function fetchUsdcBalanceFromCobo(
-  state: DemoState,
+  state: AppState,
   network?: NetworkId,
 ): Promise<number> {
   const prep = state.walletPreparation
@@ -151,7 +151,7 @@ export async function fetchUsdcBalanceFromCobo(
   return fetchUsdcBalanceOnChain(net, prep.agentWallet.address)
 }
 
-export async function syncFundingFromExistingBalance(state: DemoState): Promise<WalletPreparation> {
+export async function syncFundingFromExistingBalance(state: AppState): Promise<WalletPreparation> {
   const prep = state.walletPreparation
   if (prep.steps.agent_wallet !== 'completed' || !prep.agentWallet.created) {
     return prep
@@ -168,7 +168,7 @@ export async function syncFundingFromExistingBalance(state: DemoState): Promise<
   return applyDepositToState(state, balance, null)
 }
 
-export async function syncWalletSummaryFromCobo(state: DemoState): Promise<void> {
+export async function syncWalletSummaryFromCobo(state: AppState): Promise<void> {
   const prep = state.walletPreparation
   if (!prep.agentWallet.coboWalletId) return
 
@@ -181,7 +181,7 @@ export async function syncWalletSummaryFromCobo(state: DemoState): Promise<void>
 }
 
 export async function confirmUsdcDeposit(
-  state: DemoState,
+  state: AppState,
   amountUsdc: number,
   txHash: string,
 ): Promise<WalletPreparation> {

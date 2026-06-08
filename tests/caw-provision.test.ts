@@ -24,31 +24,25 @@ function createState(): AppState {
 }
 
 describe('provisionCawPrincipal', () => {
-  it('posts to principals provision and stores the API key server-side only', async () => {
+  it('calls IdentityApi.provisionAgent and stores the API key server-side only', async () => {
     const state = createState()
-    const fetcher = vi.fn(async () => ({
-      success: true,
-      result: {
-        agent_id: 'caw_agent_123',
-        api_key: 'caw_secret_key',
-        status: 'active',
+    const provisionAgent = vi.fn(async () => ({
+      data: {
+        success: true,
+        result: {
+          agent_id: 'caw_agent_123',
+          api_key: 'caw_secret_key',
+          status: 'active',
+        },
       },
     }))
 
     const result = await provisionCawPrincipal(state, {
       name: 'YieldAgent Dev',
-      baseUrl: 'https://api-core.agenticwallet.dev.cobo.com',
-      fetcher,
+      identityApi: { provisionAgent },
     })
 
-    expect(fetcher).toHaveBeenCalledWith(
-      'https://api-core.agenticwallet.dev.cobo.com/api/v1/principals/provision',
-      expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'YieldAgent Dev' }),
-      }),
-    )
+    expect(provisionAgent).toHaveBeenCalledWith({ name: 'YieldAgent Dev' })
     expect(result).toEqual({ agentId: 'caw_agent_123', status: 'active' })
     expect(state.settings.agentId).toBe('caw_agent_123')
     expect(state.settings.apiKeyConfigured).toBe(true)
@@ -57,12 +51,13 @@ describe('provisionCawPrincipal', () => {
 
   it('throws a helpful error when provision response is unsuccessful', async () => {
     const state = createState()
-    const fetcher = vi.fn(async () => ({ success: false, message: 'Provision failed' }))
+    const provisionAgent = vi.fn(async () => ({
+      data: { success: false, message: 'Provision failed', result: {} },
+    }))
 
     await expect(provisionCawPrincipal(state, {
       name: 'YieldAgent Dev',
-      baseUrl: 'https://api-core.agenticwallet.dev.cobo.com',
-      fetcher,
+      identityApi: { provisionAgent },
     })).rejects.toThrow('Provision failed')
   })
 })

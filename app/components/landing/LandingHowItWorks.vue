@@ -5,6 +5,13 @@ import {
   DASHBOARD_PACTS,
 } from '#shared/constants/dashboard-routes'
 
+const store = useAppStore()
+const { isConnected } = useWalletConnect()
+
+const showDashboardEntry = computed(
+  () => isConnected.value || Boolean(store.preparation?.eoa.connected),
+)
+
 const steps = [
   {
     title: '准备 Agent 资金',
@@ -56,6 +63,7 @@ const steps = [
           <h3 class="text-sm font-semibold text-on-dark">{{ step.title }}</h3>
           <p class="mt-1.5 text-pretty text-sm leading-6 text-body">{{ step.body }}</p>
           <NuxtLink
+            v-if="showDashboardEntry"
             :to="step.href"
             class="mt-3 inline-block text-sm font-medium text-primary no-underline hover:text-primary-active"
           >

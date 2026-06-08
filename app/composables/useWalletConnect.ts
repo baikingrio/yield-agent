@@ -110,6 +110,9 @@ function useWalletConnectClient() {
         await disconnectMutation.mutateAsync()
       }
       await store.disconnectEoa()
+      if (route.path !== '/') {
+        await navigateTo('/', { replace: true })
+      }
     } catch (err) {
       pageError.value = err instanceof Error ? err.message : store.error
     }

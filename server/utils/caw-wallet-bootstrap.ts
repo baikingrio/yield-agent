@@ -13,6 +13,7 @@ import type {
 import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
 import {
   createCoboWalletsApi,
+  extractCoboErrorMessage,
   isTransientCoboNetworkError,
   withCoboRetry,
 } from './cobo-client'
@@ -244,46 +245,31 @@ export async function ensureCawCredentials(state: AppState): Promise<void> {
   await provisionCawPrincipal(state, { name: 'YieldAgent Dev' })
 }
 
-interface PairInitiateResponse {
-  success?: boolean
-  message?: string
-  suggestion?: string
-  result?: {
-    token?: string
-    expires_at?: string
-    expire_at?: string
-    expired_at?: string
-  }
-}
-
 async function initiateWalletPairingApi(
   state: AppState,
   walletId: string,
 ): Promise<{ status: 'pairing'; code: string | null; expiresAt: string | null } | undefined> {
-  const apiKey = currentCoboApiKey(state)
-  if (!apiKey) return undefined
+  if (!currentCoboApiKey(state)) return undefined
 
-  const { resp, payload } = await withCoboRetry(async () => {
-    const response = await fetch(`${getCoboBasePath()}/api/v1/wallets/pairs/initiate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': apiKey,
-      },
-      body: JSON.stringify({ wallet_id: walletId }),
-    })
-    const body = await response.json().catch(() => ({})) as PairInitiateResponse
-    return { resp: response, payload: body }
-  })
+  try {
+    const walletsApi = createCoboWalletsApi(state)
+    const resp = await withCoboRetry(() => walletsApi.initiateWalletPair({ wallet_id: walletId }))
+    const payload = resp.data
 
-  if (!resp.ok || payload.success === false) {
-    throw new Error(payload.message || payload.suggestion || `CAW wallet pairing failed with HTTP ${resp.status}`)
-  }
+    if (payload.success === false) {
+      throw new Error(payload.message || payload.suggestion || 'CAW wallet pairing failed')
+    }
 
-  return {
-    status: 'pairing',
-    code: payload.result?.token ?? null,
-    expiresAt: payload.result?.expires_at ?? payload.result?.expire_at ?? payload.result?.expired_at ?? null,
+    return {
+      status: 'pairing',
+      code: payload.result?.token ?? null,
+      expiresAt: payload.result?.expires_at ?? null,
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('CAW wallet pairing')) {
+      throw err
+    }
+    throw new Error(extractCoboErrorMessage(err))
   }
 }
 
@@ -309,6 +295,8 @@ export function parsePairStatusPayload(
 ): 'paired' | 'pairing' | 'unpaired' {
   const tokenStatus = str(payload.token_status)?.toLowerCase()
   if (tokenStatus === 'completed') return 'paired'
+  if (tokenStatus === 'valid' || tokenStatus === 'paired') return 'pairing'
+  if (tokenStatus === 'expired' || tokenStatus === 'not_found') return 'unpaired'
 
   if (payload.paired === true || payload.wallet_paired === true) return 'paired'
 
@@ -338,21 +326,12 @@ async function pollPairStatusApi(
   state: AppState,
   walletId: string,
 ): Promise<'paired' | 'pairing' | 'unpaired'> {
-  const apiKey = currentCoboApiKey(state)
-  if (!apiKey) return 'unpaired'
+  if (!currentCoboApiKey(state)) return 'unpaired'
 
   try {
-    const { resp, payload } = await withCoboRetry(async () => {
-      const response = await fetch(`${getCoboBasePath()}/api/v1/wallets/pairs/info/${walletId}`, {
-        headers: { 'X-API-Key': apiKey },
-      })
-      const body = await response.json().catch(() => ({})) as Record<string, unknown>
-      return { resp: response, payload: body }
-    })
-    if (!resp.ok) return 'unpaired'
-
-    const result = (payload.result ?? payload) as Record<string, unknown>
-    return parsePairStatusPayload(result)
+    const walletsApi = createCoboWalletsApi(state)
+    const resp = await withCoboRetry(() => walletsApi.getPairInfoByWallet(walletId))
+    return parsePairStatusPayload(resp.data.result as unknown as Record<string, unknown>)
   } catch {
     return 'unpaired'
   }

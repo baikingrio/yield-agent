@@ -137,6 +137,21 @@ describe('parsePairStatusPayload', () => {
       token: '12345678',
     })).toBe('pairing')
   })
+
+  it('treats token_status valid as pairing', () => {
+    expect(bootstrap.parsePairStatusPayload({
+      token_purpose: 'pair',
+      token_status: 'valid',
+      token: '12345678',
+    })).toBe('pairing')
+  })
+
+  it('treats token_status not_found as unpaired', () => {
+    expect(bootstrap.parsePairStatusPayload({
+      token_purpose: 'pair',
+      token_status: 'not_found',
+    })).toBe('unpaired')
+  })
 })
 
 describe('ensureCawCredentials', () => {

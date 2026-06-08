@@ -151,6 +151,7 @@ const createStrategyHref = `${DASHBOARD_CREATE_STRATEGY}?template=conservative-u
               </template>
             </ClientOnly>
             <NuxtLink
+              v-if="isConnected"
               :to="createStrategyHref"
               class="inline-flex h-10 w-full items-center justify-center rounded-md border border-hairline px-6 text-sm font-semibold text-on-dark no-underline transition-colors duration-150 hover:bg-surface-elevated sm:w-auto"
             >

@@ -1,0 +1,1 @@
+import{e as s,f as n,g as o,c as r,n as c,v as _,o as p}from"./DtVUsD9O.js";const f=s({__name:"settings",async setup(u){let e,t;const a=n();return[e,t]=o(()=>c({path:_,query:a.query},{replace:!0})),await e,t(),(i,m)=>(p(),r("div"))}});export{f as default};

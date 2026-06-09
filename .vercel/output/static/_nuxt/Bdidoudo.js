@@ -1,0 +1,1 @@
+import{e as r,f as s,g as o,n,D as c,o as _,c as p}from"./DtVUsD9O.js";const f=r({__name:"create-strategy",async setup(u){let e,t;const a=s();return[e,t]=o(()=>n({path:c,query:a.query},{replace:!0})),await e,t(),(i,m)=>(_(),p("div"))}});export{f as default};

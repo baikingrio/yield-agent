@@ -1,0 +1,1 @@
+import{e as a,g as n,c as o,n as s,J as r,o as _}from"./DtVUsD9O.js";const m=a({__name:"wallet",async setup(c){let e,t;return[e,t]=n(()=>s(r,{replace:!0})),await e,t(),(p,l)=>(_(),o("div"))}});export{m as default};

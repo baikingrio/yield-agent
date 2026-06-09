@@ -1,0 +1,232 @@
+{
+  "version": 3,
+  "overrides": {},
+  "routes": [
+    {
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      },
+      "src": "/_nuxt/builds/meta/(.*)"
+    },
+    {
+      "headers": {
+        "cache-control": "public, max-age=1, immutable"
+      },
+      "src": "/_nuxt/builds/(.*)"
+    },
+    {
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      },
+      "src": "/_nuxt/(.*)"
+    },
+    {
+      "src": "/_nuxt/builds/meta(.*)",
+      "headers": {
+        "cache-control": "public,max-age=31536000,immutable"
+      },
+      "continue": true
+    },
+    {
+      "src": "/_nuxt/builds(.*)",
+      "headers": {
+        "cache-control": "public,max-age=31536000,immutable"
+      },
+      "continue": true
+    },
+    {
+      "src": "/_nuxt(.*)",
+      "headers": {
+        "cache-control": "public,max-age=31536000,immutable"
+      },
+      "continue": true
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "(?<__isr_route>/__nuxt_error)",
+      "dest": "/__fallback"
+    },
+    {
+      "src": "/wallet",
+      "dest": "/wallet"
+    },
+    {
+      "src": "/settings",
+      "dest": "/settings"
+    },
+    {
+      "src": "/pacts",
+      "dest": "/pacts"
+    },
+    {
+      "src": "/history",
+      "dest": "/history"
+    },
+    {
+      "src": "/dashboard/settings",
+      "dest": "/dashboard/settings"
+    },
+    {
+      "src": "/dashboard/pacts",
+      "dest": "/dashboard/pacts"
+    },
+    {
+      "src": "/dashboard/history",
+      "dest": "/dashboard/history"
+    },
+    {
+      "src": "/dashboard/create-strategy",
+      "dest": "/dashboard/create-strategy"
+    },
+    {
+      "src": "/dashboard",
+      "dest": "/dashboard"
+    },
+    {
+      "src": "/create-strategy",
+      "dest": "/create-strategy"
+    },
+    {
+      "src": "/api/yield-series",
+      "dest": "/api/yield-series"
+    },
+    {
+      "src": "/api/wallet/preparation/reset",
+      "dest": "/api/wallet/preparation/reset"
+    },
+    {
+      "src": "/api/wallet/preparation/import-agent",
+      "dest": "/api/wallet/preparation/import-agent"
+    },
+    {
+      "src": "/api/wallet/preparation/gas-status",
+      "dest": "/api/wallet/preparation/gas-status"
+    },
+    {
+      "src": "/api/wallet/preparation/disconnect-eoa",
+      "dest": "/api/wallet/preparation/disconnect-eoa"
+    },
+    {
+      "src": "/api/wallet/preparation/deposit-info",
+      "dest": "/api/wallet/preparation/deposit-info"
+    },
+    {
+      "src": "/api/wallet/preparation/deposit",
+      "dest": "/api/wallet/preparation/deposit"
+    },
+    {
+      "src": "/api/wallet/preparation/create-agent",
+      "dest": "/api/wallet/preparation/create-agent"
+    },
+    {
+      "src": "/api/wallet/preparation/connect-eoa",
+      "dest": "/api/wallet/preparation/connect-eoa"
+    },
+    {
+      "src": "/api/wallet/preparation/agent-status",
+      "dest": "/api/wallet/preparation/agent-status"
+    },
+    {
+      "src": "/api/wallet/preparation",
+      "dest": "/api/wallet/preparation"
+    },
+    {
+      "src": "/api/wallet",
+      "dest": "/api/wallet"
+    },
+    {
+      "src": "/api/strategy-agent/readiness",
+      "dest": "/api/strategy-agent/readiness"
+    },
+    {
+      "src": "/api/strategy-agent/ping",
+      "dest": "/api/strategy-agent/ping"
+    },
+    {
+      "src": "/api/strategy-agent/parse",
+      "dest": "/api/strategy-agent/parse"
+    },
+    {
+      "src": "/api/strategies",
+      "dest": "/api/strategies"
+    },
+    {
+      "src": "/api/settings",
+      "dest": "/api/settings"
+    },
+    {
+      "src": "/api/pacts",
+      "dest": "/api/pacts"
+    },
+    {
+      "src": "/api/logs",
+      "dest": "/api/logs"
+    },
+    {
+      "src": "/api/caw/readiness",
+      "dest": "/api/caw/readiness"
+    },
+    {
+      "src": "/api/caw/provision",
+      "dest": "/api/caw/provision"
+    },
+    {
+      "src": "/api/caw/onboard/status",
+      "dest": "/api/caw/onboard/status"
+    },
+    {
+      "src": "/api/caw/onboard/start",
+      "dest": "/api/caw/onboard/start"
+    },
+    {
+      "src": "/api/caw/onboard/continue",
+      "dest": "/api/caw/onboard/continue"
+    },
+    {
+      "src": "/__nuxt_error",
+      "dest": "/__nuxt_error"
+    },
+    {
+      "src": "/",
+      "dest": "/index"
+    },
+    {
+      "src": "/api/pacts/(?<id>[^/]+)/terminate",
+      "dest": "/api/pacts/[id]/terminate"
+    },
+    {
+      "src": "/api/pacts/(?<id>[^/]+)/simulate-denial",
+      "dest": "/api/pacts/[id]/simulate-denial"
+    },
+    {
+      "src": "/api/pacts/(?<id>[^/]+)/redeem",
+      "dest": "/api/pacts/[id]/redeem"
+    },
+    {
+      "src": "/api/pacts/(?<id>[^/]+)/position",
+      "dest": "/api/pacts/[id]/position"
+    },
+    {
+      "src": "/api/pacts/(?<id>[^/]+)/execute",
+      "dest": "/api/pacts/[id]/execute"
+    },
+    {
+      "src": "/api/pacts/(?<id>[^/]+)/approve",
+      "dest": "/api/pacts/[id]/approve"
+    },
+    {
+      "src": "/api/pacts/(?<id>[^/]+)",
+      "dest": "/api/pacts/[id]"
+    },
+    {
+      "src": "/__nuxt_island/(?:.*)",
+      "dest": "/__nuxt_island/[...]"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/__fallback"
+    }
+  ]
+}

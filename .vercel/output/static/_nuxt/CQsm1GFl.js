@@ -1,0 +1,1 @@
+import{_ as t}from"./C7CIRV7b.js";import{_ as n,o as a,c as s,b as c,bz as r}from"./DtVUsD9O.js";import"./B3kpd7jp.js";const _={},d={class:"min-h-dvh bg-canvas"};function i(e,l){const o=t;return a(),s("div",d,[c(o,{variant:"landing"}),r(e.$slots,"default")])}const u=n(_,[["render",i]]);export{u as default};

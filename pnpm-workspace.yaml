@@ -4,5 +4,5 @@ allowBuilds:
   vue-demi: true
 
 overrides:
-  '@vue/devtools-api': ^8.0.5
-  '@vue/devtools-kit': ^8.0.5
+  '@vue/devtools-api': npm:vue-devtools-stub@^0.1.0
+  '@vue/devtools-kit': npm:vue-devtools-stub@^0.1.0

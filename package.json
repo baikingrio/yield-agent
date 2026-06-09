@@ -14,6 +14,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@vue/devtools-api": "npm:vue-devtools-stub@^0.1.0",
+    "@vue/devtools-kit": "npm:vue-devtools-stub@^0.1.0",
+    "vue-devtools-stub": "^0.1.0",
     "@cobo/agentic-wallet": "^0.1.7",
     "@tanstack/vue-query": "^5.101.0",
     "@wagmi/vue": "^0.5.17",

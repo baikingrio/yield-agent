@@ -11,7 +11,7 @@ const props = defineProps<{
   canSubmit: boolean
   network: NetworkId
   submitting: boolean
-  demoTxHash: string
+  previewTxHash: string
   pipelineError: string
   pactSubmissionMessage: string
   coboPactId: string
@@ -203,8 +203,8 @@ const approvalGuidePact = computed((): Pact => ({
         <p class="text-sm font-medium text-trading-up">执行完成</p>
         <p class="text-xs text-muted">首次 Recipe 已记入测试网审计日志。</p>
         <UiTxLink
-          v-if="props.demoTxHash"
-          :hash="props.demoTxHash"
+          v-if="props.previewTxHash"
+          :hash="props.previewTxHash"
           :network="props.network"
           class="block break-all text-xs"
         />

@@ -68,6 +68,28 @@ describe('submitYieldPactToCobo fallback behavior', () => {
     delete process.env.CAW_FORCE_LOCAL_DRAFT
   })
 
+  it('allows local draft when developerMode is enabled in settings', async () => {
+    delete process.env.CAW_FORCE_LOCAL_DRAFT
+    const state = createReadyState()
+    state.settings.coboApiKey = ''
+    state.settings.apiKeyConfigured = false
+    state.settings.developerMode = true
+    const { submitYieldPactToCobo } = await import('../server/utils/cobo-pact')
+
+    const result = await submitYieldPactToCobo(state, {
+      network: 'base-sepolia',
+      asset: 'USDC',
+      targetApy: '8',
+      riskLevel: 'conservative',
+      maxSpend: '500',
+      agentFee: '15',
+      userSplit: '85',
+    }, 'pact-dev-mode-1')
+
+    expect(result.mode).toBe('local-draft')
+    expect(result.pactId).toBe('pact-dev-mode-1')
+  })
+
   it('throws when Cobo submission fails and local draft is not forced', async () => {
     delete process.env.CAW_FORCE_LOCAL_DRAFT
     submitPact.mockRejectedValueOnce(new Error('API key pact authorization is not authorized for this wallet'))

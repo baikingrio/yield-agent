@@ -93,7 +93,7 @@ export function useCreateStrategy() {
   const errors = reactive<Partial<Record<keyof StrategyForm, string>>>({})
   const pipeline = ref<PipelineStage>('preview-ready')
   const executionStep = ref(0)
-  const demoTxHash = ref('')
+  const previewTxHash = ref('')
   const pipelineError = ref('')
   const pactSubmissionMessage = ref('')
   const coboPactId = ref('')
@@ -311,7 +311,7 @@ export function useCreateStrategy() {
       executionStep.value = 1
       const result = await store.executePact(pactId)
       executionStep.value = executionSteps.length - 1
-      demoTxHash.value = result.txHash
+      previewTxHash.value = result.txHash
       pipeline.value = 'success'
       await store.fetchLogs({ limit: 10 })
     } catch (e: unknown) {
@@ -364,7 +364,7 @@ export function useCreateStrategy() {
     coboPactId.value = ''
     createdPactId.value = ''
     approvalId.value = ''
-    demoTxHash.value = ''
+    previewTxHash.value = ''
 
     if (!store.preparation?.ready) {
       pipeline.value = 'failed'
@@ -394,9 +394,15 @@ export function useCreateStrategy() {
       approvalId.value = result.pact.approvalId ?? ''
 
       if (result.pact.submissionMode === 'local-draft') {
-        pipeline.value = 'failed'
-        pipelineError.value = result.pact.submissionMessage
-          || '当前为本地 draft 模式，未接 Cobo，无法完成生产流程。请配置 CAW 后重试。'
+        if (!store.settings?.developerMode) {
+          pipeline.value = 'failed'
+          pipelineError.value = result.pact.submissionMessage
+            || '请完成 Cobo 配置，或在设置页开启开发者模式。'
+          return
+        }
+        pipeline.value = 'awaiting-approval'
+        pactSubmissionMessage.value = result.pact.submissionMessage
+          || '已创建本地 Pact Draft。请在 Pact 管理页使用「开发者：本地模拟批准」。'
         return
       }
 
@@ -466,13 +472,13 @@ export function useCreateStrategy() {
     coboPactId.value = ''
     createdPactId.value = ''
     approvalId.value = ''
-    demoTxHash.value = ''
+    previewTxHash.value = ''
     executionStep.value = 0
   }
 
   onMounted(async () => {
     try {
-      await store.fetchPreparation()
+      await Promise.all([store.fetchPreparation(), store.fetchSettings()])
       if (!store.preparation?.ready) {
         await store.fetchWallet()
       }
@@ -491,7 +497,7 @@ export function useCreateStrategy() {
     errors,
     pipeline,
     executionStep,
-    demoTxHash,
+    previewTxHash,
     pipelineError,
     pactSubmissionMessage,
     coboPactId,

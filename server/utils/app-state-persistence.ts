@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import type { AppState, WalletPreparation } from '../../shared/types/app'
 import { saveStateToDatabase } from '../db/repository'
 
-const STATE_FILE = join(process.cwd(), '.data', 'demo-session.json')
+const STATE_FILE = join(process.cwd(), '.data', 'app-session.json')
 
 interface PersistedSession {
   walletPreparation: WalletPreparation

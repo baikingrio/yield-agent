@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { createInitialState } from '../server/fixtures/initial-state'
-import { stripDemoSeedData } from '../server/utils/strip-demo-seed'
+import { stripLegacySeedData } from '../server/utils/strip-legacy-seed'
 
-describe('strip demo seed data', () => {
+describe('strip legacy seed data', () => {
   it('returns unchanged empty state', () => {
     const state = createInitialState()
-    const result = stripDemoSeedData(state)
+    const result = stripLegacySeedData(state)
     expect(result.changed).toBe(false)
     expect(result.state.strategies).toHaveLength(0)
   })
@@ -44,7 +44,7 @@ describe('strip demo seed data', () => {
     })
     state.yieldSeries7d = [{ date: '2026-06-01', cumulativeUsdc: 12 }]
 
-    const result = stripDemoSeedData(state)
+    const result = stripLegacySeedData(state)
     expect(result.changed).toBe(true)
     expect(result.removedPactIds).toEqual(['pact-demo-1'])
     expect(result.state.strategies).toHaveLength(0)

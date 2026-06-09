@@ -21,7 +21,7 @@ const modeLabel = computed(() => {
       return '可提交真实 Cobo Pact'
     case 'local-draft':
     default:
-      return '本地 Pact Draft'
+      return '配置未完成'
   }
 })
 
@@ -38,7 +38,7 @@ const apiKeyLabel = computed(() => {
         <p class="font-mono text-xs uppercase tracking-[0.2em] text-muted-strong">CAW Readiness</p>
         <h2 class="mt-2 text-lg font-semibold text-on-dark">Cobo Agentic Wallet 接入状态</h2>
         <p class="mt-1 text-sm leading-6 text-muted">
-          检查当前会创建本地 Draft、提交真实 Cobo Pact，还是可执行 active Pact。敏感 Key 不会在前端展示。
+          检查是否可提交真实 Cobo Pact，或已具备执行 active Pact 的条件。敏感 Key 不会在前端展示。
         </p>
       </div>
       <button

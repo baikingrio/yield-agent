@@ -1,5 +1,6 @@
 import { getState, persistCurrentState } from '../../../utils/app-store'
 import { refreshCoboPactStatus } from '../../../utils/cobo-pact'
+import { isLocalDraftAllowed } from '../../../utils/local-draft-policy'
 import { findPactById } from '../../../utils/pact-lookup'
 
 export default defineEventHandler(async (event) => {
@@ -29,6 +30,13 @@ export default defineEventHandler(async (event) => {
         data: { error: err instanceof Error ? err.message : 'Cobo Pact 状态同步失败' },
       })
     }
+  }
+
+  if (pact.submissionMode === 'local-draft' && !isLocalDraftAllowed(state)) {
+    throw createError({
+      statusCode: 403,
+      data: { error: '本地 Pact 批准需在设置页开启开发者模式。' },
+    })
   }
 
   pact.status = 'active'

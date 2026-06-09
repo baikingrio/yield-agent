@@ -11,7 +11,7 @@ const {
   errors,
   pipeline,
   executionStep,
-  demoTxHash,
+  previewTxHash,
   pipelineError,
   pactSubmissionMessage,
   coboPactId,
@@ -178,7 +178,7 @@ const formDisabled = computed(() =>
         :can-submit="isFormValid && preparationReady"
         :network="form.network"
         :submitting="pipeline === 'submitting'"
-        :demo-tx-hash="demoTxHash"
+        :preview-tx-hash="previewTxHash"
         :pipeline-error="pipelineError"
         :pact-submission-message="pactSubmissionMessage"
         :cobo-pact-id="coboPactId"

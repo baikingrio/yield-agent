@@ -4,7 +4,7 @@ const DEMO_PACT_PREFIX = 'pact-demo-'
 const DEMO_STRATEGY_PREFIX = 'str-demo-'
 const DEMO_LOG_IDS = new Set(['log-1', 'log-2', 'log-3', 'log-4', 'log-5'])
 
-export function stripDemoSeedData(state: AppState): {
+export function stripLegacySeedData(state: AppState): {
   state: AppState
   changed: boolean
   removedPactIds: string[]

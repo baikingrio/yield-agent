@@ -12,7 +12,7 @@ function nextActionFor(missing: string[], readiness: Pick<CawReadiness, 'pactMod
     return 'Pact 已激活，可进入受限策略执行与交易审计。'
   }
   if (missing.includes('Cobo API Key')) {
-    return 'Provision 或配置 Cobo API Key，当前只能创建本地 Pact Draft。'
+    return '请完成 Cobo API Key 配置（Provision 或设置页）。'
   }
   if (missing.includes('TSS Node ID')) {
     return '配置 AGENT_WALLET_MAIN_NODE_ID，并确认 TSS Node 运行在当前 Hermes Agent 主机上；本机可运行 caw node start。'

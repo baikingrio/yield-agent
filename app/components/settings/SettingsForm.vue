@@ -12,6 +12,7 @@ const emit = defineEmits<{
     defaultAgentFee: number
     userSplit: number
     apiKey?: string
+    developerMode?: boolean
   }]
 }>()
 
@@ -19,6 +20,7 @@ const network = ref<NetworkId>('base-sepolia')
 const apiKey = ref('')
 const defaultAgentFee = ref(15)
 const userSplit = ref(85)
+const developerMode = ref(false)
 const saved = ref(false)
 
 watch(
@@ -28,6 +30,7 @@ watch(
     network.value = s.network
     defaultAgentFee.value = s.defaultAgentFee
     userSplit.value = s.userSplit
+    developerMode.value = s.developerMode === true
   },
   { immediate: true },
 )
@@ -39,6 +42,7 @@ function onSubmit() {
     defaultAgentFee: defaultAgentFee.value,
     userSplit: userSplit.value,
     apiKey: apiKey.value.trim() || undefined,
+    developerMode: developerMode.value,
   })
 }
 
@@ -100,6 +104,23 @@ watch(
         class="h-10 w-full rounded-md border border-hairline bg-surface px-3 font-mono text-sm text-on-dark"
       />
     </div>
+
+    <details class="rounded-md border border-hairline bg-canvas px-4 py-3">
+      <summary class="cursor-pointer text-sm font-medium text-on-dark">高级 · 开发者</summary>
+      <div class="mt-4 space-y-2">
+        <label class="flex items-start gap-3 text-sm text-body">
+          <input
+            v-model="developerMode"
+            type="checkbox"
+            class="mt-1 h-4 w-4 rounded border-hairline"
+          />
+          <span>
+            开发者模式：允许在无 Cobo 配置时创建本地 Pact Draft 并模拟批准。
+            <span class="mt-1 block text-xs text-muted">无法执行链上 Recipe；答辩演示请保持关闭。</span>
+          </span>
+        </label>
+      </div>
+    </details>
 
     <div class="flex items-center gap-4">
       <button

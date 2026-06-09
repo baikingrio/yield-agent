@@ -29,6 +29,7 @@ async function handleSave(body: {
   defaultAgentFee: number
   userSplit: number
   apiKey?: string
+  developerMode?: boolean
 }) {
   saving.value = true
   store.clearError()

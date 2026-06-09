@@ -1,6 +1,6 @@
 import { createPublicClient, formatEther, http } from 'viem'
 import { arbitrumSepolia, baseSepolia, sepolia } from 'viem/chains'
-import { NETWORK_LABELS } from '../../shared/types/app'
+import { NETWORK_LABELS } from '../../shared/constants/network'
 import type { AgentGasWrongChainHint, NetworkId } from '../../shared/types/app'
 
 export { NETWORK_LABELS }

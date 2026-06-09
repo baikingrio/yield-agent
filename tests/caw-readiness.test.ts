@@ -86,7 +86,7 @@ describe('buildCawReadiness', () => {
     expect(readiness.apiKeyConfigured).toBe(false)
     expect(readiness.apiKeySource).toBe('missing')
     expect(readiness.missing).toContain('Cobo API Key')
-    expect(readiness.nextAction).toContain('Provision')
+    expect(readiness.nextAction).toContain('Cobo API Key')
   })
 
   it('prefers settings API key over env API key for source labeling', () => {

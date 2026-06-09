@@ -237,7 +237,7 @@ HERMES_PROFILE=default
 
 Dashboard 策略卡片在 `awaiting-approval` 时显示「待 Cobo App 审批」，点击跳转 `/pacts?id=`。
 
-用户主路径需配置 Cobo API Key。仅本地开发可在 `.env` 设置 `CAW_FORCE_LOCAL_DRAFT=true` 回退 local-draft（无法执行链上 Recipe）。
+用户主路径需配置 Cobo API Key 并提交真实 Cobo Pact。无 Cobo 时可在**设置页 → 高级 · 开发者**开启「开发者模式」以创建本地 Pact Draft（无法链上执行 Recipe）。`CAW_FORCE_LOCAL_DRAFT=true` 仅供 CI / 本地脚本。
 
 ## 开发任务拆解
 

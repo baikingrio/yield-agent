@@ -1,9 +1,6 @@
 export type NetworkId = 'base-sepolia' | 'arbitrum-sepolia'
 
-export const NETWORK_LABELS: Record<NetworkId, string> = {
-  'base-sepolia': 'Base Sepolia',
-  'arbitrum-sepolia': 'Arbitrum Sepolia',
-}
+export { NETWORK_LABELS } from '../constants/network'
 
 /** 测试网允许小额策略；maxSpend 为 Pact 总支出上限（非单日）。 */
 export const MIN_MAX_SPEND_USDC = 1
@@ -150,6 +147,8 @@ export interface AppSettings {
   defaultAgentFee: number
   userSplit: number
   agentId?: string
+  /** 开启后允许本地 Pact Draft 调试路径（无法链上执行 Recipe） */
+  developerMode?: boolean
   /** 仅服务端会话内存，不返回给客户端 */
   coboApiKey?: string
 }

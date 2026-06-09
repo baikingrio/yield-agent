@@ -38,8 +38,9 @@ Never commit real API keys, pact-scoped API keys, private keys, wallet backups, 
 
 The Settings page displays a CAW Readiness card with these modes:
 
-- `local-draft`: missing API key, Agent Wallet, or funding; strategy creation falls back to local Pact draft.
+- `local-draft` (shown as **配置未完成**): missing API key, Agent Wallet, or funding. Not the user-facing main path.
 - `cobo-pact`: API key, Agent Wallet, and funding are ready; strategy creation can submit a real Cobo Pact.
+- **Developer mode** (Settings → Advanced): when enabled, allows local Pact draft creation/approval for debugging without Cobo. Cannot execute on-chain recipes. `CAW_FORCE_LOCAL_DRAFT=true` is for CI/scripts only.
 - `pact-execution-ready`: future mode for when an active Pact returns a pact-scoped execution API key and the app can execute transactions under that Pact.
 
 ## Runtime Caveat

@@ -57,7 +57,7 @@ function copyAgentAddress() {
 
 const canRefresh = computed(() => isCoboPact.value && props.pact?.status === 'awaiting-approval')
 const canApproveLocal = computed(
-  () => import.meta.dev
+  () => Boolean(store.settings?.developerMode)
     && isLocalDraft.value
     && props.pact
     && ['pending', 'awaiting-approval'].includes(props.pact.status),
@@ -319,7 +319,7 @@ const detailLines = computed(() => {
         :disabled="busy"
         @click="emit('approveLocal')"
       >
-        本地模拟批准
+        开发者：本地模拟批准
       </button>
       <button
         v-if="canExecute"

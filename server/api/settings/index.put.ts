@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { NetworkId } from '../../../shared/types/app'
-import { getState } from '../../utils/app-store'
+import { getState, persistCurrentState } from '../../utils/app-store'
 import { toPublicSettings } from '../../utils/settings'
 
 const schema = z.object({
@@ -8,6 +8,7 @@ const schema = z.object({
   defaultAgentFee: z.number().min(0).max(30).optional(),
   userSplit: z.number().min(0).max(100).optional(),
   apiKey: z.string().optional(),
+  developerMode: z.boolean().optional(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -28,6 +29,8 @@ export default defineEventHandler(async (event) => {
     settings.coboApiKey = data.apiKey.trim()
     settings.apiKeyConfigured = true
   }
+  if (data.developerMode !== undefined) settings.developerMode = data.developerMode
 
+  persistCurrentState()
   return toPublicSettings(settings)
 })

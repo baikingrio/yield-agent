@@ -10,6 +10,7 @@ import type { CreateStrategyPayload, AppState, NetworkId, Pact, PactStatus } fro
 import { createCoboPactsApi, extractCoboErrorMessage, isCoboConfigured, isInvalidApiKeyError } from './cobo-client'
 import { refreshApiKeyFromCli } from './cobo-api-key'
 import { buildYieldContractCallTargets, getNetworkChainConfig } from './cobo-config'
+import { isLocalDraftAllowed } from './local-draft-policy'
 import { revokeStoredPactCredential } from './pact-credentials'
 
 const NETWORK_NAMES: Record<NetworkId, string> = {
@@ -333,12 +334,12 @@ export async function submitYieldPactToCobo(
   const prep = state.walletPreparation
   const draft = buildYieldPactDraft(data)
 
-  const forceLocalDraft = process.env.CAW_FORCE_LOCAL_DRAFT === 'true'
+  const allowLocalDraft = isLocalDraftAllowed(state)
 
   if (!prep.agentWallet.coboWalletId || !isCoboConfigured(state)) {
-    if (!forceLocalDraft) {
+    if (!allowLocalDraft) {
       throw new Error(
-        'Cobo API 未配置。请在设置页填写 Cobo API Key，或配置 AGENT_WALLET_API_KEY。本地开发可设置 CAW_FORCE_LOCAL_DRAFT=true。',
+        'Cobo API 未配置。请在设置页填写 Cobo API Key，或配置 AGENT_WALLET_API_KEY。开发者可在设置页开启开发者模式。',
       )
     }
     return {
@@ -386,7 +387,7 @@ export async function submitYieldPactToCobo(
           return await submitOnce()
         } catch (retryErr) {
           const message = extractCoboErrorMessage(retryErr)
-          if (!forceLocalDraft) throw new Error(message)
+          if (!allowLocalDraft) throw new Error(message)
           return {
             mode: 'local-draft',
             pactId: fallbackPactId,
@@ -398,7 +399,7 @@ export async function submitYieldPactToCobo(
     }
 
     const message = extractCoboErrorMessage(err)
-    if (!forceLocalDraft) throw new Error(message)
+    if (!allowLocalDraft) throw new Error(message)
     return {
       mode: 'local-draft',
       pactId: fallbackPactId,

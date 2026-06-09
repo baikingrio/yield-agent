@@ -222,6 +222,7 @@ export const useAppStore = defineStore('app', () => {
     defaultAgentFee?: number
     userSplit?: number
     apiKey?: string
+    developerMode?: boolean
   }) {
     settings.value = await $fetch<AppSettings>('/api/settings', { method: 'PUT', body })
   }

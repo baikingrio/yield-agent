@@ -10,7 +10,7 @@ import type {
 } from '../../shared/types/app'
 import { createInitialState } from '../fixtures/initial-state'
 import { loadPersistedSession } from '../utils/app-state-persistence'
-import { stripDemoSeedData } from '../utils/strip-demo-seed'
+import { stripLegacySeedData } from '../utils/strip-legacy-seed'
 import { stripLegacyPrepFixtures } from '../utils/strip-legacy-prep'
 import { getDatabase } from './client'
 
@@ -109,7 +109,7 @@ export function hydrateInitialState(): AppState {
       let state = fromDb
       let dirty = false
 
-      const seedStrip = stripDemoSeedData(state)
+      const seedStrip = stripLegacySeedData(state)
       state = seedStrip.state
       if (seedStrip.changed) {
         dirty = true

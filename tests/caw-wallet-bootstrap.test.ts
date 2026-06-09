@@ -67,6 +67,17 @@ describe('detectBootstrapMode', () => {
 })
 
 describe('checkTssReadiness', () => {
+  it('allows sdk-create before wallet exists when MAIN_NODE_ID is configured', async () => {
+    vi.stubEnv('AGENT_WALLET_MAIN_NODE_ID', 'node-remote-1')
+    vi.stubEnv('CAW_CLI_BIN', '/tmp/missing-caw-bin')
+
+    const readiness = await bootstrap.checkTssReadiness(createState(), null)
+
+    expect(readiness.online).toBe(true)
+    expect(readiness.source).toBe('sdk-remote')
+    expect(readiness.nodeId).toBe('node-remote-1')
+  })
+
   it('treats local TSS as online even when caw node status exits non-zero with partial JSON', async () => {
     const err = new Error('remote status forbidden') as Error & { stdout: string }
     err.stdout = JSON.stringify({

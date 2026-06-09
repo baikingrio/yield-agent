@@ -183,7 +183,20 @@ export async function checkTssReadiness(
     }
   }
 
+  const mainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim()
   const targetWalletId = walletId ?? state.walletPreparation.agentWallet.coboWalletId
+
+  // SDK create on Vercel: wallet does not exist yet, so remote node status is unavailable.
+  // Trust configured MAIN_NODE_ID and proceed; TSS is verified after createWallet.
+  if (mainNodeId && !targetWalletId && !cawBin) {
+    return {
+      online: true,
+      nodeId: mainNodeId,
+      source: 'sdk-remote',
+      message: '将使用远程 TSS Node 创建 MPC 钱包',
+    }
+  }
+
   if (targetWalletId && state.settings.coboApiKey?.trim()) {
     try {
       const walletsApi = createCoboWalletsApi(state)
@@ -207,9 +220,11 @@ export async function checkTssReadiness(
 
   return {
     online: false,
-    nodeId: process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null,
+    nodeId: mainNodeId ?? null,
     source: 'none',
-    message: '请先配置 TSS Node 或完成 CAW onboard',
+    message: mainNodeId
+      ? '无法查询远程 TSS Node 状态，请确认 Hermes 主机 TSS 在线'
+      : '请先配置 TSS Node 或完成 CAW onboard',
   }
 }
 

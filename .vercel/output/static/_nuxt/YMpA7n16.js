@@ -1,1 +1,0 @@
-import{e as o,f as s,g as r,c as n,n as c,U as _,o as p}from"./DtVUsD9O.js";const f=o({__name:"history",async setup(u){let e,t;const a=s();return[e,t]=r(()=>c({path:_,query:a.query},{replace:!0})),await e,t(),(i,m)=>(p(),n("div"))}});export{f as default};

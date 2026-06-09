@@ -1,1 +1,0 @@
-import{e as s,f as o,g as n,c as r,n as c,P as _,o as p}from"./DtVUsD9O.js";const f=s({__name:"pacts",async setup(u){let e,t;const a=o();return[e,t]=n(()=>c({path:_,query:a.query},{replace:!0})),await e,t(),(i,m)=>(p(),r("div"))}});export{f as default};

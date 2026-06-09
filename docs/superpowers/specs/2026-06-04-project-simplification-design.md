@@ -1,7 +1,7 @@
 # YieldAgent 项目简化优化设计
 
 **日期**：2026-06-04  
-**状态**：已评审（用户确认 1/2/3/4）  
+**状态**：Phase 1–2 已完成；Phase 3 续篇见 [2026-06-09-project-simplification-phase3-design.md](./2026-06-09-project-simplification-phase3-design.md)  
 **目标**：在保持 Cobo 真实主链路的前提下，平衡降低维护成本、用户认知负担与长期可运营性。
 
 ---

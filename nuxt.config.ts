@@ -11,9 +11,16 @@ export default defineNuxtConfig({
   nitro: {
     alias: {
       '#shared': sharedDir,
+      // Avoid ERR_REQUIRE_ESM (perfect-debounce) from @vue/devtools-kit on serverless SSR.
+      ...(process.env.NODE_ENV === 'production'
+        ? {
+            '@vue/devtools-kit': 'vue-devtools-stub',
+            '@vue/devtools-api': 'vue-devtools-stub',
+          }
+        : {}),
     },
   },
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NODE_ENV === 'development' },
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],
   runtimeConfig: {
     public: {

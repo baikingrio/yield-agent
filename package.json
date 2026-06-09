@@ -2,6 +2,9 @@
   "name": "yield_agent",
   "type": "module",
   "private": true,
+  "engines": {
+    "node": ">=22.11.0"
+  },
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",

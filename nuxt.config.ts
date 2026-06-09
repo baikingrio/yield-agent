@@ -2,25 +2,41 @@
 import { fileURLToPath } from 'node:url'
 
 const sharedDir = fileURLToPath(new URL('./shared', import.meta.url))
+const isProduction = process.env.NODE_ENV === 'production'
+
+/** Prevent @vue/devtools-kit (CJS) from require()-ing ESM perfect-debounce on Vercel SSR. */
+const devtoolsStubAliases = isProduction
+  ? {
+      '@vue/devtools-kit': 'vue-devtools-stub',
+      '@vue/devtools-api': 'vue-devtools-stub',
+    }
+  : {}
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   alias: {
     '#shared': sharedDir,
+    ...devtoolsStubAliases,
   },
   nitro: {
     alias: {
       '#shared': sharedDir,
-      // Avoid ERR_REQUIRE_ESM (perfect-debounce) from @vue/devtools-kit on serverless SSR.
-      ...(process.env.NODE_ENV === 'production'
-        ? {
-            '@vue/devtools-kit': 'vue-devtools-stub',
-            '@vue/devtools-api': 'vue-devtools-stub',
-          }
-        : {}),
+      ...devtoolsStubAliases,
+    },
+    ...(isProduction
+      ? {
+          externals: {
+            inline: ['@vue/devtools-kit', '@vue/devtools-api', 'vue-devtools-stub'],
+          },
+        }
+      : {}),
+  },
+  vite: {
+    resolve: {
+      alias: devtoolsStubAliases,
     },
   },
-  devtools: { enabled: process.env.NODE_ENV === 'development' },
+  devtools: { enabled: !isProduction },
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],
   runtimeConfig: {
     public: {

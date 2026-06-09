@@ -6,7 +6,11 @@ import { initSchema } from './schema'
 let database: DatabaseSync | null = null
 
 export function getDatabasePath(): string {
-  return process.env.DATABASE_PATH?.trim() || join(process.cwd(), '.data', 'yieldagent.db')
+  const explicit = process.env.DATABASE_PATH?.trim()
+  if (explicit) return explicit
+  // Vercel Lambda: /var/task is read-only; persist under /tmp when unset.
+  if (process.env.VERCEL === '1') return '/tmp/yieldagent.db'
+  return join(process.cwd(), '.data', 'yieldagent.db')
 }
 
 export function getDatabase(): DatabaseSync {

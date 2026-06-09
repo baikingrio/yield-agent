@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm run build",
+  "installCommand": "pnpm install",
+  "framework": "nuxtjs",
+  "functions": {
+    "api/**": {
+      "maxDuration": 60
+    }
+  }
+}

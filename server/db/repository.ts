@@ -103,32 +103,37 @@ function importLegacyJsonSession(state: AppState): AppState {
 }
 
 export function hydrateInitialState(): AppState {
-  const fromDb = loadStateFromDatabase()
-  if (fromDb) {
-    let state = fromDb
-    let dirty = false
+  try {
+    const fromDb = loadStateFromDatabase()
+    if (fromDb) {
+      let state = fromDb
+      let dirty = false
 
-    const seedStrip = stripDemoSeedData(state)
-    state = seedStrip.state
-    if (seedStrip.changed) {
-      dirty = true
-      for (const pactId of seedStrip.removedPactIds) {
-        deletePactCredential(pactId)
+      const seedStrip = stripDemoSeedData(state)
+      state = seedStrip.state
+      if (seedStrip.changed) {
+        dirty = true
+        for (const pactId of seedStrip.removedPactIds) {
+          deletePactCredential(pactId)
+        }
       }
+
+      const prepStrip = stripLegacyPrepFixtures(state)
+      state = prepStrip.state
+      if (prepStrip.changed) dirty = true
+
+      if (dirty) saveStateToDatabase(state)
+      return state
     }
 
-    const prepStrip = stripLegacyPrepFixtures(state)
-    state = prepStrip.state
-    if (prepStrip.changed) dirty = true
-
-    if (dirty) saveStateToDatabase(state)
+    let state = createInitialState()
+    state = importLegacyJsonSession(state)
+    saveStateToDatabase(state)
     return state
+  } catch (err) {
+    console.warn('[yield-agent] SQLite unavailable; using ephemeral in-memory state.', err)
+    return createInitialState()
   }
-
-  let state = createInitialState()
-  state = importLegacyJsonSession(state)
-  saveStateToDatabase(state)
-  return state
 }
 
 export function saveStateToDatabase(state: AppState): void {

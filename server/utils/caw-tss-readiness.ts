@@ -73,17 +73,34 @@ export async function checkTssReadiness(
       }
     } catch (err) {
       const raw = extractCoboErrorMessage(err)
-      if (raw.toLowerCase().includes('not authorized for this wallet')) {
+      const normalized = raw.toLowerCase()
+      const configuredMainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null
+
+      const isPactScopedStatusAuthGap = normalized.includes('api key pact authorization')
+        || (normalized.includes('agent wallet') && normalized.includes('提交 pact'))
+
+      if (isPactScopedStatusAuthGap) {
+        return {
+          online: Boolean(configuredMainNodeId),
+          nodeId: configuredMainNodeId,
+          source: 'sdk-remote',
+          message: configuredMainNodeId
+            ? '远程 TSS Node 已配置；当前 API Key 暂不能查询节点状态，继续等待钱包 vault 初始化'
+            : '当前 API Key 暂不能查询节点状态，请配置 AGENT_WALLET_MAIN_NODE_ID',
+        }
+      }
+
+      if (normalized.includes('not authorized for this wallet')) {
         return {
           online: false,
-          nodeId: process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null,
+          nodeId: configuredMainNodeId,
           source: 'sdk-remote',
           message: 'API Key 与钱包不匹配。请使用 Hermes 上 caw wallet current --show-api-key 的 Key，重置后重建或导入钱包',
         }
       }
       return {
         online: false,
-        nodeId: process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null,
+        nodeId: configuredMainNodeId,
         source: 'sdk-remote',
         message: `无法查询远程 TSS Node 状态：${raw}`,
       }

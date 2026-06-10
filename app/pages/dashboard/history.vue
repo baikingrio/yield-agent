@@ -38,8 +38,7 @@ onMounted(loadLogs)
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl">
-    <header class="mb-6">
+  <header class="mb-6">
       <h1 class="text-2xl font-semibold text-on-dark">交易历史</h1>
       <p class="mt-2 text-sm text-muted">可审计执行轨迹，与控制台近期日志同源。</p>
       <p v-if="pactIdFilter" class="mt-2 font-mono text-xs text-muted">
@@ -53,5 +52,4 @@ onMounted(loadLogs)
     <HistoryLogTypeFilter v-model="filter" class="mb-6" />
 
     <HistoryLogTimeline :logs="store.logs" :loading="loading" />
-  </div>
 </template>

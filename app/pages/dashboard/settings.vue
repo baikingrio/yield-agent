@@ -126,8 +126,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl">
-    <header class="mb-6">
+  <header class="mb-6">
       <h1 class="text-2xl font-semibold text-on-dark">设置</h1>
       <p class="mt-2 text-sm text-muted">测试网环境配置。API Key 可手动填入，也可在下方通过 CAW provision 创建；敏感凭证仅保存在服务端会话内存。</p>
     </header>
@@ -177,5 +176,4 @@ onMounted(load)
       @refresh="refreshStrategyAgentReadiness"
       @ping="pingStrategyAgent"
     />
-  </div>
 </template>

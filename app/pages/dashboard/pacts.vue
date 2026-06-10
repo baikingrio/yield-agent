@@ -84,8 +84,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl">
-    <header class="mb-6">
+  <header class="mb-6">
       <h1 class="text-2xl font-semibold text-on-dark">Pact 管理</h1>
       <p class="mt-2 text-sm text-muted">
         管理 CAW Pact 生命周期；待审批项需在 Cobo App 由主人批准。
@@ -186,5 +185,4 @@ onMounted(() => {
         @terminate="terminateSelected"
       />
     </div>
-  </div>
 </template>

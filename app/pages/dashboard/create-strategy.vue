@@ -55,9 +55,8 @@ const formDisabled = computed(() =>
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl">
-    <header class="mb-6 space-y-4 md:mb-8">
-      <h1 class="text-balance text-[clamp(1.75rem,4vw,2.5rem)] font-semibold leading-tight tracking-[-0.03em] text-on-dark">
+  <header class="mb-6 space-y-4 md:mb-8">
+      <h1 class="text-2xl font-semibold text-on-dark">
         创建策略
       </h1>
       <p class="max-w-2xl text-sm text-body">
@@ -231,5 +230,4 @@ const formDisabled = computed(() =>
         @simulate-fail="simulateFailure()"
       />
     </div>
-  </div>
 </template>

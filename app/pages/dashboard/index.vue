@@ -41,8 +41,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl">
-    <DashboardOpsStrip
+  <DashboardOpsStrip
       :wallet="store.wallet"
       :pacts="store.pacts"
       :loading="initialLoading"
@@ -106,5 +105,4 @@ onMounted(async () => {
         @update:range="onRangeChange"
       />
     </div>
-  </div>
 </template>

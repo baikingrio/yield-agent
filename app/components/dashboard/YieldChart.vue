@@ -36,12 +36,30 @@ const emit = defineEmits<{
 }>()
 
 const reducedMotion = ref(false)
+const { resolved: themeResolved } = useTheme()
 
 onMounted(() => {
   reducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 })
 
+function chartPalette() {
+  const tradingUp = readThemeColor('--color-trading-up', '#0ecb81')
+  const hairline = readThemeColor('--color-hairline', '#2b3139')
+  const muted = readThemeColor('--color-muted', '#707a8a')
+  const r = parseInt(tradingUp.slice(1, 3), 16)
+  const g = parseInt(tradingUp.slice(3, 5), 16)
+  const b = parseInt(tradingUp.slice(5, 7), 16)
+  return {
+    tradingUp,
+    hairline,
+    muted,
+    fill: `rgba(${r}, ${g}, ${b}, 0.08)`,
+  }
+}
+
 const chartData = computed(() => {
+  themeResolved.value
+  const palette = chartPalette()
   const points = props.series?.points ?? []
   return {
     labels: points.map((p) => p.date.slice(5)),
@@ -49,8 +67,8 @@ const chartData = computed(() => {
       {
         label: '累计收益 (USDC)',
         data: points.map((p) => p.cumulativeUsdc),
-        borderColor: '#0ecb81',
-        backgroundColor: 'rgba(14, 203, 129, 0.08)',
+        borderColor: palette.tradingUp,
+        backgroundColor: palette.fill,
         fill: true,
         tension: 0.25,
         pointRadius: 2,
@@ -60,30 +78,34 @@ const chartData = computed(() => {
   }
 })
 
-const chartOptions = computed(() => ({
-  responsive: true,
-  maintainAspectRatio: false,
-  animation: reducedMotion.value ? false : { duration: 0 },
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      callbacks: {
-        label: (ctx: { parsed: { y: number } }) =>
-          `累计 ${ctx.parsed.y.toLocaleString('zh-CN')} USDC`,
+const chartOptions = computed(() => {
+  themeResolved.value
+  const palette = chartPalette()
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: reducedMotion.value ? false : { duration: 0 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx: { parsed: { y: number } }) =>
+            `累计 ${ctx.parsed.y.toLocaleString('zh-CN')} USDC`,
+        },
       },
     },
-  },
-  scales: {
-    x: {
-      grid: { color: '#2b3139' },
-      ticks: { color: '#707a8a', maxTicksLimit: 7 },
+    scales: {
+      x: {
+        grid: { color: palette.hairline },
+        ticks: { color: palette.muted, maxTicksLimit: 7 },
+      },
+      y: {
+        grid: { color: palette.hairline },
+        ticks: { color: palette.muted },
+      },
     },
-    y: {
-      grid: { color: '#2b3139' },
-      ticks: { color: '#707a8a' },
-    },
-  },
-}))
+  }
+})
 
 const hasData = computed(() => {
   const pts = props.series?.points ?? []

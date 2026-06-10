@@ -2,7 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
   --color-primary: #fcd535;
   --color-primary-active: #f0b90b;
   --color-primary-disabled: #3a3a1f;
@@ -23,6 +25,7 @@
   --color-status-active: #0ecb81;
   --color-status-paused: #f0b90b;
   --color-status-error: #f6465d;
+  --color-focus-ring: rgba(59, 130, 246, 0.5);
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --radius-sm: 4px;
@@ -31,6 +34,31 @@
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --z-dropdown: 40;
   --z-sticky: 50;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --color-primary: #f0b90b;
+  --color-primary-active: #c9940a;
+  --color-primary-disabled: #e8dfac;
+  --color-ink: #181a20;
+  --color-body: #474d57;
+  --color-muted: #707a8a;
+  --color-muted-strong: #5e6673;
+  --color-hairline: #dee0e3;
+  --color-canvas: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f0f1f3;
+  --color-on-primary: #181a20;
+  --color-on-dark: #181a20;
+  --color-trading-up: #0ecb81;
+  --color-trading-down: #f6465d;
+  --color-info: #2563eb;
+  --color-status-pending: #707a8a;
+  --color-status-active: #0ecb81;
+  --color-status-paused: #c9940a;
+  --color-status-error: #f6465d;
+  --color-focus-ring: rgba(37, 99, 235, 0.45);
 }
 
 @layer base {
@@ -47,7 +75,7 @@
 
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
   }
 }
 

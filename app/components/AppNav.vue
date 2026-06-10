@@ -22,9 +22,10 @@ const showDashboardEntry = computed(
   >
     <NuxtLink
       to="/"
-      class="shrink-0 text-sm font-semibold text-primary no-underline hover:text-primary-active"
+      class="shrink-0 no-underline transition-opacity duration-150 hover:opacity-90"
+      aria-label="YieldAgent 首页"
     >
-      YieldAgent
+      <UiAppLogo />
     </NuxtLink>
 
     <nav
@@ -42,7 +43,7 @@ const showDashboardEntry = computed(
       <AppWalletStatus />
     </nav>
 
-    <div v-else class="flex min-w-0 flex-1 justify-end">
+    <div v-else class="flex min-w-0 flex-1 items-center justify-end gap-2">
       <AppWalletStatus />
     </div>
   </header>

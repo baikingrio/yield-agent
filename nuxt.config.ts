@@ -45,7 +45,15 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'zh-CN' },
+      script: [
+        {
+          key: 'theme-init',
+          innerHTML: `(function(){try{var k='yieldagent-theme';var p=localStorage.getItem(k)||'system';var r=p==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.dataset.theme=r;document.documentElement.style.colorScheme=r;}catch(e){var f=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=f;document.documentElement.style.colorScheme=f;}})();`,
+          tagPosition: 'head',
+        },
+      ],
       link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {

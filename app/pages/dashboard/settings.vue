@@ -143,6 +143,8 @@ onMounted(load)
       @save="handleSave"
     />
 
+    <SettingsAppearanceCard v-if="!loading" />
+
     <SettingsCawDeploymentCheckCard
       v-if="!loading"
       :check="store.deploymentCheck"

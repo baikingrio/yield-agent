@@ -12,5 +12,10 @@ const preparationReady = computed(() => Boolean(store.preparation?.ready))
         <slot />
       </main>
     </div>
+    <div class="mt-auto px-4 pb-8 md:px-6">
+      <div class="mx-auto max-w-5xl">
+        <LandingSiteFooter />
+      </div>
+    </div>
   </div>
 </template>

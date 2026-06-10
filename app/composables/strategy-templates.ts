@@ -44,6 +44,7 @@ export const TEMPLATE_PRESETS: Record<StrategyTemplateKey, {
   description: string
   nlText: string
   form: StrategyForm
+  comingSoon?: boolean
 }> = {
   'conservative-usdc': {
     title: '保守型 USDC 收益',
@@ -59,9 +60,10 @@ export const TEMPLATE_PRESETS: Record<StrategyTemplateKey, {
   },
   custom: {
     title: '自定义策略',
-    description: '用自然语言描述目标，系统先生成 Pact Preview。',
+    description: '自然语言描述策略目标（待实现）。',
     nlText: '',
     form: { ...DEFAULT_FORM },
+    comingSoon: true,
   },
 }
 
@@ -69,6 +71,7 @@ export const STRATEGY_TEMPLATES = Object.entries(TEMPLATE_PRESETS).map(([key, va
   key: key as StrategyTemplateKey,
   title: value.title,
   description: value.description,
+  comingSoon: value.comingSoon === true,
 }))
 
 export function stepIndexFromPipeline(pipeline: PipelineStage): number {

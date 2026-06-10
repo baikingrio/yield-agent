@@ -25,6 +25,7 @@ export function useCreateStrategy() {
       : 'conservative-usdc'
 
   const selectedTemplateKey = ref<StrategyTemplateKey>(initialTemplate)
+  const customTemplateComingSoon = computed(() => selectedTemplateKey.value === 'custom')
   const form = reactive<StrategyForm>({ ...TEMPLATE_PRESETS[initialTemplate].form })
   const nlOpen = ref(initialTemplate !== 'custom')
   const nlText = ref(TEMPLATE_PRESETS[initialTemplate].nlText)
@@ -145,7 +146,7 @@ export function useCreateStrategy() {
     return Object.keys(next).length === 0
   }
 
-  const isFormValid = computed(() => validateForm(false))
+  const isFormValid = computed(() => !customTemplateComingSoon.value && validateForm(false))
 
   const {
     pipeline,
@@ -256,6 +257,7 @@ export function useCreateStrategy() {
     deniedActions,
     strategyTemplates: STRATEGY_TEMPLATES,
     selectedTemplateKey,
+    customTemplateComingSoon,
     preparationReady,
     availableBalanceLabel,
     preparationNetworkLabel,

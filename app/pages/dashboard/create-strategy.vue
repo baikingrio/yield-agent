@@ -23,6 +23,7 @@ const {
   deniedActions,
   strategyTemplates,
   selectedTemplateKey,
+  customTemplateComingSoon,
   preparationReady,
   availableBalanceLabel,
   preparationNetworkLabel,
@@ -121,11 +122,22 @@ const formDisabled = computed(() =>
           :key="template.key"
           type="button"
           class="rounded-lg border bg-surface p-4 text-left transition-colors hover:border-primary/70 hover:bg-surface-elevated"
-          :class="selectedTemplateKey === template.key ? 'border-primary' : 'border-hairline'"
+          :class="[
+            selectedTemplateKey === template.key ? 'border-primary' : 'border-hairline',
+            template.comingSoon ? 'opacity-90' : '',
+          ]"
           :aria-pressed="selectedTemplateKey === template.key"
           @click="applyTemplate(template.key)"
         >
-          <span class="font-mono text-[0.65rem] text-primary">模板</span>
+          <span class="flex items-center gap-2">
+            <span class="font-mono text-[0.65rem] text-primary">模板</span>
+            <span
+              v-if="template.comingSoon"
+              class="rounded-sm bg-surface-elevated px-1.5 py-0.5 font-mono text-[0.6rem] text-muted-strong"
+            >
+              待实现
+            </span>
+          </span>
           <p class="mt-2 text-sm font-semibold text-on-dark">{{ template.title }}</p>
           <p class="mt-1 text-xs leading-5 text-muted">{{ template.description }}</p>
         </button>
@@ -133,8 +145,29 @@ const formDisabled = computed(() =>
     </template>
 
     <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)] lg:items-start">
+      <section
+        v-if="preparationReady && customTemplateComingSoon"
+        class="rounded-lg border border-hairline bg-surface px-5 py-10 text-center"
+        role="status"
+        aria-labelledby="custom-template-heading"
+      >
+        <p class="font-mono text-xs text-muted-strong">待实现</p>
+        <h2 id="custom-template-heading" class="mt-2 text-base font-semibold text-on-dark">
+          自定义策略
+        </h2>
+        <p class="mx-auto mt-3 max-w-md text-sm leading-6 text-body">
+          用自然语言描述策略目标并自动生成 Pact 的功能正在开发中。请先使用「保守型 USDC 收益」或「平衡型收益策略」模板体验完整流程。
+        </p>
+        <button
+          type="button"
+          class="mt-6 inline-flex h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-active"
+          @click="applyTemplate('conservative-usdc')"
+        >
+          改用保守型模板
+        </button>
+      </section>
       <CreateStrategyForm
-        v-if="preparationReady"
+        v-else-if="preparationReady"
         :form="form"
         :errors="errors"
         :disabled="formDisabled"
@@ -176,6 +209,7 @@ const formDisabled = computed(() =>
         :form-valid="isFormValid"
         :preparation-ready="preparationReady"
         :can-submit="isFormValid && preparationReady"
+        :blocked-reason="customTemplateComingSoon ? '自定义策略功能待实现，请先选择其他模板。' : undefined"
         :network="form.network"
         :submitting="pipeline === 'submitting'"
         :preview-tx-hash="previewTxHash"

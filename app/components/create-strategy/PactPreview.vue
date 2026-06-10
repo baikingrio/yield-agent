@@ -9,6 +9,7 @@ const props = defineProps<{
   formValid: boolean
   preparationReady: boolean
   canSubmit: boolean
+  blockedReason?: string
   network: NetworkId
   submitting: boolean
   previewTxHash: string
@@ -126,9 +127,12 @@ const approvalGuidePact = computed((): Pact => ({
 
     <div class="flex-1 space-y-4 overflow-y-auto px-5 py-4">
       <template v-if="!props.formValid && !showPipelinePanel">
-        <p class="text-sm text-muted">请填写必填项以生成 Pact 边界。</p>
+        <p class="text-sm text-muted">
+          {{ props.blockedReason ?? '请填写必填项以生成 Pact 边界。' }}
+        </p>
       </template>
 
+      <template v-if="props.formValid || showPipelinePanel">
       <dl class="space-y-3">
         <div v-for="line in props.lines" :key="line.label" class="grid gap-0.5">
           <dt class="text-xs font-medium text-muted-strong">{{ line.label }}</dt>
@@ -170,6 +174,7 @@ const approvalGuidePact = computed((): Pact => ({
           </li>
         </ul>
       </section>
+      </template>
     </div>
 
     <div

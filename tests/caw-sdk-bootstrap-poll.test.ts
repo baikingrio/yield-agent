@@ -2,13 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AppState } from '../shared/types/app'
 
 const bootstrapViaSdkCreate = vi.hoisted(() => vi.fn())
-const getWalletStatusFromSdk = vi.hoisted(() => vi.fn())
+const probeWalletStatusFromSdk = vi.hoisted(() => vi.fn())
 const resolveEvmAddressFromSdk = vi.hoisted(() => vi.fn())
 
 vi.mock('../server/utils/caw-sdk-wallet', () => ({
   bootstrapViaSdkCreate,
-  getWalletStatusFromSdk,
+  probeWalletStatusFromSdk,
   resolveEvmAddressFromSdk,
+  getWalletStatusFromSdk: vi.fn(),
 }))
 
 vi.mock('../server/utils/caw-provision', () => ({
@@ -63,7 +64,7 @@ afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
   bootstrapViaSdkCreate.mockReset()
-  getWalletStatusFromSdk.mockReset()
+  probeWalletStatusFromSdk.mockReset()
   resolveEvmAddressFromSdk.mockReset()
 })
 
@@ -87,13 +88,22 @@ describe('pollAgentBootstrap sdk-create', () => {
     bootstrapViaSdkCreate.mockImplementation(async (s: AppState) => {
       s.walletPreparation.agentWallet.coboWalletId = 'wallet-new'
       s.walletPreparation.steps.agent_wallet = 'in_progress'
+      return {
+        adopted: false,
+        walletUuid: 'wallet-new',
+        walletName: 'YieldAgent-test',
+      }
     })
-    getWalletStatusFromSdk.mockResolvedValue('preparing')
+    probeWalletStatusFromSdk.mockResolvedValue({
+      status: 'preparing',
+      readError: null,
+      inferredFrom: 'wallet',
+    })
 
     const response = await pollAgentBootstrap(state)
 
     expect(bootstrapViaSdkCreate).toHaveBeenCalledOnce()
-    expect(getWalletStatusFromSdk).toHaveBeenCalledWith(state, 'wallet-new')
+    expect(probeWalletStatusFromSdk).toHaveBeenCalledWith(state, 'wallet-new')
     expect(response.bootstrap?.phase).toBe('bootstrapping')
     expect(response.preparation.steps.agent_wallet).toBe('in_progress')
     expect(response.bootstrap?.message).not.toBe('将使用远程 TSS Node 创建 MPC 钱包')
@@ -113,7 +123,11 @@ describe('pollAgentBootstrap sdk-create', () => {
         pairing: { status: 'unpaired', code: null, expiresAt: null },
       },
     })
-    getWalletStatusFromSdk.mockResolvedValue('preparing')
+    probeWalletStatusFromSdk.mockResolvedValue({
+      status: 'preparing',
+      readError: null,
+      inferredFrom: 'wallet',
+    })
 
     const response = await pollAgentBootstrap(state)
 

@@ -16,8 +16,17 @@ export class CoboNotConfiguredError extends Error {
   }
 }
 
+export function preferEnvCoboApiKey(): boolean {
+  return process.env.AGENT_WALLET_TSS_RUNTIME === 'hermes-agent-host'
+    || process.env.VERCEL === '1'
+}
+
 export function getCoboApiKey(state: AppState): string {
-  const key = state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim()
+  const envKey = process.env.AGENT_WALLET_API_KEY?.trim()
+  const settingsKey = state.settings.coboApiKey?.trim()
+  const key = preferEnvCoboApiKey() && envKey
+    ? envKey
+    : (settingsKey || envKey)
   if (!key) throw new CoboNotConfiguredError()
   return key
 }

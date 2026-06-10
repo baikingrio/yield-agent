@@ -168,15 +168,23 @@ async function copyAddress(addr: string) {
         {{ createLabel }}
       </button>
     </div>
-    <div v-else class="mt-4 flex flex-wrap gap-3">
-      <button
-        type="button"
-        class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors duration-150 hover:bg-primary-active disabled:opacity-50"
-        :disabled="locked || busy || agentPolling"
-        @click="emit('create')"
+    <div v-else class="mt-4 space-y-3">
+      <p
+        v-if="prep?.agentWallet.coboWalletId && prep.steps.agent_wallet === 'in_progress'"
+        class="text-xs leading-5 text-muted"
       >
-        {{ createLabel }}
-      </button>
+        已关联云端钱包，请勿重复创建。点击下方按钮将继续轮询 vault 状态；重置不会删除 CAW App 中的钱包。
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <button
+          type="button"
+          class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors duration-150 hover:bg-primary-active disabled:opacity-50"
+          :disabled="locked || busy || agentPolling"
+          @click="emit('create')"
+        >
+          {{ createLabel }}
+        </button>
+      </div>
     </div>
   </section>
 </template>

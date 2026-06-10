@@ -420,11 +420,14 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function resetPreparation() {
-    preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/reset', {
-      method: 'POST',
-    })
+    const response = await $fetch<{ preparation: WalletPreparation; warning: string | null }>(
+      '/api/wallet/preparation/reset',
+      { method: 'POST' },
+    )
+    preparation.value = response.preparation
+    agentBootstrap.value = response.preparation.agentBootstrap ?? null
     await fetchWallet({ sync: true })
-    return preparation.value
+    return response
   }
 
   function clearError() {

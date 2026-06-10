@@ -19,6 +19,7 @@ const blockerLabels: Record<string, string> = {
   node_id_mismatch: 'MAIN_NODE_ID 与绑定节点不一致',
   wallet_preparing: '钱包仍在 preparing',
   prefer_env_api_key: '建议使用环境变量而非会话内 Key',
+  ephemeral_database: 'Vercel 未配置持久化 DATABASE_PATH（易重复创建钱包）',
 }
 
 async function copyTemplate() {

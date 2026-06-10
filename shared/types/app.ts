@@ -159,6 +159,7 @@ export type CawDeploymentBlocker =
   | 'node_id_mismatch'
   | 'wallet_preparing'
   | 'prefer_env_api_key'
+  | 'ephemeral_database'
 
 export interface CawDeploymentCheck {
   runtime: 'hermes-agent-host' | 'local' | 'unknown'

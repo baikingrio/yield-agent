@@ -72,6 +72,13 @@ describe('buildCawDeploymentCheck', () => {
     expect(check.blockers).toContain('prefer_env_api_key')
   })
 
+  it('flags ephemeral database on Vercel without DATABASE_PATH', () => {
+    vi.stubEnv('VERCEL', '1')
+    vi.stubEnv('DATABASE_PATH', '')
+    const check = buildCawDeploymentCheck(createState())
+    expect(check.blockers).toContain('ephemeral_database')
+  })
+
   it('includes env template placeholders without secrets', () => {
     vi.stubEnv('AGENT_WALLET_MAIN_NODE_ID', 'node-abc')
     const check = buildCawDeploymentCheck(createState())

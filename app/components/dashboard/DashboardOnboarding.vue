@@ -4,6 +4,7 @@ const {
   busy,
   depositAmount,
   pageError,
+  resetNotice,
   createAgentLabel,
   depositLabel,
   bootstrap,
@@ -57,6 +58,13 @@ const {
       :message="pageError || store.error || ''"
       @retry="init"
     />
+
+    <p
+      v-if="resetNotice"
+      class="rounded-lg border border-primary/30 bg-canvas px-4 py-3 text-sm leading-6 text-body"
+    >
+      {{ resetNotice }}
+    </p>
 
     <div v-if="!prep && busy" class="h-48 animate-pulse rounded-lg bg-surface" />
 

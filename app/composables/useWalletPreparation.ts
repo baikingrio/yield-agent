@@ -29,6 +29,7 @@ export function useWalletPreparation() {
   const depositPhase = ref<'idle' | 'signing' | 'confirming'>('idle')
   const depositAmount = ref('500')
   const pageError = ref<string | null>(null)
+  const resetNotice = ref<string | null>(null)
 
   const bootstrapPhaseLabel = computed(() => {
     const phase = bootstrap.value?.phase ?? 'idle'
@@ -139,6 +140,7 @@ export function useWalletPreparation() {
   async function runCreateAgent() {
     if (stepLocked('agent_wallet')) return
     if (prep.value?.agentWallet.pairing?.status === 'paired') return
+    if (busy.value || agentPolling.value) return
     pageError.value = null
     stopAgentPolling()
     busy.value = true
@@ -184,11 +186,21 @@ export function useWalletPreparation() {
   }
 
   async function runReset() {
+    const hadCoboWallet = Boolean(prep.value?.agentWallet.coboWalletId)
+    const confirmed = window.confirm(
+      hadCoboWallet
+        ? '重置只会清除本应用的准备进度，不会在 CAW App 中删除已创建的 Agent 钱包。未激活的 YieldAgent 钱包需在 CAW App 中手动忽略。确定继续？'
+        : '确定重置钱包准备进度？',
+    )
+    if (!confirmed) return
+
     stopAgentPolling()
     pageError.value = null
+    resetNotice.value = null
     busy.value = true
     try {
-      await store.resetPreparation()
+      const response = await store.resetPreparation()
+      resetNotice.value = response.warning
       depositAmount.value = '500'
     } catch {
       pageError.value = store.error
@@ -215,6 +227,7 @@ export function useWalletPreparation() {
     depositPhase,
     depositAmount,
     pageError,
+    resetNotice,
     createAgentLabel,
     depositLabel,
     bootstrapPhaseLabel,

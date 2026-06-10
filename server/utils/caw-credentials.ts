@@ -7,11 +7,15 @@ import {
   str,
   type CawCliRunner,
 } from './caw-cli'
+import { preferEnvCoboApiKey } from './cobo-client'
 
 export const AGENT_WALLET_API_KEY_REQUIRED = 'AGENT_WALLET_API_KEY_REQUIRED'
 
 function currentCoboApiKey(state: AppState): string | null {
-  return state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim() || null
+  const envKey = process.env.AGENT_WALLET_API_KEY?.trim()
+  const settingsKey = state.settings.coboApiKey?.trim()
+  if (preferEnvCoboApiKey() && envKey) return envKey
+  return settingsKey || envKey || null
 }
 
 function isSplitDeployRuntime(): boolean {

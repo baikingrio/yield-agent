@@ -120,11 +120,22 @@ export async function checkTssReadiness(
 export function buildSdkPreparingMessage(
   walletStatus: string | null,
   tss: { online: boolean; nodeId: string | null; message: string },
+  readError?: string | null,
 ): string {
   const configuredMainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null
 
   if (!walletStatus) {
-    return '无法从 Cobo API 读取钱包状态，请确认 API Key 与网络配置'
+    if (readError) {
+      const normalized = readError.toLowerCase()
+      if (normalized.includes('not authorized for this wallet') || readError.includes('无权')) {
+        return 'API Key 与钱包不匹配。请在 Vercel 设置 Hermes 上 `caw wallet current --show-api-key` 的 AGENT_WALLET_API_KEY，并清除设置页中过期的 Key'
+      }
+      if (normalized.includes('invalid api key') || readError.includes('无效')) {
+        return readError
+      }
+      return `无法读取钱包状态：${readError}`
+    }
+    return '无法从 Cobo API 读取钱包状态，请确认 Vercel 已配置 AGENT_WALLET_API_KEY（与 Hermes onboard 相同）'
   }
 
   if (!tss.online) {

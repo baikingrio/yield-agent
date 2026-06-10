@@ -30,7 +30,9 @@ import {
 import {
   bootstrapViaSdkCreate,
   getWalletStatusFromSdk,
+  probeWalletStatusFromSdk,
   resolveEvmAddressFromSdk,
+  type SdkWalletCreateResult,
 } from './caw-sdk-wallet'
 import { buildSdkPreparingMessage, checkTssReadiness } from './caw-tss-readiness'
 import {
@@ -66,6 +68,13 @@ function setBootstrapState(state: AppState, patch: Partial<AgentBootstrapState>)
   prep.agentBootstrap = next
   touchPreparation(prep, state)
   return next
+}
+
+function sdkCreateBootstrapMessage(result: SdkWalletCreateResult): string {
+  if (result.adopted) {
+    return `已复用云端 Agent 钱包（${result.walletName}），继续等待 vault 就绪`
+  }
+  return '正在通过 SDK 创建 MPC 钱包并等待 vault 就绪'
 }
 
 function isBootstrapDone(prep: WalletPreparation): boolean {
@@ -378,11 +387,11 @@ export async function startAgentBootstrap(state: AppState): Promise<AgentBootstr
   if (mode === 'cli-onboard') {
     await bootstrapViaCliOnboardStep(state)
   } else {
-    await bootstrapViaSdkCreate(state)
+    const created = await bootstrapViaSdkCreate(state)
     setBootstrapState(state, {
       phase: 'bootstrapping',
       walletStatus: 'preparing',
-      message: '正在通过 SDK 创建 MPC 钱包并等待 vault 就绪',
+      message: sdkCreateBootstrapMessage(created),
     })
   }
 
@@ -468,7 +477,7 @@ export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstra
     await ensureCawCredentials(state)
     let walletUuid = prep.agentWallet.coboWalletId
     if (!walletUuid) {
-      await bootstrapViaSdkCreate(state)
+      const created = await bootstrapViaSdkCreate(state)
       walletUuid = prep.agentWallet.coboWalletId
       if (!walletUuid) {
         return buildStatusResponse(state, false)
@@ -476,11 +485,12 @@ export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstra
       setBootstrapState(state, {
         phase: 'bootstrapping',
         walletStatus: 'preparing',
-        message: '正在通过 SDK 创建 MPC 钱包并等待 vault 就绪',
+        message: sdkCreateBootstrapMessage(created),
       })
     }
 
-    const walletStatus = await getWalletStatusFromSdk(state, walletUuid)
+    const walletProbe = await probeWalletStatusFromSdk(state, walletUuid)
+    const walletStatus = walletProbe.status
     setBootstrapState(state, { walletStatus })
 
     if (walletStatus !== 'active') {
@@ -494,6 +504,19 @@ export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstra
         })
         return buildStatusResponse(state, false)
       }
+      if (!walletStatus && walletProbe.readError) {
+        markAgentWalletPreparing(state, {
+          coboWalletId: walletUuid,
+          pairing: { status: 'unpaired', code: null, expiresAt: null },
+        })
+        setBootstrapState(state, {
+          phase: 'bootstrapping',
+          walletStatus: null,
+          tssOnline: true,
+          message: buildSdkPreparingMessage(null, tssCheck, walletProbe.readError),
+        })
+        return buildStatusResponse(state, false)
+      }
       markAgentWalletPreparing(state, {
         coboWalletId: walletUuid,
         pairing: { status: 'unpaired', code: null, expiresAt: null },
@@ -502,7 +525,7 @@ export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstra
         phase: 'bootstrapping',
         walletStatus,
         tssOnline: true,
-        message: buildSdkPreparingMessage(walletStatus, tssCheck),
+        message: buildSdkPreparingMessage(walletStatus, tssCheck, walletProbe.readError),
       })
       return buildStatusResponse(state, false)
     }

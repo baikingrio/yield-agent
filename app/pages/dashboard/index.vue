@@ -16,11 +16,10 @@ async function loadDashboard() {
   try {
     await Promise.all([
       store.fetchWallet({ sync: false }),
-      store.fetchStrategies(),
-      store.fetchPacts(),
       store.fetchLogs({ limit: 10 }),
       store.fetchYieldSeries(undefined, { sync: true }),
     ])
+    await store.syncPortfolioFromCobo()
     void store.fetchWallet({ sync: true })
   } finally {
     store.loading = false

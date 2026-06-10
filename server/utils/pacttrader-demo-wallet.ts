@@ -48,7 +48,9 @@ export function applyPresetDemoWallet(
   if (!config.enabled) return { state, applied: false }
 
   state.settings.network = normalizeNetwork(state.settings.network)
-  state.settings.apiKeyConfigured = true
+  state.settings.apiKeyConfigured = Boolean(
+    state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim(),
+  )
 
   state.wallet.address = config.agentWalletAddress
   state.wallet.totalAssetsUsdc = config.availableUsdc

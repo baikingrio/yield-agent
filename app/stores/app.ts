@@ -56,13 +56,21 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function fetchStrategies() {
+  async function fetchStrategies(options?: { sync?: boolean }) {
     try {
-      strategies.value = await $fetch<Strategy[]>('/api/strategies')
+      strategies.value = await $fetch<Strategy[]>('/api/strategies', {
+        query: options?.sync ? { sync: 'true' } : undefined,
+      })
     } catch (e) {
       error.value = apiErrorMessage(e)
       throw e
     }
+  }
+
+  /** Import remote Cobo pacts first, then load strategies (order matters). */
+  async function syncPortfolioFromCobo(status?: string) {
+    await fetchPacts(status, { sync: true })
+    await fetchStrategies()
   }
 
   async function fetchPacts(status?: string, options?: { sync?: boolean }) {
@@ -454,6 +462,7 @@ export const useAppStore = defineStore('app', () => {
     error,
     fetchWallet,
     fetchStrategies,
+    syncPortfolioFromCobo,
     fetchPacts,
     fetchPact,
     syncPact,

@@ -245,11 +245,15 @@ export function usePactManagement() {
         ? Promise.resolve()
         : store.fetchPreparation().catch(() => {})
 
-      await Promise.all([
-        preparationTask,
-        store.fetchStrategies(),
-        store.fetchPacts(pactListFetchStatus(statusFilter.value), { sync: false }),
-      ])
+      await preparationTask
+      if (options?.sync) {
+        await store.syncPortfolioFromCobo(pactListFetchStatus(statusFilter.value))
+      } else {
+        await Promise.all([
+          store.fetchStrategies(),
+          store.fetchPacts(pactListFetchStatus(statusFilter.value), { sync: false }),
+        ])
+      }
     } finally {
       loading.value = false
     }

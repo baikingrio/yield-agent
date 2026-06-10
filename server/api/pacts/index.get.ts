@@ -1,5 +1,7 @@
 import type { PactStatus } from '../../../shared/types/app'
 import { getState, persistCurrentState } from '../../utils/app-store'
+import { CoboNotConfiguredError, extractCoboErrorMessage } from '../../utils/cobo-client'
+import { syncCoboPactsForAgentWallet } from '../../utils/cobo-pact-import'
 import { refreshCoboPactStatus } from '../../utils/cobo-pact'
 
 const STATUSES: PactStatus[] = ['pending', 'active', 'completed', 'terminated', 'awaiting-approval']
@@ -13,6 +15,20 @@ export default defineEventHandler(async (event) => {
   const state = getState()
 
   if (query.sync === 'true') {
+    try {
+      await syncCoboPactsForAgentWallet(state)
+    } catch (err) {
+      if (err instanceof CoboNotConfiguredError) {
+        throw createError({
+          statusCode: 400,
+          data: {
+            error: '请配置 AGENT_WALLET_API_KEY（与 Hermes caw wallet current --show-api-key 相同）以从 Cobo 同步 Pact',
+          },
+        })
+      }
+      console.warn('[yield-agent] Cobo pact sync failed:', extractCoboErrorMessage(err))
+    }
+
     let toSync = state.pacts.filter(
       (pact) => pact.submissionMode === 'cobo' && LIVE_SYNC_STATUSES.has(pact.status),
     )

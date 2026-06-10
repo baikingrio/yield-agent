@@ -312,6 +312,8 @@ export interface AgentBootstrapStatusResponse {
 
 export interface WalletPreparation {
   network: NetworkId
+  /** Hackathon mode uses one pre-paired operator wallet instead of per-judge onboarding. */
+  demoMode?: 'preset'
   agentBootstrap?: AgentBootstrapState
   eoa: {
     connected: boolean

@@ -47,6 +47,7 @@ export function useWalletPreparation() {
   }))
 
   const createAgentLabel = computed(() => {
+    if (prep.value?.demoMode === 'preset') return '已使用预置 Demo Wallet'
     if (busy.value || agentPolling.value) return '初始化中…'
     if (prep.value?.steps.agent_wallet === 'in_progress') return '继续初始化'
     if (prep.value?.agentWallet.created) return '重新生成配对码'
@@ -138,6 +139,7 @@ export function useWalletPreparation() {
   }
 
   async function runCreateAgent() {
+    if (prep.value?.demoMode === 'preset') return
     if (stepLocked('agent_wallet')) return
     if (prep.value?.agentWallet.pairing?.status === 'paired') return
     if (busy.value || agentPolling.value) return

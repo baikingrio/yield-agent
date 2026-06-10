@@ -13,6 +13,7 @@ import { createInitialState } from '../fixtures/initial-state'
 import { loadPersistedSession } from '../utils/app-state-persistence'
 import { stripLegacySeedData } from '../utils/strip-legacy-seed'
 import { stripLegacyPrepFixtures } from '../utils/strip-legacy-prep'
+import { applyPresetDemoWallet, getPresetDemoWalletConfig } from '../utils/pacttrader-demo-wallet'
 import { getDatabase } from './client'
 
 const BLOB_KEYS = ['wallet', 'wallet_preparation', 'settings', 'yield_series_7d', 'yield_series_30d'] as const
@@ -126,6 +127,13 @@ export function hydrateInitialState(): AppState {
       const networkNorm = normalizeAppStateNetworks(state)
       state = networkNorm.state
       if (networkNorm.changed) dirty = true
+
+      const demoConfig = getPresetDemoWalletConfig()
+      if (demoConfig.enabled && !state.walletPreparation.ready) {
+        const demoResult = applyPresetDemoWallet(state)
+        state = demoResult.state
+        if (demoResult.applied) dirty = true
+      }
 
       if (dirty) saveStateToDatabase(state)
       return state

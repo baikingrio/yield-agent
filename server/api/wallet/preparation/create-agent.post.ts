@@ -7,6 +7,15 @@ export default defineEventHandler(async () => {
   const state = getState()
 
   try {
+    if (state.walletPreparation.demoMode === 'preset') {
+      const prep = state.walletPreparation
+      return {
+        preparation: prep,
+        bootstrap: prep.agentBootstrap ?? null,
+        done: true,
+      }
+    }
+
     const prep = await createCoboAgentWallet(state)
     flushCurrentState()
     const bootstrap = prep.agentBootstrap ?? null

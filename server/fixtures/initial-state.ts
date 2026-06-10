@@ -1,8 +1,9 @@
 import type { AppState } from '../../shared/types/app'
+import { applyPresetDemoWallet } from '../utils/pacttrader-demo-wallet'
 import { createInitialWalletPreparation } from '../utils/wallet-preparation'
 
 export function createInitialState(): AppState {
-  return {
+  const state: AppState = {
     wallet: {
       address: '',
       totalAssetsUsdc: 0,
@@ -22,4 +23,7 @@ export function createInitialState(): AppState {
       userSplit: 85,
     },
   }
+
+  applyPresetDemoWallet(state)
+  return state
 }

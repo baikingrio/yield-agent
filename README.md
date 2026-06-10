@@ -218,6 +218,21 @@ HERMES_PROFILE=default
 | 长期 `preparing` | TSS 未参与 MPC；检查 MAIN_NODE_ID 与 `caw node` |
 | `tss_check` + 无 Key | 在 Vercel 配置 `AGENT_WALLET_API_KEY` |
 
+## Hackathon 预置演示钱包模式
+
+公开评审链接建议使用「方案 A：预置演示钱包」，避免多位评委同时通过 Vercel 重复 `createWallet`，导致全站单例 SQLite 状态串线或 CAW vault 长期 `preparing`。
+
+启用方式：
+
+```env
+PACTTRADER_DEMO_MODE=preset
+PACTTRADER_DEMO_AGENT_WALLET_ADDRESS=<预置 active Agent Wallet 地址>
+PACTTRADER_DEMO_CAW_WALLET_ID=<预置 CAW wallet uuid>
+PACTTRADER_DEMO_AVAILABLE_USDC=500
+```
+
+启用后，Dashboard 默认显示已激活、已配对、已注资的演示 Agent Wallet；`POST /api/wallet/preparation/create-agent` 会返回预置状态，不再创建新 CAW 钱包。详细架构和任务拆解见 [`docs/PactTrader_Hackathon_Demo_Architecture.md`](./docs/PactTrader_Hackathon_Demo_Architecture.md)。
+
 ## Demo 数据与接口
 
 当前版本使用 SQLite 持久化策略、Pact 与审计日志，并接入真实测试网钱包准备与 Cobo Pact 提交流程：

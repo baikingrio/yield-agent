@@ -53,6 +53,16 @@ const {
       </button>
     </header>
 
+    <div
+      v-if="prep?.demoMode === 'preset'"
+      class="rounded-lg border border-primary/30 bg-canvas px-4 py-3 text-sm leading-6 text-body"
+    >
+      <p class="font-semibold text-on-dark">Hackathon Demo 模式已启用</p>
+      <p class="mt-1">
+        当前公开评审路径使用项目方预置的 active Agent Wallet，避免多位评委重复创建 CAW 钱包导致状态串线；如需真实自助配对，可在本地/运维环境关闭 preset 模式后再走完整初始化。
+      </p>
+    </div>
+
     <UiPageAlert
       v-if="pageError || store.error"
       :message="pageError || store.error || ''"

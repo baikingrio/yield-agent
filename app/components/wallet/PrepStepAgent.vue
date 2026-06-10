@@ -63,9 +63,16 @@ async function copyAddress(addr: string) {
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
         <p class="font-mono text-xs text-primary">步骤 2</p>
-        <h2 id="step-agent-heading" class="mt-2 text-base font-semibold text-on-dark">创建 CAW Agent Wallet</h2>
+        <h2 id="step-agent-heading" class="mt-2 text-base font-semibold text-on-dark">
+          {{ prep?.demoMode === 'preset' ? '预置 CAW Agent Wallet' : '创建 CAW Agent Wallet' }}
+        </h2>
         <p class="mt-2 max-w-prose text-sm leading-6 text-body">
-          按 Cobo 官方流程：TSS Node 在线 → onboard/bootstrap → vault active → 生成配对码 → CAW App 配对。
+          <template v-if="prep?.demoMode === 'preset'">
+            Hackathon 评审默认使用已激活、已配对、已注资的演示钱包，主路径聚焦策略模板、Pact 权限边界和审计日志。
+          </template>
+          <template v-else>
+            按 Cobo 官方流程：TSS Node 在线 → onboard/bootstrap → vault active → 生成配对码 → CAW App 配对。
+          </template>
         </p>
       </div>
       <UiStatusChip

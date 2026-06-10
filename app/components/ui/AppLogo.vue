@@ -31,7 +31,7 @@ const textClass = computed(() => (props.size === 'sm' ? 'text-xs' : 'text-sm'))
         width="27"
         height="27"
         rx="7"
-        class="stroke-on-dark"
+        class="stroke-body"
         stroke-width="2"
       />
       <rect x="7" y="20" width="5" height="6" rx="1.25" class="fill-primary-active" />

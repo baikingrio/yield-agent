@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PactFilterTab } from '~/composables/usePactManagement'
+import type { PactFilterTab } from '~/utils/pact-filter'
 import { DASHBOARD_CREATE_STRATEGY } from '#shared/constants/dashboard-routes'
 
 useHead({ title: 'Pact 管理 · YieldAgent' })

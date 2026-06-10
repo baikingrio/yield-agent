@@ -9,8 +9,6 @@ import {
   type PactFilterTab,
 } from '~/utils/pact-filter'
 
-export type { PactFilterTab } from '~/utils/pact-filter'
-
 const POLL_MS = 4000
 const MAX_POLL_ATTEMPTS = 75
 

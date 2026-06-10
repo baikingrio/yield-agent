@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { StrategyForm } from '~/composables/useCreateStrategy'
+import type { StrategyForm } from '~/composables/strategy-templates'
 
 const props = defineProps<{
   form: StrategyForm

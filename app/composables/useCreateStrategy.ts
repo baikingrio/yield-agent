@@ -13,14 +13,6 @@ import {
 } from './strategy-templates'
 import { useStrategyPipeline } from './useStrategyPipeline'
 
-export type { NetworkId } from '#shared/types/app'
-export type {
-  PipelineStage,
-  RiskLevel,
-  StrategyForm,
-  StrategyTemplateKey,
-} from './strategy-templates'
-
 export function useCreateStrategy() {
   const route = useRoute()
   const store = useAppStore()

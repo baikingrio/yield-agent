@@ -39,16 +39,6 @@ import {
   touchPreparation,
 } from './wallet-preparation'
 
-export type { CawCliRunner } from './caw-cli'
-export { resolveCawCliBin, runCawJson } from './caw-cli'
-export {
-  AGENT_WALLET_API_KEY_REQUIRED,
-  ensureCawCredentials,
-  syncCredentialsFromCli,
-} from './caw-credentials'
-export { getWalletStatusFromSdk } from './caw-sdk-wallet'
-export { buildSdkPreparingMessage, checkTssReadiness } from './caw-tss-readiness'
-
 type PairingInfo = {
   status: 'unpaired' | 'pairing' | 'paired'
   code: string | null

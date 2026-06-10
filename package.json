@@ -7,7 +7,7 @@
   },
   "scripts": {
     "build": "nuxt build && node scripts/patch-vercel-devtools.mjs",
-    "dev": "nuxt dev",
+    "dev": "NODE_OPTIONS='--disable-warning=ExperimentalWarning' nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",

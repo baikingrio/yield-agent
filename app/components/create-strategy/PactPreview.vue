@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { DASHBOARD_HOME, DASHBOARD_PACTS } from '#shared/constants/dashboard-routes'
 import type { NetworkId, Pact } from '../../../shared/types/app'
-import type { PipelineStage } from '~/composables/useCreateStrategy'
+import type { PipelineStage } from '~/composables/strategy-templates'
 
 const props = defineProps<{
   lines: { label: string; value: string }[]

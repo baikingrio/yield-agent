@@ -8,6 +8,13 @@ vi.mock('../server/utils/caw-provision', () => ({
 }))
 
 import * as bootstrap from '../server/utils/caw-wallet-bootstrap'
+import * as cawCli from '../server/utils/caw-cli'
+import {
+  AGENT_WALLET_API_KEY_REQUIRED,
+  ensureCawCredentials,
+  syncCredentialsFromCli,
+} from '../server/utils/caw-credentials'
+import { checkTssReadiness } from '../server/utils/caw-tss-readiness'
 
 function createState(): AppState {
   return {
@@ -45,7 +52,7 @@ describe('detectBootstrapMode', () => {
       throw new Error('unexpected')
     })
 
-    vi.spyOn(bootstrap, 'resolveCawCliBin').mockResolvedValue('/usr/local/bin/caw')
+    vi.spyOn(cawCli, 'resolveCawCliBin').mockResolvedValue('/usr/local/bin/caw')
     const mode = await bootstrap.detectBootstrapMode(runner)
     expect(mode).toBe('cli-onboard')
   })
@@ -71,7 +78,7 @@ describe('checkTssReadiness', () => {
     vi.stubEnv('AGENT_WALLET_MAIN_NODE_ID', 'node-remote-1')
     vi.stubEnv('CAW_CLI_BIN', '/tmp/missing-caw-bin')
 
-    const readiness = await bootstrap.checkTssReadiness(createState(), null)
+    const readiness = await checkTssReadiness(createState(), null)
 
     expect(readiness.online).toBe(true)
     expect(readiness.source).toBe('sdk-remote')
@@ -89,7 +96,7 @@ describe('checkTssReadiness', () => {
       throw new Error('unexpected')
     })
 
-    const readiness = await bootstrap.checkTssReadiness(createState(), null, runner)
+    const readiness = await checkTssReadiness(createState(), null, runner)
 
     expect(readiness.online).toBe(true)
     expect(readiness.source).toBe('cli-local')
@@ -112,7 +119,7 @@ describe('syncCredentialsFromCli', () => {
     })
 
     const state = createState()
-    const ok = await bootstrap.syncCredentialsFromCli(state, runner)
+    const ok = await syncCredentialsFromCli(state, runner)
 
     expect(ok).toBe(true)
     expect(state.settings.coboApiKey).toBe('cli-api-key')
@@ -126,7 +133,7 @@ describe('syncCredentialsFromCli', () => {
     state.settings.coboApiKey = 'existing-key'
     state.settings.apiKeyConfigured = true
 
-    const ok = await bootstrap.syncCredentialsFromCli(state, runner)
+    const ok = await syncCredentialsFromCli(state, runner)
 
     expect(ok).toBe(true)
     expect(runner).not.toHaveBeenCalled()
@@ -171,7 +178,7 @@ describe('ensureCawCredentials', () => {
     state.settings.coboApiKey = 'settings-key'
     state.settings.apiKeyConfigured = true
 
-    await bootstrap.ensureCawCredentials(state)
+    await ensureCawCredentials(state)
 
     expect(provisionCawPrincipal).not.toHaveBeenCalled()
   })
@@ -180,7 +187,7 @@ describe('ensureCawCredentials', () => {
     vi.stubEnv('AGENT_WALLET_API_KEY', 'env-key')
     const state = createState()
 
-    await bootstrap.ensureCawCredentials(state)
+    await ensureCawCredentials(state)
 
     expect(provisionCawPrincipal).not.toHaveBeenCalled()
   })
@@ -191,8 +198,8 @@ describe('ensureCawCredentials', () => {
     vi.stubEnv('CAW_CLI_BIN', '/tmp/missing-caw-bin')
     const state = createState()
 
-    await expect(bootstrap.ensureCawCredentials(state)).rejects.toThrow(
-      bootstrap.AGENT_WALLET_API_KEY_REQUIRED,
+    await expect(ensureCawCredentials(state)).rejects.toThrow(
+      AGENT_WALLET_API_KEY_REQUIRED,
     )
     expect(provisionCawPrincipal).not.toHaveBeenCalled()
   })

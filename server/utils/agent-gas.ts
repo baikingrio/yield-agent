@@ -3,8 +3,6 @@ import { arbitrumSepolia, baseSepolia, sepolia } from 'viem/chains'
 import { NETWORK_LABELS } from '../../shared/constants/network'
 import type { AgentGasWrongChainHint, NetworkId } from '../../shared/types/app'
 
-export { NETWORK_LABELS }
-
 export const MIN_NATIVE_ETH = 0.0001
 export const RECOMMENDED_FUND_ETH = 0.001
 

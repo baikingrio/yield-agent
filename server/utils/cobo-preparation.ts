@@ -228,5 +228,3 @@ export async function confirmUsdcDeposit(
     throw new Error('转入确认失败，请重试')
   }
 }
-
-export { extractCoboErrorMessage }

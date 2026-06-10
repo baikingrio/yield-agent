@@ -1,5 +1,5 @@
 import type { AppState } from '../../shared/types/app'
-import { runCawJson, type CawCliRunner } from './caw-wallet-bootstrap'
+import { runCawJson, type CawCliRunner } from './caw-cli'
 import { schedulePersistAppState } from './app-state-persistence'
 
 function str(value: unknown): string | null {

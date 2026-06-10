@@ -1,6 +1,7 @@
 import { getState } from '../../utils/app-store'
 import { buildCawDeploymentCheck } from '../../utils/caw-deployment-check'
-import { checkTssReadiness, getWalletStatusFromSdk } from '../../utils/caw-wallet-bootstrap'
+import { checkTssReadiness } from '../../utils/caw-tss-readiness'
+import { getWalletStatusFromSdk } from '../../utils/caw-sdk-wallet'
 import { isCoboConfigured } from '../../utils/cobo-client'
 
 export default defineEventHandler(async () => {

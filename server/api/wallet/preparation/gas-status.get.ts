@@ -1,10 +1,10 @@
 import { formatEther } from 'viem'
+import { NETWORK_LABELS } from '#shared/types/app'
 import { getState } from '../../../utils/app-store'
 import {
   FAUCET_HINTS,
   MIN_NATIVE_ETH,
   NATIVE_TOKEN_LABELS,
-  NETWORK_LABELS,
   RECOMMENDED_FUND_ETH,
   detectWrongChainGasHint,
   getAgentNativeEthBalance,

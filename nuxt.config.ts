@@ -20,6 +20,11 @@ export default defineNuxtConfig({
       '#shared': sharedDir,
       ...devtoolsStubAliases,
     },
+    esbuild: {
+      options: {
+        target: 'es2020',
+      },
+    },
     externals: {
       inline: ['@vue/devtools-kit', '@vue/devtools-api', 'vue-devtools-stub'],
     },

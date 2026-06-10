@@ -68,13 +68,21 @@ onMounted(async () => {
 
     <DashboardWalletBar :wallet="store.wallet" :loading="initialLoading" />
 
+    <DashboardActivePactCard
+      :pacts="store.pacts"
+      :strategies="store.strategies"
+      :loading="initialLoading"
+    />
+
+    <DashboardDenialDemoCard :pacts="store.pacts" />
+
+    <DashboardRecentLogsTable :logs="store.logs" :loading="initialLoading" />
+
     <DashboardStrategyList
       :strategies="store.strategies"
       :pacts="store.pacts"
       :loading="initialLoading"
     />
-
-    <DashboardRecentLogsTable :logs="store.logs" :loading="initialLoading" />
 
     <DashboardYieldChart
       :series="store.yieldSeries"

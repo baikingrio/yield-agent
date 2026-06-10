@@ -14,6 +14,7 @@ import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
 import {
   createCoboWalletsApi,
   extractCoboErrorMessage,
+  isCoboConfigured,
   isTransientCoboNetworkError,
   withCoboRetry,
 } from './cobo-client'
@@ -197,7 +198,18 @@ export async function checkTssReadiness(
     }
   }
 
-  if (targetWalletId && state.settings.coboApiKey?.trim()) {
+  if (targetWalletId && !isCoboConfigured(state)) {
+    return {
+      online: false,
+      nodeId: mainNodeId ?? null,
+      source: 'none',
+      message: mainNodeId
+        ? 'Cobo API Key 未配置。请在 Vercel 设置 AGENT_WALLET_API_KEY（与 Hermes caw onboard 相同），然后点击「继续初始化」'
+        : '请先在设置页 Provision Cobo API Key，或配置 AGENT_WALLET_API_KEY',
+    }
+  }
+
+  if (targetWalletId && isCoboConfigured(state)) {
     try {
       const walletsApi = createCoboWalletsApi(state)
       const nodeResp = await withCoboRetry(() => walletsApi.getWalletNodeStatus(targetWalletId))
@@ -208,12 +220,21 @@ export async function checkTssReadiness(
         source: 'sdk-remote',
         message: online ? '远程 TSS Node 在线' : '远程 TSS Node 未在线',
       }
-    } catch {
+    } catch (err) {
+      const raw = extractCoboErrorMessage(err)
+      if (raw.toLowerCase().includes('not authorized for this wallet')) {
+        return {
+          online: false,
+          nodeId: process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null,
+          source: 'sdk-remote',
+          message: 'API Key 与钱包不匹配。请使用 Hermes 上 caw wallet current --show-api-key 的 Key，重置后重建或导入钱包',
+        }
+      }
       return {
         online: false,
         nodeId: process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null,
         source: 'sdk-remote',
-        message: '无法查询远程 TSS Node 状态',
+        message: `无法查询远程 TSS Node 状态：${raw}`,
       }
     }
   }
@@ -223,7 +244,7 @@ export async function checkTssReadiness(
     nodeId: mainNodeId ?? null,
     source: 'none',
     message: mainNodeId
-      ? '无法查询远程 TSS Node 状态，请确认 Hermes 主机 TSS 在线'
+      ? '无法查询远程 TSS Node 状态，请确认 Hermes 主机 TSS 在线且已配置 AGENT_WALLET_API_KEY'
       : '请先配置 TSS Node 或完成 CAW onboard',
   }
 }
@@ -253,10 +274,20 @@ export async function syncCredentialsFromCli(
   }
 }
 
+export const AGENT_WALLET_API_KEY_REQUIRED = 'AGENT_WALLET_API_KEY_REQUIRED'
+
+function isSplitDeployRuntime(): boolean {
+  return process.env.AGENT_WALLET_TSS_RUNTIME === 'hermes-agent-host'
+    || process.env.VERCEL === '1'
+}
+
 export async function ensureCawCredentials(state: AppState): Promise<void> {
   if (currentCoboApiKey(state)) return
   if (await syncCredentialsFromCli(state)) return
   if (state.settings.agentId) return
+  if (isSplitDeployRuntime()) {
+    throw new Error(AGENT_WALLET_API_KEY_REQUIRED)
+  }
   await provisionCawPrincipal(state, { name: 'YieldAgent Dev' })
 }
 
@@ -466,7 +497,7 @@ async function resolveEvmAddressFromSdk(
   }
 }
 
-async function getWalletStatusFromSdk(state: AppState, walletUuid: string): Promise<string | null> {
+export async function getWalletStatusFromSdk(state: AppState, walletUuid: string): Promise<string | null> {
   try {
     const walletsApi = createCoboWalletsApi(state)
     const detail = (await withCoboRetry(() => walletsApi.getWallet(walletUuid))).data.result
@@ -474,6 +505,40 @@ async function getWalletStatusFromSdk(state: AppState, walletUuid: string): Prom
   } catch {
     return null
   }
+}
+
+function buildSdkPreparingMessage(
+  walletStatus: string | null,
+  tss: { online: boolean; nodeId: string | null; message: string },
+): string {
+  const configuredMainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null
+
+  if (!walletStatus) {
+    return '无法从 Cobo API 读取钱包状态，请确认 API Key 与网络配置'
+  }
+
+  if (!tss.online) {
+    return `钱包状态 ${walletStatus}，但 TSS Node 离线。请在 Hermes 主机运行 caw node start`
+  }
+
+  const boundNodeId = tss.nodeId
+  if (configuredMainNodeId && boundNodeId && configuredMainNodeId !== boundNodeId) {
+    return `钱包 ${walletStatus}，绑定 TSS 节点 (${boundNodeId}) 与 AGENT_WALLET_MAIN_NODE_ID (${configuredMainNodeId}) 不一致`
+  }
+
+  const nodeHint = boundNodeId ?? configuredMainNodeId ?? '未知'
+  return `SDK 钱包仍在 ${walletStatus}，等待 vault 初始化。请确认 Hermes 主机 caw node 在线（节点 ${nodeHint}）`
+}
+
+async function ensureBootstrapMode(state: AppState): Promise<AgentBootstrapMode | null> {
+  const bootstrap = getBootstrapState(state.walletPreparation)
+  if (bootstrap.mode) return bootstrap.mode
+
+  const detected = await detectBootstrapMode()
+  if (detected === 'unavailable') return null
+
+  setBootstrapState(state, { mode: detected })
+  return detected
 }
 
 function rememberPendingAgentWallet(state: AppState, walletUuid: string): void {
@@ -599,7 +664,6 @@ export async function startAgentBootstrap(state: AppState): Promise<AgentBootstr
 
 export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstrapStatusResponse> {
   const prep = state.walletPreparation
-  const bootstrap = getBootstrapState(prep)
 
   if (isBootstrapDone(prep)) {
     setBootstrapState(state, { phase: 'paired', message: '已完成配对' })
@@ -609,6 +673,9 @@ export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstra
   if (prep.agentWallet.address && prep.agentWallet.coboWalletId) {
     return pollPairingForReadyWallet(state)
   }
+
+  await ensureBootstrapMode(state)
+  const bootstrap = getBootstrapState(prep)
 
   try {
     const tss = await checkTssReadiness(state, prep.agentWallet.coboWalletId)
@@ -678,14 +745,23 @@ export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstra
     if (walletStatus !== 'active') {
       if (walletStatus === 'archived') throw new Error('WALLET_ARCHIVED')
       const tssCheck = await checkTssReadiness(state, walletUuid)
-      if (!tssCheck.online) throw new Error('TSS_NODE_OFFLINE')
+      if (!tssCheck.online) {
+        setBootstrapState(state, {
+          phase: 'tss_check',
+          tssOnline: false,
+          message: tssCheck.message,
+        })
+        return buildStatusResponse(state, false)
+      }
       markAgentWalletPreparing(state, {
         coboWalletId: walletUuid,
         pairing: { status: 'unpaired', code: null, expiresAt: null },
       })
       setBootstrapState(state, {
         phase: 'bootstrapping',
-        message: 'SDK 钱包仍在 preparing，等待 vault 初始化',
+        walletStatus,
+        tssOnline: true,
+        message: buildSdkPreparingMessage(walletStatus, tssCheck),
       })
       return buildStatusResponse(state, false)
     }

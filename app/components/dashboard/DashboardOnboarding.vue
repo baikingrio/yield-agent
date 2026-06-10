@@ -9,7 +9,11 @@ const {
   bootstrap,
   bootstrapPhaseLabel,
   bootstrapMessage,
+  bootstrapUserCopy,
   agentPolling,
+  agentPollAttempt,
+  maxAgentPollAttempts,
+  preferImportFirst,
   coboConfigured,
   networkLabel,
   stepLocked,
@@ -69,6 +73,10 @@ const {
           :create-label="createAgentLabel"
           :bootstrap-phase-label="bootstrapPhaseLabel"
           :bootstrap-message="bootstrapMessage"
+          :bootstrap-user-copy="bootstrapUserCopy"
+          :agent-poll-attempt="agentPollAttempt"
+          :max-agent-poll-attempts="maxAgentPollAttempts"
+          :prefer-import-first="preferImportFirst"
           :cobo-configured="coboConfigured"
           @create="runCreateAgent"
           @import="runImportAgent"

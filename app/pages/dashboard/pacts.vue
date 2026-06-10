@@ -72,6 +72,15 @@ watch(selectedId, (id) => {
 watch(actionBanner, () => {
   if (selectedId.value) void loadPactLogs(selectedId.value)
 })
+
+const route = useRoute()
+
+onMounted(() => {
+  const highlight = route.query.highlight
+  if (typeof highlight === 'string' && highlight.trim()) {
+    selectPact(highlight.trim())
+  }
+})
 </script>
 
 <template>

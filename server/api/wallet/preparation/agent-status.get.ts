@@ -2,6 +2,7 @@ import { getState } from '../../../utils/app-store'
 import { pollCoboAgentWalletStatus, syncFundingFromExistingBalance } from '../../../utils/cobo-preparation'
 import { getWalletPreparation } from '../../../utils/wallet-preparation'
 import { CoboNotConfiguredError } from '../../../utils/cobo-client'
+import { walletPreparationErrorMessage } from '../../../utils/wallet-preparation-errors'
 
 export default defineEventHandler(async () => {
   const state = getState()
@@ -25,7 +26,7 @@ export default defineEventHandler(async () => {
     }
     throw createError({
       statusCode: 400,
-      data: { error: e instanceof Error ? e.message : '查询 Agent Wallet 状态失败' },
+      data: { error: walletPreparationErrorMessage(e) },
     })
   }
 })

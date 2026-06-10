@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type {
   CreateStrategyPayload,
   CawReadiness,
+  CawDeploymentCheck,
   CawOnboardStatus,
   AppSettings,
   HermesStrategyPingResult,
@@ -38,6 +39,7 @@ export const useAppStore = defineStore('app', () => {
   const preparation = ref<WalletPreparation | null>(null)
   const agentBootstrap = ref<AgentBootstrapState | null>(null)
   const cawReadiness = ref<CawReadiness | null>(null)
+  const deploymentCheck = ref<CawDeploymentCheck | null>(null)
   const cawOnboardStatus = ref<CawOnboardStatus | null>(null)
   const strategyAgentReadiness = ref<StrategyAgentReadiness | null>(null)
   const strategyAgentPing = ref<HermesStrategyPingResult | null>(null)
@@ -132,6 +134,16 @@ export const useAppStore = defineStore('app', () => {
     try {
       cawReadiness.value = await $fetch<CawReadiness>('/api/caw/readiness')
       return cawReadiness.value
+    } catch (e) {
+      error.value = apiErrorMessage(e)
+      throw e
+    }
+  }
+
+  async function fetchDeploymentCheck() {
+    try {
+      deploymentCheck.value = await $fetch<CawDeploymentCheck>('/api/caw/deployment-check')
+      return deploymentCheck.value
     } catch (e) {
       error.value = apiErrorMessage(e)
       throw e
@@ -411,6 +423,7 @@ export const useAppStore = defineStore('app', () => {
     preparation,
     agentBootstrap,
     cawReadiness,
+    deploymentCheck,
     cawOnboardStatus,
     strategyAgentReadiness,
     strategyAgentPing,
@@ -425,6 +438,7 @@ export const useAppStore = defineStore('app', () => {
     fetchYieldSeries,
     fetchSettings,
     fetchCawReadiness,
+    fetchDeploymentCheck,
     fetchCawOnboardStatus,
     startCawOnboard,
     continueCawOnboard,

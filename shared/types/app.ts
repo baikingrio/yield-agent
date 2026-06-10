@@ -153,6 +153,31 @@ export interface AppSettings {
   coboApiKey?: string
 }
 
+export type CawDeploymentBlocker =
+  | 'missing_api_key'
+  | 'missing_main_node'
+  | 'tss_offline'
+  | 'node_id_mismatch'
+  | 'wallet_preparing'
+  | 'prefer_env_api_key'
+
+export interface CawDeploymentCheck {
+  runtime: 'hermes-agent-host' | 'local' | 'unknown'
+  apiKeyConfigured: boolean
+  apiKeySource: 'settings' | 'env' | 'missing'
+  preferEnvKey: boolean
+  mainNodeConfigured: boolean
+  mainNodeId: string | null
+  tssOnline: boolean | null
+  boundTssNodeId: string | null
+  mainNodeMatchesBound: boolean | null
+  walletId: string | null
+  walletStatus: string | null
+  blockers: CawDeploymentBlocker[]
+  nextActions: string[]
+  envTemplate: string
+}
+
 export interface CawReadiness {
   environment: CawEnvironment
   apiBaseUrl: string

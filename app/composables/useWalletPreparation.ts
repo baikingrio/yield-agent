@@ -1,6 +1,9 @@
 import { DASHBOARD_CREATE_STRATEGY } from '#shared/constants/dashboard-routes'
 import { NETWORK_LABELS } from '#shared/types/app'
 import type { AgentBootstrapPhase, NetworkId, PrepStep } from '#shared/types/app'
+import { mapBootstrapUserCopy } from '#shared/utils/bootstrap-user-copy'
+
+export const MAX_AGENT_POLL_ATTEMPTS = 24
 
 const BOOTSTRAP_PHASE_LABELS: Record<AgentBootstrapPhase, string> = {
   idle: '待开始',
@@ -12,7 +15,6 @@ const BOOTSTRAP_PHASE_LABELS: Record<AgentBootstrapPhase, string> = {
   failed: '初始化失败',
 }
 
-const MAX_AGENT_POLL_ATTEMPTS = 24
 const AGENT_POLL_INTERVAL_MS = 5000
 
 export function useWalletPreparation() {
@@ -23,6 +25,7 @@ export function useWalletPreparation() {
   const bootstrap = computed(() => store.agentBootstrap ?? prep.value?.agentBootstrap ?? null)
   const busy = ref(false)
   const agentPolling = ref(false)
+  const agentPollAttempt = ref(0)
   const depositPhase = ref<'idle' | 'signing' | 'confirming'>('idle')
   const depositAmount = ref('500')
   const pageError = ref<string | null>(null)
@@ -33,6 +36,16 @@ export function useWalletPreparation() {
   })
 
   const bootstrapMessage = computed(() => bootstrap.value?.message ?? null)
+
+  const bootstrapUserCopy = computed(() => mapBootstrapUserCopy({
+    phase: bootstrap.value?.phase,
+    tssOnline: bootstrap.value?.tssOnline,
+    message: bootstrap.value?.message,
+    pollAttempt: agentPollAttempt.value,
+    maxPollAttempts: MAX_AGENT_POLL_ATTEMPTS,
+  }))
+
+  const preferImportFirst = computed(() => store.deploymentCheck?.preferEnvKey ?? false)
 
   const createAgentLabel = computed(() => {
     if (busy.value || agentPolling.value) return '初始化中…'
@@ -69,12 +82,14 @@ export function useWalletPreparation() {
       pollTimer = null
     }
     agentPolling.value = false
+    agentPollAttempt.value = 0
   }
 
   async function pollAgentUntilDone(attempt = 0): Promise<void> {
+    agentPollAttempt.value = attempt
     if (attempt >= MAX_AGENT_POLL_ATTEMPTS) {
       stopAgentPolling()
-      pageError.value = '初始化耗时较长，请确认 TSS Node 在线后点击「继续初始化」'
+      pageError.value = '初始化耗时较长，请按运维检查清单核对配置后点击「继续初始化」'
       return
     }
 
@@ -102,7 +117,11 @@ export function useWalletPreparation() {
     store.clearError()
     busy.value = true
     try {
-      await Promise.all([store.fetchPreparation(), store.fetchSettings()])
+      await Promise.all([
+        store.fetchPreparation(),
+        store.fetchSettings(),
+        store.fetchDeploymentCheck().catch(() => null),
+      ])
       const needsBootstrapPoll = prep.value?.steps.agent_wallet === 'in_progress'
       const needsPairingPoll = Boolean(
         prep.value?.agentWallet.address
@@ -205,6 +224,10 @@ export function useWalletPreparation() {
     bootstrap,
     busy,
     agentPolling,
+    agentPollAttempt,
+    maxAgentPollAttempts: MAX_AGENT_POLL_ATTEMPTS,
+    bootstrapUserCopy,
+    preferImportFirst,
     depositPhase,
     depositAmount,
     pageError,

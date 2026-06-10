@@ -16,6 +16,7 @@ async function load() {
     await Promise.all([
       store.fetchSettings(),
       store.fetchCawReadiness(),
+      store.fetchDeploymentCheck().catch(() => null),
       store.fetchCawOnboardStatus(),
       store.fetchStrategyAgentReadiness(),
     ])
@@ -46,6 +47,16 @@ async function refreshCawReadiness() {
   store.clearError()
   try {
     await store.fetchCawReadiness()
+  } finally {
+    cawBusy.value = false
+  }
+}
+
+async function refreshDeploymentCheck() {
+  cawBusy.value = true
+  store.clearError()
+  try {
+    await store.fetchDeploymentCheck()
   } finally {
     cawBusy.value = false
   }
@@ -130,6 +141,13 @@ onMounted(load)
       :settings="store.settings"
       :saving="saving"
       @save="handleSave"
+    />
+
+    <SettingsCawDeploymentCheckCard
+      v-if="!loading"
+      :check="store.deploymentCheck"
+      :busy="cawBusy"
+      @refresh="refreshDeploymentCheck"
     />
 
     <SettingsCawReadinessCard

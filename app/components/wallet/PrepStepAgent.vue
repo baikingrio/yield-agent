@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AgentBootstrapState, WalletPreparation } from '../../../shared/types/app'
+import type { BootstrapUserCopy } from '../../../shared/utils/bootstrap-user-copy'
 
 const props = defineProps<{
   prep: WalletPreparation | null
@@ -7,9 +8,13 @@ const props = defineProps<{
   locked: boolean
   busy: boolean
   agentPolling: boolean
+  agentPollAttempt?: number
+  maxAgentPollAttempts?: number
   createLabel: string
   bootstrapPhaseLabel: string
   bootstrapMessage: string | null
+  bootstrapUserCopy: BootstrapUserCopy
+  preferImportFirst?: boolean
   coboConfigured: boolean
 }>()
 
@@ -91,12 +96,36 @@ async function copyAddress(addr: string) {
       </li>
     </ol>
 
-    <p
-      v-if="bootstrapMessage && (busy || agentPolling || prep?.steps.agent_wallet === 'in_progress' || prep?.agentWallet.pairing?.status === 'pairing')"
-      class="mt-3 rounded-md border border-primary/20 bg-canvas px-3 py-2 text-xs text-body"
+    <div
+      v-if="busy || agentPolling || prep?.steps.agent_wallet === 'in_progress' || prep?.agentWallet.pairing?.status === 'pairing' || bootstrap?.phase === 'tss_check'"
+      class="mt-3 space-y-2 rounded-md border px-3 py-2 text-xs"
+      :class="bootstrapUserCopy.severity === 'error'
+        ? 'border-trading-down/30 bg-canvas'
+        : bootstrapUserCopy.severity === 'warning'
+          ? 'border-primary/30 bg-canvas'
+          : 'border-primary/20 bg-canvas'"
     >
-      {{ bootstrapMessage }}
-    </p>
+      <p class="font-semibold text-on-dark">{{ bootstrapUserCopy.title }}</p>
+      <p class="text-body">{{ bootstrapUserCopy.body }}</p>
+      <p
+        v-if="agentPolling && maxAgentPollAttempts"
+        class="font-mono text-muted"
+      >
+        第 {{ (agentPollAttempt ?? 0) + 1 }}/{{ maxAgentPollAttempts }} 次检查
+      </p>
+      <NuxtLink
+        v-if="bootstrapUserCopy.ctaHref && bootstrapUserCopy.ctaLabel"
+        :to="bootstrapUserCopy.ctaHref"
+        class="inline-flex font-medium text-primary no-underline hover:text-primary-active"
+      >
+        {{ bootstrapUserCopy.ctaLabel }} →
+      </NuxtLink>
+      <WalletOpsChecklist v-if="bootstrapUserCopy.showOpsChecklist" class="mt-2" />
+      <details v-if="bootstrapUserCopy.showTechnicalDetails && bootstrapMessage" class="mt-1">
+        <summary class="cursor-pointer text-muted">技术详情</summary>
+        <p class="mt-1 font-mono text-[11px] text-muted">{{ bootstrapMessage }}</p>
+      </details>
+    </div>
 
     <div v-if="prep?.agentWallet.created && prep.agentWallet.address" class="mt-4 space-y-2">
       <div class="flex flex-wrap items-center gap-3">
@@ -142,22 +171,42 @@ async function copyAddress(addr: string) {
       </button>
     </div>
     <div v-else class="mt-4 flex flex-wrap gap-3">
-      <button
-        type="button"
-        class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-4 text-sm font-semibold text-on-dark transition-colors duration-150 hover:bg-surface-elevated disabled:opacity-50"
-        :disabled="locked || busy || agentPolling"
-        @click="emit('create')"
-      >
-        {{ createLabel }}
-      </button>
-      <button
-        type="button"
-        class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-4 text-sm font-semibold text-muted transition-colors duration-150 hover:bg-surface-elevated hover:text-on-dark disabled:opacity-50"
-        :disabled="locked || busy || agentPolling"
-        @click="emit('import')"
-      >
-        导入已 onboard 钱包
-      </button>
+      <template v-if="preferImportFirst">
+        <button
+          type="button"
+          class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors duration-150 hover:bg-primary-active disabled:opacity-50"
+          :disabled="locked || busy || agentPolling"
+          @click="emit('import')"
+        >
+          导入已 onboard 钱包
+        </button>
+        <button
+          type="button"
+          class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-4 text-sm font-semibold text-muted transition-colors duration-150 hover:bg-surface-elevated hover:text-on-dark disabled:opacity-50"
+          :disabled="locked || busy || agentPolling"
+          @click="emit('create')"
+        >
+          {{ createLabel }}
+        </button>
+      </template>
+      <template v-else>
+        <button
+          type="button"
+          class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-4 text-sm font-semibold text-on-dark transition-colors duration-150 hover:bg-surface-elevated disabled:opacity-50"
+          :disabled="locked || busy || agentPolling"
+          @click="emit('create')"
+        >
+          {{ createLabel }}
+        </button>
+        <button
+          type="button"
+          class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-4 text-sm font-semibold text-muted transition-colors duration-150 hover:bg-surface-elevated hover:text-on-dark disabled:opacity-50"
+          :disabled="locked || busy || agentPolling"
+          @click="emit('import')"
+        >
+          导入已 onboard 钱包
+        </button>
+      </template>
     </div>
   </section>
 </template>

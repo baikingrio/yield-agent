@@ -183,11 +183,40 @@ HERMES_PROFILE=default
 
 注意：
 
-- 一般不需要手动配置 `AGENT_WALLET_API_KEY`；YieldAgent 会在创建 Agent Wallet 时自动调用 `POST /api/v1/principals/provision`，并把初始 API Key 仅保存在服务端；
-- 如果手动配置 `AGENT_WALLET_API_KEY`，不要提交真实 API Key；
-- 不要提交私钥、助记词或主网资产信息；
+- **Vercel + Hermes 分体部署**：必须在 Vercel 环境变量设置 `AGENT_WALLET_API_KEY`（与 Hermes `caw onboard` 相同），**不会** auto-provision 新 Agent；
+- 本机开发（安装 `caw` CLI）可不填 Key，走 `cli-onboard`；
+- 不要提交真实 API Key、私钥、助记词或主网资产信息；
 - Hackathon Demo 默认使用测试网；
-- Vercel 不能运行长期 TSS Node，也不能直接调用本机 CLI；生产 Demo 需要把 TSS Node 和 Hermes API 放在当前 Hermes Agent 主机，并通过公网域名或 tunnel 暴露给 Vercel server/API 调用。
+
+### Vercel + Hermes 生产部署
+
+1. **Hermes 主机**：`caw onboard` 完成 → `caw node start` 常驻
+2. **取凭证**：
+   ```bash
+   caw wallet current --show-api-key   # → AGENT_WALLET_API_KEY
+   caw node status                     # → AGENT_WALLET_MAIN_NODE_ID
+   ```
+3. **Vercel 环境变量**（必填）：
+   ```text
+   AGENT_WALLET_ENV=dev
+   AGENT_WALLET_API_URL=https://api-core.agenticwallet.dev.cobo.com
+   AGENT_WALLET_API_KEY=<Hermes onboard key>
+   AGENT_WALLET_MAIN_NODE_ID=<Hermes TSS node id>
+   AGENT_WALLET_TSS_RUNTIME=hermes-agent-host
+   HERMES_STRATEGY_MODE=api
+   HERMES_API_URL=<Hermes 公网 API>
+   HERMES_API_KEY=<Bearer key>
+   ```
+4. **Redeploy** Vercel 后，在设置页查看「部署自检」（`GET /api/caw/deployment-check`）
+5. **钱包创建**：Hermes 已有 active 钱包时，在 Dashboard 优先点「导入已 onboard 钱包」
+
+**故障排查**
+
+| 现象 | 处理 |
+|------|------|
+| `403 not authorized for this wallet` | API Key 与钱包 Agent 不一致；对齐 Hermes Key 后 reset 重建或 import |
+| 长期 `preparing` | TSS 未参与 MPC；检查 MAIN_NODE_ID 与 `caw node` |
+| `tss_check` + 无 Key | 在 Vercel 配置 `AGENT_WALLET_API_KEY` |
 
 ## Demo 数据与接口
 

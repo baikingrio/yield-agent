@@ -28,7 +28,7 @@ AGENT_WALLET_TSS_RUNTIME=hermes-agent-host
 AGENT_WALLET_MAIN_NODE_ID=
 ```
 
-- `AGENT_WALLET_API_KEY`: optional initial CAW Agent API key. The normal YieldAgent flow does not require the user/operator to set it manually; when creating an Agent Wallet, YieldAgent calls CAW API `POST /api/v1/principals/provision` and stores the returned API key server-side only. Set this env var only when reusing an existing CAW Agent credential or intentionally bypassing auto-provision.
+- `AGENT_WALLET_API_KEY`: **Required for Vercel + Hermes split deploy.** Must match the Hermes host `caw wallet current --show-api-key`. Split deploy (`AGENT_WALLET_TSS_RUNTIME=hermes-agent-host` or `VERCEL=1`) does **not** auto-provision; misaligned keys cause `403 not authorized for this wallet` and wallets stuck in `preparing`. Local dev with `caw` CLI may omit this and use cli-onboard or provision.
 - `AGENT_WALLET_TSS_RUNTIME=hermes-agent-host`: the hackathon runtime decision; TSS Node runs on the current Hermes Agent host machine, not inside Vercel.
 - `AGENT_WALLET_MAIN_NODE_ID`: TSS Node ID on the Hermes Agent host used when creating MPC wallets.
 
@@ -76,6 +76,22 @@ Credential reuse (avoids duplicate `provision`):
 4. Only if all three are missing: `POST /api/v1/principals/provision`
 
 Pairing codes are generated only after the wallet reaches `active`. Generating a pair code while the vault is still `preparing` causes CAW App reshare failures.
+
+## Split Deploy Troubleshooting
+
+```text
+403 not authorized for this wallet
+  → Vercel API Key ≠ Hermes onboard Agent
+  → Fix: set AGENT_WALLET_API_KEY on Vercel, reset prep, import or recreate
+
+Wallet stuck preparing
+  → TSS node not bound / offline, or wrong MAIN_NODE_ID
+  → Fix: caw node start on Hermes; align MAIN_NODE_ID; prefer import-agent if Hermes wallet active
+
+tss_check + missing key
+  → No AGENT_WALLET_API_KEY on Vercel
+  → Fix: configure env + redeploy; check GET /api/caw/deployment-check
+```
 
 ## Current Implementation
 

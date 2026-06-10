@@ -184,4 +184,16 @@ describe('ensureCawCredentials', () => {
 
     expect(provisionCawPrincipal).not.toHaveBeenCalled()
   })
+
+  it('throws when hermes-agent-host runtime has no api key', async () => {
+    vi.stubEnv('AGENT_WALLET_TSS_RUNTIME', 'hermes-agent-host')
+    vi.stubEnv('AGENT_WALLET_API_KEY', '')
+    vi.stubEnv('CAW_CLI_BIN', '/tmp/missing-caw-bin')
+    const state = createState()
+
+    await expect(bootstrap.ensureCawCredentials(state)).rejects.toThrow(
+      bootstrap.AGENT_WALLET_API_KEY_REQUIRED,
+    )
+    expect(provisionCawPrincipal).not.toHaveBeenCalled()
+  })
 })

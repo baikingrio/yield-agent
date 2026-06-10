@@ -1,6 +1,7 @@
 import { getState, persistCurrentState } from '../../../utils/app-store'
 import { simulatePactDenial } from '../../../utils/cobo-execution'
 import { findPactById } from '../../../utils/pact-lookup'
+import { pactResolveHttpError, resolvePactById } from '../../../utils/pact-resolve'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
@@ -9,10 +10,19 @@ export default defineEventHandler(async (event) => {
   }
 
   const state = getState()
-  const pact = findPactById(state, id)
+  const hadLocal = Boolean(findPactById(state, id))
+  let pact: Awaited<ReturnType<typeof resolvePactById>>
+  try {
+    pact = await resolvePactById(state, id, { importFromCobo: true })
+  } catch (err) {
+    const mapped = pactResolveHttpError(err)
+    if (mapped) throw createError({ statusCode: mapped.statusCode, data: { error: mapped.error } })
+    throw createError({ statusCode: 404, data: { error: 'Pact not found' } })
+  }
   if (!pact) {
     throw createError({ statusCode: 404, data: { error: 'Pact not found' } })
   }
+  if (!hadLocal) persistCurrentState()
 
   try {
     const result = await simulatePactDenial(state, pact.id)

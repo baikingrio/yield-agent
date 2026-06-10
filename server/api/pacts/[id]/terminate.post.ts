@@ -7,6 +7,7 @@ import {
 } from '../../../utils/cobo-pact'
 import { revokeStoredPactCredential } from '../../../utils/pact-credentials'
 import { findPactById } from '../../../utils/pact-lookup'
+import { pactResolveHttpError, resolvePactById } from '../../../utils/pact-resolve'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
@@ -14,11 +15,21 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, data: { error: '缺少 Pact ID' } })
   }
   const state = getState()
-  const pact = findPactById(state, id)
+  const hadLocal = Boolean(findPactById(state, id))
+  let pact: Awaited<ReturnType<typeof resolvePactById>>
+  try {
+    pact = await resolvePactById(state, id, { importFromCobo: true })
+  } catch (err) {
+    const mapped = pactResolveHttpError(err)
+    if (mapped) throw createError({ statusCode: mapped.statusCode, data: { error: mapped.error } })
+    throw createError({ statusCode: 404, data: { error: 'Pact not found' } })
+  }
 
   if (!pact) {
     throw createError({ statusCode: 404, data: { error: 'Pact not found' } })
   }
+
+  if (!hadLocal) persistCurrentState()
 
   const action = resolveCoboTerminateAction(pact)
 

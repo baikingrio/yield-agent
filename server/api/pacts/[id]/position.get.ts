@@ -1,7 +1,8 @@
-import { getState } from '../../../utils/app-store'
+import { getState, persistCurrentState } from '../../../utils/app-store'
 import { getNetworkChainConfig } from '../../../utils/cobo-config'
 import { fetchYieldPositionSnapshot } from '../../../utils/yield-position'
 import { findPactById } from '../../../utils/pact-lookup'
+import { pactResolveHttpError, resolvePactById } from '../../../utils/pact-resolve'
 import type { NetworkId } from '../../../../shared/types/app'
 
 export default defineEventHandler(async (event) => {
@@ -11,10 +12,19 @@ export default defineEventHandler(async (event) => {
   }
 
   const state = getState()
-  const pact = findPactById(state, id)
+  const hadLocal = Boolean(findPactById(state, id))
+  let pact: Awaited<ReturnType<typeof resolvePactById>>
+  try {
+    pact = await resolvePactById(state, id, { importFromCobo: true })
+  } catch (err) {
+    const mapped = pactResolveHttpError(err)
+    if (mapped) throw createError({ statusCode: mapped.statusCode, data: { error: mapped.error } })
+    throw createError({ statusCode: 404, data: { error: 'Pact not found' } })
+  }
   if (!pact) {
     throw createError({ statusCode: 404, data: { error: 'Pact not found' } })
   }
+  if (!hadLocal) persistCurrentState()
 
   const walletAddress = state.walletPreparation.agentWallet.address
   if (!walletAddress) {

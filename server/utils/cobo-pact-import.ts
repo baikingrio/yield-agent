@@ -167,3 +167,22 @@ export async function syncCoboPactsForAgentWallet(state: AppState): Promise<{
 
   return { imported, updated, remoteCount: remotePacts.length }
 }
+
+/** Hydrate a single Cobo pact into local state (e.g. Vercel cold instance / ephemeral DB). */
+export async function ensureCoboPactInState(state: AppState, pactId: string): Promise<Pact> {
+  const existing = findLocalPact(state, pactId)
+  if (existing) return existing
+
+  if (!isCoboConfigured(state)) {
+    throw new CoboNotConfiguredError()
+  }
+
+  const pactsApi = createCoboPactsApi(state)
+  const detail = await withCoboRetry(() => pactsApi.getPact(pactId))
+  const remote = detail.data.result
+  if (!remote?.id) {
+    throw new Error('Pact not found')
+  }
+
+  return importCoboPactIntoState(state, remote).pact
+}

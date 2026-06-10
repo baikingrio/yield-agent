@@ -15,6 +15,7 @@ vi.mock('../server/utils/cobo-client', () => ({
 }))
 
 import {
+  ensureCoboPactInState,
   normalizeCoboPactList,
   syncCoboPactsForAgentWallet,
 } from '../server/utils/cobo-pact-import'
@@ -113,6 +114,33 @@ describe('syncCoboPactsForAgentWallet', () => {
       50,
       false,
     )
+  })
+
+  it('imports a single remote pact by id when missing locally', async () => {
+    getPact.mockResolvedValue({
+      data: {
+        result: {
+          id: '35c06120-ef9f-47ee-b25b-3eab6571b696',
+          wallet_id: '3752834b-c0fa-4f8d-b6b5-00b992d09923',
+          name: 'YieldAgent 平衡型收益',
+          intent: '平衡型 USDC 收益',
+          status: 'active',
+          spec: {
+            policies: [{ rules: { deny_if: { amount_gt: '200' } } }],
+          },
+          progress_tx_count: 0,
+          progress_usd_spent: '0',
+        },
+      },
+    })
+
+    const state = withAgentWallet(createInitialState())
+    const pact = await ensureCoboPactInState(state, '35c06120-ef9f-47ee-b25b-3eab6571b696')
+
+    expect(pact.id).toBe('35c06120-ef9f-47ee-b25b-3eab6571b696')
+    expect(pact.status).toBe('active')
+    expect(state.strategies).toHaveLength(1)
+    expect(getPact).toHaveBeenCalledWith('35c06120-ef9f-47ee-b25b-3eab6571b696')
   })
 
   it('updates existing local pact status without duplicating imports', async () => {

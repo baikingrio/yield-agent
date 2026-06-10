@@ -5,6 +5,7 @@ import {
   DASHBOARD_HOME,
   DASHBOARD_PACTS,
 } from '#shared/constants/dashboard-routes'
+import { canEnterDashboard } from '#shared/utils/demo-access'
 
 const props = withDefaults(defineProps<{
   /** Dashboard layout provides the divider; skip the component border. */
@@ -17,7 +18,7 @@ const store = useAppStore()
 const { isConnected } = useWalletConnect()
 
 const showDashboardEntry = computed(
-  () => isConnected.value || Boolean(store.preparation?.eoa.connected),
+  () => canEnterDashboard({ preparation: store.preparation, browserWalletConnected: isConnected.value }),
 )
 
 const links = [

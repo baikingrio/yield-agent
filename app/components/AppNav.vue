@@ -7,13 +7,6 @@ withDefaults(
   }>(),
   { variant: 'landing' },
 )
-
-const store = useAppStore()
-const { isConnected } = useWalletConnect()
-
-const showDashboardEntry = computed(
-  () => isConnected.value || Boolean(store.preparation?.eoa.connected),
-)
 </script>
 
 <template>
@@ -34,13 +27,11 @@ const showDashboardEntry = computed(
       aria-label="落地页导航"
     >
       <NuxtLink
-        v-if="showDashboardEntry"
         :to="DASHBOARD_HOME"
-        class="hidden h-9 shrink-0 items-center justify-center rounded-md border border-hairline px-3 text-sm font-semibold text-body no-underline transition-colors duration-150 hover:bg-surface-elevated sm:inline-flex md:px-4"
+        class="inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold text-on-primary no-underline transition-colors duration-150 hover:bg-primary-active md:px-4"
       >
-        控制台
+        Try Demo
       </NuxtLink>
-      <AppWalletStatus />
     </nav>
 
     <div v-else class="flex min-w-0 flex-1 items-center justify-end gap-2">

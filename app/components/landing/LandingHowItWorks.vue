@@ -4,18 +4,19 @@ import {
   DASHBOARD_HOME,
   DASHBOARD_PACTS,
 } from '#shared/constants/dashboard-routes'
+import { canEnterDashboard } from '#shared/utils/demo-access'
 
 const store = useAppStore()
 const { isConnected } = useWalletConnect()
 
 const showDashboardEntry = computed(
-  () => isConnected.value || Boolean(store.preparation?.eoa.connected),
+  () => canEnterDashboard({ preparation: store.preparation, browserWalletConnected: isConnected.value }),
 )
 
 const steps = [
   {
-    title: '准备 Agent 资金',
-    body: '连接 EOA，在控制台创建 Agent Wallet 并转入用于自动化的 USDC。资金与主钱包隔离。',
+    title: '进入 Demo 环境',
+    body: '公开评审路径使用预置 Agent Wallet，无需先连接浏览器钱包；进入控制台即可查看资金、策略和审计状态。',
     href: DASHBOARD_HOME,
     linkLabel: '前往控制台',
   },

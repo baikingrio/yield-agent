@@ -1,4 +1,4 @@
-import { AGENT_WALLET_API_KEY_REQUIRED } from './caw-wallet-bootstrap'
+import { AGENT_WALLET_API_KEY_REQUIRED } from './caw-credentials'
 import { extractCoboErrorMessage } from './cobo-client'
 
 export const WALLET_PREPARATION_ERROR_MESSAGES: Record<string, string> = {

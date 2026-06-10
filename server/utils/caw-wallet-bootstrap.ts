@@ -1,48 +1,58 @@
-import { execFile } from 'node:child_process'
-import { access } from 'node:fs/promises'
-import { constants } from 'node:fs'
-import { promisify } from 'node:util'
 import type {
   AgentBootstrapMode,
-  AgentBootstrapPhase,
   AgentBootstrapState,
   AgentBootstrapStatusResponse,
   AppState,
   WalletPreparation,
 } from '../../shared/types/app'
-import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
+import { getNetworkChainConfig } from './cobo-config'
 import {
   createCoboWalletsApi,
   extractCoboErrorMessage,
-  isCoboConfigured,
   isTransientCoboNetworkError,
   withCoboRetry,
 } from './cobo-client'
 import { runCawOnboardStep } from './caw-onboard'
-import { provisionCawPrincipal } from './caw-provision'
-import { schedulePersistAppState } from './app-state-persistence'
+import {
+  bool,
+  defaultCawRunner,
+  isStringArray,
+  resolveCawCliBin,
+  runCawJson,
+  str,
+  type CawCliRunner,
+} from './caw-cli'
+import {
+  AGENT_WALLET_API_KEY_REQUIRED,
+  ensureCawCredentials,
+  syncCredentialsFromCli,
+} from './caw-credentials'
+import {
+  bootstrapViaSdkCreate,
+  getWalletStatusFromSdk,
+  resolveEvmAddressFromSdk,
+} from './caw-sdk-wallet'
+import { buildSdkPreparingMessage, checkTssReadiness } from './caw-tss-readiness'
 import {
   markAgentWalletCreated,
   markAgentWalletPreparing,
   touchPreparation,
 } from './wallet-preparation'
 
-const execFileAsync = promisify(execFile)
+export type { CawCliRunner } from './caw-cli'
+export { resolveCawCliBin, runCawJson } from './caw-cli'
+export {
+  AGENT_WALLET_API_KEY_REQUIRED,
+  ensureCawCredentials,
+  syncCredentialsFromCli,
+} from './caw-credentials'
+export { getWalletStatusFromSdk } from './caw-sdk-wallet'
+export { buildSdkPreparingMessage, checkTssReadiness } from './caw-tss-readiness'
 
-export interface CawCliRunner {
-  (args: string[]): Promise<{ stdout: string; stderr?: string }>
-}
-
-function str(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value : null
-}
-
-function bool(value: unknown): boolean {
-  return value === true
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+type PairingInfo = {
+  status: 'unpaired' | 'pairing' | 'paired'
+  code: string | null
+  expiresAt: string | null
 }
 
 function defaultBootstrapState(): AgentBootstrapState {
@@ -74,73 +84,6 @@ function isBootstrapDone(prep: WalletPreparation): boolean {
     && prep.agentWallet.pairing?.status === 'paired'
 }
 
-type PairingInfo = {
-  status: 'unpaired' | 'pairing' | 'paired'
-  code: string | null
-  expiresAt: string | null
-}
-
-export async function resolveCawCliBin(): Promise<string | null> {
-  const configured = process.env.CAW_CLI_BIN?.trim()
-  if (configured) {
-    try {
-      await access(configured, constants.X_OK)
-      return configured
-    } catch {
-      return null
-    }
-  }
-  try {
-    const { stdout } = await execFileAsync('which', ['caw'])
-    return stdout.trim() || null
-  } catch {
-    return null
-  }
-}
-
-async function defaultCawRunner(args: string[]): Promise<{ stdout: string; stderr?: string }> {
-  const cawBin = await resolveCawCliBin()
-  if (!cawBin) throw new Error('CAW_CLI_NOT_FOUND')
-  const { stdout, stderr } = await execFileAsync(cawBin, args, {
-    timeout: 120_000,
-    maxBuffer: 1024 * 1024,
-    env: {
-      ...process.env,
-      PATH: `/usr/local/bin:${process.env.PATH ?? ''}`,
-    },
-  })
-  return { stdout, stderr }
-}
-
-export async function runCawJson(
-  args: string[],
-  runner: CawCliRunner = defaultCawRunner,
-): Promise<Record<string, unknown> | unknown[]> {
-  const { stdout } = await runner(args)
-  const parsed = JSON.parse(stdout || '{}')
-  if (Array.isArray(parsed)) return parsed
-  return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {}
-}
-
-async function runCawJsonBestEffort(
-  args: string[],
-  runner: CawCliRunner = defaultCawRunner,
-): Promise<Record<string, unknown> | unknown[]> {
-  try {
-    return await runCawJson(args, runner)
-  } catch (err) {
-    const stdout = err && typeof err === 'object' && 'stdout' in err
-      ? (err as { stdout?: unknown }).stdout
-      : null
-    if (typeof stdout === 'string' && stdout.trim()) {
-      const parsed = JSON.parse(stdout)
-      if (Array.isArray(parsed)) return parsed
-      return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {}
-    }
-    throw err
-  }
-}
-
 export async function detectBootstrapMode(
   runner: CawCliRunner = defaultCawRunner,
 ): Promise<AgentBootstrapMode | 'unavailable'> {
@@ -161,141 +104,12 @@ export async function detectBootstrapMode(
   return 'unavailable'
 }
 
-export async function checkTssReadiness(
-  state: AppState,
-  walletId?: string | null,
-  runner: CawCliRunner = defaultCawRunner,
-): Promise<{ online: boolean; nodeId: string | null; source: 'cli-local' | 'sdk-remote' | 'none'; message: string }> {
-  const cawBin = await resolveCawCliBin()
-  if (cawBin) {
-    try {
-      const status = await runCawJsonBestEffort(['node', 'status'], runner) as Record<string, unknown>
-      const remote = status.remote as Record<string, unknown> | undefined
-      const local = status.local as Record<string, unknown> | undefined
-      const online = bool(remote?.online) || bool(local?.running)
-      return {
-        online,
-        nodeId: str(remote?.tss_node_id),
-        source: 'cli-local',
-        message: online ? 'TSS Node 在线' : 'TSS Node 未在线，请运行 caw node start',
-      }
-    } catch {
-      // Fall through to SDK remote check.
-    }
-  }
-
-  const mainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim()
-  const targetWalletId = walletId ?? state.walletPreparation.agentWallet.coboWalletId
-
-  // SDK create on Vercel: wallet does not exist yet, so remote node status is unavailable.
-  // Trust configured MAIN_NODE_ID and proceed; TSS is verified after createWallet.
-  if (mainNodeId && !targetWalletId && !cawBin) {
-    return {
-      online: true,
-      nodeId: mainNodeId,
-      source: 'sdk-remote',
-      message: '将使用远程 TSS Node 创建 MPC 钱包',
-    }
-  }
-
-  if (targetWalletId && !isCoboConfigured(state)) {
-    return {
-      online: false,
-      nodeId: mainNodeId ?? null,
-      source: 'none',
-      message: mainNodeId
-        ? 'Cobo API Key 未配置。请在 Vercel 设置 AGENT_WALLET_API_KEY（与 Hermes caw onboard 相同），然后点击「继续初始化」'
-        : '请先在设置页 Provision Cobo API Key，或配置 AGENT_WALLET_API_KEY',
-    }
-  }
-
-  if (targetWalletId && isCoboConfigured(state)) {
-    try {
-      const walletsApi = createCoboWalletsApi(state)
-      const nodeResp = await withCoboRetry(() => walletsApi.getWalletNodeStatus(targetWalletId))
-      const online = nodeResp.data.result?.online === true
-      return {
-        online,
-        nodeId: str(nodeResp.data.result?.tss_node_id) ?? process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null,
-        source: 'sdk-remote',
-        message: online ? '远程 TSS Node 在线' : '远程 TSS Node 未在线',
-      }
-    } catch (err) {
-      const raw = extractCoboErrorMessage(err)
-      if (raw.toLowerCase().includes('not authorized for this wallet')) {
-        return {
-          online: false,
-          nodeId: process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null,
-          source: 'sdk-remote',
-          message: 'API Key 与钱包不匹配。请使用 Hermes 上 caw wallet current --show-api-key 的 Key，重置后重建或导入钱包',
-        }
-      }
-      return {
-        online: false,
-        nodeId: process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null,
-        source: 'sdk-remote',
-        message: `无法查询远程 TSS Node 状态：${raw}`,
-      }
-    }
-  }
-
-  return {
-    online: false,
-    nodeId: mainNodeId ?? null,
-    source: 'none',
-    message: mainNodeId
-      ? '无法查询远程 TSS Node 状态，请确认 Hermes 主机 TSS 在线且已配置 AGENT_WALLET_API_KEY'
-      : '请先配置 TSS Node 或完成 CAW onboard',
-  }
-}
-
-function currentCoboApiKey(state: AppState): string | null {
-  return state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim() || null
-}
-
-export async function syncCredentialsFromCli(
-  state: AppState,
-  runner: CawCliRunner = defaultCawRunner,
-): Promise<boolean> {
-  if (currentCoboApiKey(state)) return true
-  try {
-    const wallet = await runCawJson(['wallet', 'current', '--show-api-key'], runner)
-    if (Array.isArray(wallet)) return false
-    const apiKey = str(wallet.api_key)
-    const agentId = str(wallet.agent_id)
-    if (!apiKey) return false
-    state.settings.coboApiKey = apiKey
-    state.settings.apiKeyConfigured = true
-    if (agentId) state.settings.agentId = agentId
-    schedulePersistAppState(state)
-    return true
-  } catch {
-    return false
-  }
-}
-
-export const AGENT_WALLET_API_KEY_REQUIRED = 'AGENT_WALLET_API_KEY_REQUIRED'
-
-function isSplitDeployRuntime(): boolean {
-  return process.env.AGENT_WALLET_TSS_RUNTIME === 'hermes-agent-host'
-    || process.env.VERCEL === '1'
-}
-
-export async function ensureCawCredentials(state: AppState): Promise<void> {
-  if (currentCoboApiKey(state)) return
-  if (await syncCredentialsFromCli(state)) return
-  if (state.settings.agentId) return
-  if (isSplitDeployRuntime()) {
-    throw new Error(AGENT_WALLET_API_KEY_REQUIRED)
-  }
-  await provisionCawPrincipal(state, { name: 'YieldAgent Dev' })
-}
-
 async function initiateWalletPairingApi(
   state: AppState,
   walletId: string,
 ): Promise<{ status: 'pairing'; code: string | null; expiresAt: string | null } | undefined> {
-  if (!currentCoboApiKey(state)) return undefined
+  const apiKey = state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim()
+  if (!apiKey) return undefined
 
   try {
     const walletsApi = createCoboWalletsApi(state)
@@ -372,7 +186,8 @@ async function pollPairStatusApi(
   state: AppState,
   walletId: string,
 ): Promise<'paired' | 'pairing' | 'unpaired'> {
-  if (!currentCoboApiKey(state)) return 'unpaired'
+  const apiKey = state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim()
+  if (!apiKey) return 'unpaired'
 
   try {
     const walletsApi = createCoboWalletsApi(state)
@@ -469,67 +284,6 @@ async function resolveEvmAddressFromCli(
   }
 }
 
-async function resolveEvmAddressFromSdk(
-  state: AppState,
-  walletUuid: string,
-): Promise<string | null> {
-  const networkConfig = getNetworkChainConfig(state.walletPreparation.network)
-  const walletsApi = createCoboWalletsApi(state)
-  try {
-    const addrResp = await withCoboRetry(() => walletsApi.createWalletAddress(walletUuid, {
-      chain_id: networkConfig.coboChainId,
-    }))
-    const created = addrResp.data.result?.address
-    if (created) return created
-  } catch {
-    // Fall back to list.
-  }
-  try {
-    const listResp = await withCoboRetry(() => walletsApi.listWalletAddresses(walletUuid))
-    const addresses = listResp.data.result ?? []
-    const match = addresses.find((item) =>
-      item.compatible_chains?.includes(networkConfig.coboChainId)
-      || item.chain_type === 'ETH',
-    )
-    return match?.address ?? addresses[0]?.address ?? null
-  } catch {
-    return null
-  }
-}
-
-export async function getWalletStatusFromSdk(state: AppState, walletUuid: string): Promise<string | null> {
-  try {
-    const walletsApi = createCoboWalletsApi(state)
-    const detail = (await withCoboRetry(() => walletsApi.getWallet(walletUuid))).data.result
-    return detail.status ?? null
-  } catch {
-    return null
-  }
-}
-
-function buildSdkPreparingMessage(
-  walletStatus: string | null,
-  tss: { online: boolean; nodeId: string | null; message: string },
-): string {
-  const configuredMainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null
-
-  if (!walletStatus) {
-    return '无法从 Cobo API 读取钱包状态，请确认 API Key 与网络配置'
-  }
-
-  if (!tss.online) {
-    return `钱包状态 ${walletStatus}，但 TSS Node 离线。请在 Hermes 主机运行 caw node start`
-  }
-
-  const boundNodeId = tss.nodeId
-  if (configuredMainNodeId && boundNodeId && configuredMainNodeId !== boundNodeId) {
-    return `钱包 ${walletStatus}，绑定 TSS 节点 (${boundNodeId}) 与 AGENT_WALLET_MAIN_NODE_ID (${configuredMainNodeId}) 不一致`
-  }
-
-  const nodeHint = boundNodeId ?? configuredMainNodeId ?? '未知'
-  return `SDK 钱包仍在 ${walletStatus}，等待 vault 初始化。请确认 Hermes 主机 caw node 在线（节点 ${nodeHint}）`
-}
-
 async function ensureBootstrapMode(state: AppState): Promise<AgentBootstrapMode | null> {
   const bootstrap = getBootstrapState(state.walletPreparation)
   if (bootstrap.mode) return bootstrap.mode
@@ -539,28 +293,6 @@ async function ensureBootstrapMode(state: AppState): Promise<AgentBootstrapMode 
 
   setBootstrapState(state, { mode: detected })
   return detected
-}
-
-function rememberPendingAgentWallet(state: AppState, walletUuid: string): void {
-  const prep = state.walletPreparation
-  prep.agentWallet.coboWalletId = walletUuid
-  touchPreparation(prep, state)
-}
-
-async function bootstrapViaSdkCreate(state: AppState): Promise<void> {
-  const prep = state.walletPreparation
-  if (prep.agentWallet.coboWalletId) return
-
-  await ensureCawCredentials(state)
-  const walletsApi = createCoboWalletsApi(state)
-  const mainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim()
-  const createResp = await withCoboRetry(() => walletsApi.createWallet({
-    wallet_type: 'MPC',
-    name: `YieldAgent-${Date.now()}`,
-    group_type: 'agent',
-    ...(mainNodeId ? { main_node_id: mainNodeId } : {}),
-  }))
-  rememberPendingAgentWallet(state, createResp.data.result.uuid)
 }
 
 async function bootstrapViaCliOnboardStep(state: AppState): Promise<void> {
@@ -731,7 +463,6 @@ export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstra
       return buildStatusResponse(state, pairing.status === 'paired')
     }
 
-    // sdk-create path
     await ensureCawCredentials(state)
     const walletUuid = prep.agentWallet.coboWalletId
     if (!walletUuid) {

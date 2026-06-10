@@ -1,78 +1,25 @@
 import { MAX_MAX_SPEND_USDC, MIN_MAX_SPEND_USDC, NETWORK_LABELS } from '#shared/types/app'
 import { parseNumericField } from '#shared/utils/numeric-field'
 import { extractApiErrorMessage } from '~/utils/api-error'
+import {
+  DEFAULT_FORM,
+  RISK_LABELS,
+  STRATEGY_TEMPLATES,
+  TEMPLATE_PRESETS,
+  stepIndexFromPipeline,
+  type PipelineStage,
+  type StrategyForm,
+  type StrategyTemplateKey,
+} from './strategy-templates'
+import { useStrategyPipeline } from './useStrategyPipeline'
 
-export type NetworkId = 'base-sepolia' | 'arbitrum-sepolia'
-export type RiskLevel = 'conservative' | 'balanced' | 'aggressive'
-
-export type StrategyTemplateKey = 'conservative-usdc' | 'balanced-supply' | 'custom'
-
-export type PipelineStage =
-  | 'configure'
-  | 'preview-ready'
-  | 'submitting'
-  | 'awaiting-approval'
-  | 'executing'
-  | 'success'
-  | 'failed'
-
-export interface StrategyForm {
-  network: NetworkId
-  asset: string
-  targetApy: string
-  riskLevel: RiskLevel
-  maxSpend: string
-  agentFee: string
-  userSplit: string
-}
-
-const RISK_LABELS: Record<RiskLevel, string> = {
-  conservative: '保守型收益',
-  balanced: '平衡型收益',
-  aggressive: '激进型收益',
-}
-
-const DEFAULT_FORM: StrategyForm = {
-  network: 'base-sepolia',
-  asset: 'USDC',
-  targetApy: '',
-  riskLevel: 'conservative',
-  maxSpend: '500',
-  agentFee: '15',
-  userSplit: '85',
-}
-
-const TEMPLATE_PRESETS: Record<StrategyTemplateKey, {
-  title: string
-  description: string
-  nlText: string
-  form: StrategyForm
-}> = {
-  'conservative-usdc': {
-    title: '保守型 USDC 收益',
-    description: '首次体验推荐：最多 500 USDC，只允许 Aave / Compound Supply。',
-    nlText: '我想在 Base Sepolia 上用 500 USDC 做一个保守收益策略，只允许 Aave 和 Compound，期限 7 天，收益 85% 给我，15% 给 Agent。',
-    form: { ...DEFAULT_FORM, riskLevel: 'conservative', maxSpend: '500', targetApy: '8' },
-  },
-  'balanced-supply': {
-    title: '平衡型收益策略',
-    description: '允许小额调整，但仍受预算、白名单协议和期限限制。',
-    nlText: '我想在 Arbitrum Sepolia 上用 800 USDC 做一个平衡收益策略，允许小额兑换后存入 Aave 或 Compound，收益 88% 给我，12% 给 Agent。',
-    form: { ...DEFAULT_FORM, network: 'arbitrum-sepolia', riskLevel: 'balanced', maxSpend: '800', agentFee: '12', userSplit: '88' },
-  },
-  custom: {
-    title: '自定义策略',
-    description: '用自然语言描述目标，系统先生成 Pact Preview。',
-    nlText: '',
-    form: { ...DEFAULT_FORM },
-  },
-}
-
-const STRATEGY_TEMPLATES = Object.entries(TEMPLATE_PRESETS).map(([key, value]) => ({
-  key: key as StrategyTemplateKey,
-  title: value.title,
-  description: value.description,
-}))
+export type { NetworkId } from '#shared/types/app'
+export type {
+  PipelineStage,
+  RiskLevel,
+  StrategyForm,
+  StrategyTemplateKey,
+} from './strategy-templates'
 
 export function useCreateStrategy() {
   const route = useRoute()
@@ -91,15 +38,6 @@ export function useCreateStrategy() {
   const nlText = ref(TEMPLATE_PRESETS[initialTemplate].nlText)
   const nlFilled = ref(false)
   const errors = reactive<Partial<Record<keyof StrategyForm, string>>>({})
-  const pipeline = ref<PipelineStage>('preview-ready')
-  const executionStep = ref(0)
-  const previewTxHash = ref('')
-  const pipelineError = ref('')
-  const pactSubmissionMessage = ref('')
-  const coboPactId = ref('')
-  const createdPactId = ref('')
-  const approvalId = ref('')
-  const approvalRefreshing = ref(false)
   const nlParsing = ref(false)
 
   const agentSplit = computed(() => {
@@ -176,21 +114,6 @@ export function useCreateStrategy() {
     { label: 'Agent 绩效费', value: `${form.agentFee}%` },
   ])
 
-  const isFormValid = computed(() => validateForm(false))
-
-  const stepIndex = computed(() => {
-    const map: Record<PipelineStage, number> = {
-      configure: 1,
-      'preview-ready': 2,
-      submitting: 3,
-      'awaiting-approval': 3,
-      executing: 4,
-      success: 5,
-      failed: 5,
-    }
-    return map[pipeline.value]
-  })
-
   function validateForm(setErrors = true): boolean {
     const next: Partial<Record<keyof StrategyForm, string>> = {}
     const spend = parseNumericField(form.maxSpend)
@@ -230,13 +153,35 @@ export function useCreateStrategy() {
     return Object.keys(next).length === 0
   }
 
+  const isFormValid = computed(() => validateForm(false))
+
+  const {
+    pipeline,
+    executionStep,
+    previewTxHash,
+    pipelineError,
+    pactSubmissionMessage,
+    coboPactId,
+    approvalId,
+    approvalRefreshing,
+    executionSteps,
+    submitPact,
+    refreshApprovalStatus,
+    simulateFailure,
+    resetToEdit,
+    syncPipelineFromFormValidity,
+  } = useStrategyPipeline({
+    form,
+    networkMismatch,
+    isFormValid,
+    validateBeforeSubmit: () => validateForm(true),
+  })
+
   watch(
     form,
     () => {
       validateForm(true)
-      if (['configure', 'preview-ready'].includes(pipeline.value)) {
-        pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
-      }
+      syncPipelineFromFormValidity()
     },
     { deep: true },
   )
@@ -259,7 +204,7 @@ export function useCreateStrategy() {
       form.userSplit = result.proposal.userSplit
       nlFilled.value = true
       validateForm(true)
-      pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
+      syncPipelineFromFormValidity()
     } catch (e: unknown) {
       errors.maxSpend = extractApiErrorMessage(e, '自然语言解析失败')
       pipeline.value = 'configure'
@@ -276,7 +221,7 @@ export function useCreateStrategy() {
     nlOpen.value = key !== 'custom'
     nlFilled.value = key !== 'custom'
     validateForm(true)
-    pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
+    syncPipelineFromFormValidity()
   }
 
   function clearNlFill() {
@@ -284,196 +229,6 @@ export function useCreateStrategy() {
     Object.assign(form, { ...DEFAULT_FORM })
     validateForm(true)
     pipeline.value = 'configure'
-  }
-
-  let pollTimer: ReturnType<typeof setTimeout> | null = null
-  let pollAborted = false
-
-  function clearPollTimer() {
-    if (pollTimer) {
-      clearTimeout(pollTimer)
-      pollTimer = null
-    }
-    pollAborted = true
-  }
-
-  const executionSteps = [
-    'Strategy Agent 生成收益策略',
-    '校验 Pact allowlist / max spend',
-    'Executor Agent 执行 Aave Supply',
-    'Revenue Agent 写入收益与分账日志',
-  ] as const
-
-  async function runFirstExecution(pactId: string) {
-    pipeline.value = 'executing'
-    executionStep.value = 0
-    try {
-      executionStep.value = 1
-      const result = await store.executePact(pactId)
-      executionStep.value = executionSteps.length - 1
-      previewTxHash.value = result.txHash
-      pipeline.value = 'success'
-      await store.fetchLogs({ limit: 10 })
-    } catch (e: unknown) {
-      pipeline.value = 'failed'
-      pipelineError.value = extractApiErrorMessage(e, 'Recipe 执行失败')
-    }
-  }
-
-  function schedulePactPoll(pactId: string, attempt = 0) {
-    const maxAttempts = 75
-    pollAborted = false
-
-    const poll = async () => {
-      if (pollAborted) return
-      if (attempt >= maxAttempts) {
-        pipeline.value = 'failed'
-        pipelineError.value = '等待 Cobo 审批超时，请在 Cobo App 完成审批后从 Pact 管理页同步状态。'
-        return
-      }
-
-      try {
-        const pact = await store.syncPact(pactId)
-        if (pact.status === 'active') {
-          await runFirstExecution(pactId)
-          return
-        }
-        if (pact.status === 'terminated') {
-          pipeline.value = 'failed'
-          pipelineError.value = pact.submissionMessage || 'Pact 已被拒绝或终止。'
-          return
-        }
-        pipeline.value = 'awaiting-approval'
-        pollTimer = setTimeout(() => schedulePactPoll(pactId, attempt + 1), 4000)
-      } catch {
-        pollTimer = setTimeout(() => schedulePactPoll(pactId, attempt + 1), 4000)
-      }
-    }
-
-    void poll()
-  }
-
-  async function submitPact() {
-    if (!validateForm(true) || pipeline.value === 'submitting') return
-
-    clearPollTimer()
-    pollAborted = false
-    pipeline.value = 'submitting'
-    pipelineError.value = ''
-    pactSubmissionMessage.value = ''
-    coboPactId.value = ''
-    createdPactId.value = ''
-    approvalId.value = ''
-    previewTxHash.value = ''
-
-    if (!store.preparation?.ready) {
-      pipeline.value = 'failed'
-      pipelineError.value = '请先在控制台完成 Agent Wallet 设置，再创建 Pact 策略。'
-      return
-    }
-
-    if (networkMismatch.value) {
-      pipeline.value = 'failed'
-      pipelineError.value = '策略网络必须与 Agent Wallet 注资网络一致。'
-      return
-    }
-
-    try {
-      const result = await store.createStrategy({
-        network: form.network,
-        asset: form.asset,
-        targetApy: form.targetApy.trim() || undefined,
-        riskLevel: form.riskLevel,
-        maxSpend: form.maxSpend,
-        agentFee: form.agentFee,
-        userSplit: form.userSplit,
-      })
-      pactSubmissionMessage.value = result.pact.submissionMessage ?? ''
-      coboPactId.value = result.pact.coboPactId ?? result.pact.id
-      createdPactId.value = result.pact.id
-      approvalId.value = result.pact.approvalId ?? ''
-
-      if (result.pact.submissionMode === 'local-draft') {
-        if (!store.settings?.developerMode) {
-          pipeline.value = 'failed'
-          pipelineError.value = result.pact.submissionMessage
-            || '请完成 Cobo 配置，或在设置页开启开发者模式。'
-          return
-        }
-        pipeline.value = 'awaiting-approval'
-        pactSubmissionMessage.value = result.pact.submissionMessage
-          || '已创建本地 Pact Draft。请在 Pact 管理页使用「开发者：本地模拟批准」。'
-        return
-      }
-
-      if (result.pact.status === 'active') {
-        await runFirstExecution(result.pact.id)
-        return
-      }
-
-      pipeline.value = 'awaiting-approval'
-      schedulePactPoll(result.pact.id)
-    } catch (e: unknown) {
-      pipeline.value = 'failed'
-      pipelineError.value = extractApiErrorMessage(e, '创建策略失败，请重试。')
-    }
-  }
-
-  async function refreshApprovalStatus() {
-    const pactId = createdPactId.value || coboPactId.value
-    if (!pactId || approvalRefreshing.value) return
-
-    approvalRefreshing.value = true
-    try {
-      const pact = await store.syncPact(pactId)
-      if (!pact) return
-      pactSubmissionMessage.value = pact.submissionMessage ?? pactSubmissionMessage.value
-      if (pact.status === 'active') {
-        await runFirstExecution(pactId)
-        return
-      }
-      if (pact.status === 'terminated') {
-        pipeline.value = 'failed'
-        pipelineError.value = pact.submissionMessage || 'Pact 已被拒绝或终止。'
-        return
-      }
-      pipeline.value = 'awaiting-approval'
-    } catch (e: unknown) {
-      pipelineError.value = extractApiErrorMessage(e, '同步审批状态失败，请稍后重试。')
-    } finally {
-      approvalRefreshing.value = false
-    }
-  }
-
-  async function simulateFailure() {
-    const pactId = createdPactId.value || coboPactId.value
-    if (!pactId) {
-      pipeline.value = 'failed'
-      pipelineError.value = '请先创建 Pact，再模拟越权请求。'
-      return
-    }
-
-    try {
-      const result = await store.simulatePactDenial(pactId)
-      pipeline.value = 'failed'
-      pipelineError.value = result.reason
-      await store.fetchLogs({ limit: 10 })
-    } catch (e: unknown) {
-      pipeline.value = 'failed'
-      pipelineError.value = extractApiErrorMessage(e, '越权模拟失败')
-    }
-  }
-
-  function resetToEdit() {
-    clearPollTimer()
-    pipeline.value = isFormValid.value ? 'preview-ready' : 'configure'
-    pipelineError.value = ''
-    pactSubmissionMessage.value = ''
-    coboPactId.value = ''
-    createdPactId.value = ''
-    approvalId.value = ''
-    previewTxHash.value = ''
-    executionStep.value = 0
   }
 
   onMounted(async () => {
@@ -485,9 +240,8 @@ export function useCreateStrategy() {
     } catch { /* page shows gate */ }
   })
 
-  onUnmounted(clearPollTimer)
-
   const preparationReady = computed(() => store.preparation?.ready ?? false)
+  const stepIndex = computed(() => stepIndexFromPipeline(pipeline.value))
 
   return {
     form,

@@ -46,7 +46,7 @@ function formatTime(ts: string) {
           {{ TYPE_LABELS[log.type] }} · {{ log.status }}
         </p>
         <p class="mt-2">
-          <UiTxLink :hash="log.txHash" network="base-sepolia" />
+          <UiTxLink :hash="log.txHash" />
         </p>
       </div>
     </li>

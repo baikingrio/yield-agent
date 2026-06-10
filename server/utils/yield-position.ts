@@ -1,7 +1,7 @@
 import { createPublicClient, http } from 'viem'
-import { arbitrumSepolia, baseSepolia } from 'viem/chains'
 import type { NetworkId, YieldPositionSnapshot } from '../../shared/types/app'
 import type { NetworkChainConfig } from './cobo-config'
+import { APP_CHAIN } from './chain'
 import { resolveFirstYieldSupplyRoute } from './yield-execution'
 
 /** Compound III Comet: base asset balance for account (single-arg balanceOf). */
@@ -13,10 +13,6 @@ const compoundBalanceAbi = [{
   stateMutability: 'view',
 }] as const
 
-function chainForNetwork(network: NetworkId) {
-  return network === 'base-sepolia' ? baseSepolia : arbitrumSepolia
-}
-
 export async function readYieldSuppliedAmount(
   network: NetworkId,
   chainConfig: NetworkChainConfig,
@@ -24,7 +20,7 @@ export async function readYieldSuppliedAmount(
 ): Promise<bigint> {
   const route = resolveFirstYieldSupplyRoute(chainConfig)
   const client = createPublicClient({
-    chain: chainForNetwork(network),
+    chain: APP_CHAIN,
     transport: http(),
   })
 

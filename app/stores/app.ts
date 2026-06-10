@@ -233,7 +233,6 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function updateSettings(body: {
-    network?: NetworkId
     defaultAgentFee?: number
     userSplit?: number
     apiKey?: string

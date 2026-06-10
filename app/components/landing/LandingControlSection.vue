@@ -2,7 +2,7 @@
 const allowed = [
   '在 Pact 预算内执行已批准的 Supply Recipe',
   '按约定分账规则结算收益',
-  '在授权网络（Base / Arbitrum Sepolia）上操作',
+  '在 Base Sepolia 测试网上操作',
 ]
 
 const denied = [

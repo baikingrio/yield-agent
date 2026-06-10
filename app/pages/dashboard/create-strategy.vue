@@ -26,8 +26,6 @@ const {
   customTemplateComingSoon,
   preparationReady,
   availableBalanceLabel,
-  preparationNetworkLabel,
-  networkMismatch,
   agentSplit,
   fundingSourceLabel,
   isFormValid,
@@ -175,8 +173,6 @@ const formDisabled = computed(() =>
         :nl-filled="nlFilled"
         :nl-parsing="nlParsing"
         :available-balance-label="availableBalanceLabel"
-        :preparation-network-label="preparationNetworkLabel"
-        :network-mismatch="networkMismatch"
         :agent-split="agentSplit"
         @update:nl-open="nlOpen = $event"
         @update:nl-text="nlText = $event"
@@ -209,7 +205,6 @@ const formDisabled = computed(() =>
         :preparation-ready="preparationReady"
         :can-submit="isFormValid && preparationReady"
         :blocked-reason="customTemplateComingSoon ? '自定义策略功能待实现，请先选择其他模板。' : undefined"
-        :network="form.network"
         :submitting="pipeline === 'submitting'"
         :preview-tx-hash="previewTxHash"
         :pipeline-error="pipelineError"

@@ -13,10 +13,7 @@ import { buildYieldContractCallTargets, getNetworkChainConfig } from './cobo-con
 import { isLocalDraftAllowed } from './local-draft-policy'
 import { revokeStoredPactCredential } from './pact-credentials'
 
-const NETWORK_NAMES: Record<NetworkId, string> = {
-  'base-sepolia': 'Base Sepolia 测试网',
-  'arbitrum-sepolia': 'Arbitrum Sepolia 测试网',
-}
+const NETWORK_NAME = 'Base Sepolia 测试网'
 
 const RISK_NAMES: Record<string, string> = {
   conservative: '保守型收益',
@@ -287,7 +284,7 @@ function buildCompletionConditions(): CompletionCondition[] {
 export function buildYieldPactDraft(data: CreateStrategyPayload): PactSubmitDraft {
   const riskLabel = RISK_NAMES[data.riskLevel] ?? data.riskLevel
   const apyPart = data.targetApy?.trim() ? `，目标 APY ${data.targetApy}%` : ''
-  const intent = `${riskLabel} · ${data.asset}（${NETWORK_NAMES[data.network]}）${apyPart}`
+  const intent = `${riskLabel} · ${data.asset}（${NETWORK_NAME}）${apyPart}`
   const whitelist = strategyWhitelist(data.riskLevel, data.network)
   const maxSpend = Number(data.maxSpend)
   const agentFee = Number(data.agentFee)
@@ -296,7 +293,7 @@ export function buildYieldPactDraft(data: CreateStrategyPayload): PactSubmitDraf
 
   const executionPlan = [
     '# Summary',
-    `Create a bounded YieldAgent strategy for ${maxSpend} ${data.asset} on ${NETWORK_NAMES[data.network]}.`,
+    `Create a bounded YieldAgent strategy for ${maxSpend} ${data.asset} on ${NETWORK_NAME}.`,
     '',
     '# Contract Operations',
     `1. Use only the CAW Agent Wallet funded by the user, never the user's EOA directly.`,

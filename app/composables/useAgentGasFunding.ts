@@ -1,12 +1,7 @@
 import { useConnection, useSendTransaction, useSwitchChain } from '@wagmi/vue'
-import { arbitrumSepolia, baseSepolia } from '@wagmi/vue/chains'
+import { baseSepolia } from '@wagmi/vue/chains'
 import { createPublicClient, http, parseEther } from 'viem'
 import type { NetworkId } from '#shared/types/app'
-
-const CHAIN_BY_NETWORK = {
-  'base-sepolia': baseSepolia,
-  'arbitrum-sepolia': arbitrumSepolia,
-} as const
 
 function useAgentGasFundingClient() {
   const fundingError = ref<string | null>(null)
@@ -17,7 +12,7 @@ function useAgentGasFundingClient() {
 
   async function fundAgentGas(
     agentAddress: string,
-    network: NetworkId,
+    _network: NetworkId,
     amountEth = 0.001,
   ): Promise<`0x${string}`> {
     fundingError.value = null
@@ -25,9 +20,8 @@ function useAgentGasFundingClient() {
       throw new Error('请先在钱包准备页连接 EOA')
     }
 
-    const chain = CHAIN_BY_NETWORK[network]
-    if (chainId.value !== chain.id) {
-      await switchChain.switchChainAsync({ chainId: chain.id })
+    if (chainId.value !== baseSepolia.id) {
+      await switchChain.switchChainAsync({ chainId: baseSepolia.id })
     }
 
     funding.value = true
@@ -35,9 +29,9 @@ function useAgentGasFundingClient() {
       const hash = await sendTransaction.mutateAsync({
         to: agentAddress as `0x${string}`,
         value: parseEther(String(amountEth)),
-        chainId: chain.id,
+        chainId: baseSepolia.id,
       })
-      const client = createPublicClient({ chain, transport: http() })
+      const client = createPublicClient({ chain: baseSepolia, transport: http() })
       const receipt = await client.waitForTransactionReceipt({ hash, timeout: 120_000 })
       if (receipt.status !== 'success') {
         throw new Error('Gas 充值交易失败')

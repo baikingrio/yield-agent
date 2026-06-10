@@ -2,9 +2,9 @@ import { formatEther } from 'viem'
 import { NETWORK_LABELS } from '#shared/types/app'
 import { getState } from '../../../utils/app-store'
 import {
-  FAUCET_HINTS,
+  FAUCET_HINT,
   MIN_NATIVE_ETH,
-  NATIVE_TOKEN_LABELS,
+  NATIVE_TOKEN_LABEL,
   RECOMMENDED_FUND_ETH,
   detectWrongChainGasHint,
   getAgentNativeEthBalance,
@@ -24,13 +24,13 @@ export default defineEventHandler(async () => {
   return {
     network: prep.network,
     networkLabel: NETWORK_LABELS[prep.network],
-    nativeTokenLabel: NATIVE_TOKEN_LABELS[prep.network],
+    nativeTokenLabel: NATIVE_TOKEN_LABEL,
     agentAddress: address,
     ethBalance: formatEther(balance),
     ready: hasEnoughAgentGas(balance),
     minEth: MIN_NATIVE_ETH,
     recommendedFundEth: RECOMMENDED_FUND_ETH,
-    faucetUrl: FAUCET_HINTS[prep.network],
+    faucetUrl: FAUCET_HINT,
     wrongChainHint,
   }
 })

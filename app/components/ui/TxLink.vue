@@ -1,18 +1,9 @@
 <script setup lang="ts">
-import type { NetworkId } from '../../../shared/types/app'
-
 const props = defineProps<{
   hash: string
-  network?: NetworkId
 }>()
 
-const explorerUrl = computed(() => {
-  const hash = props.hash
-  if (props.network === 'arbitrum-sepolia') {
-    return `https://sepolia.arbiscan.io/tx/${hash}`
-  }
-  return `https://sepolia.basescan.org/tx/${hash}`
-})
+const explorerUrl = computed(() => `https://sepolia.basescan.org/tx/${props.hash}`)
 
 const shortHash = computed(() => {
   const h = props.hash

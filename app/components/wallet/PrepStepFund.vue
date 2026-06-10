@@ -68,7 +68,7 @@ async function copyAddress(addr: string) {
       </p>
       <p v-if="prep.funding.lastTxHash" class="text-xs text-muted">
         Tx：
-        <UiTxLink :hash="prep.funding.lastTxHash" :network="prep.network" />
+        <UiTxLink :hash="prep.funding.lastTxHash" />
       </p>
       <p class="text-xs text-muted">
         后续可在控制台「资金管理」中补充或提取 idle USDC。

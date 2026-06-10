@@ -34,7 +34,7 @@ const links = [
       <div>
         <UiAppLogo variant="full" size="sm" />
         <p class="mt-3 max-w-[50ch] text-xs leading-5 text-[var(--color-muted-strong)]">
-          基于 Cobo Agentic Wallet 的自主收益 Agent 平台。当前运行于 Base / Arbitrum Sepolia 测试网，不涉及主网资产。
+          基于 Cobo Agentic Wallet 的自主收益 Agent 平台。当前运行于 Base Sepolia 测试网，不涉及主网资产。
         </p>
       </div>
       <div class="flex flex-col items-start gap-4 sm:items-end">

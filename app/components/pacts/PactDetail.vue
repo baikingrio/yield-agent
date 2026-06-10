@@ -3,7 +3,6 @@ import { DASHBOARD_HISTORY, DASHBOARD_HOME } from '#shared/constants/dashboard-r
 import type {
   AgentGasStatus,
   LogEntry,
-  NetworkId,
   Pact,
   Strategy,
   YieldPositionSnapshot,
@@ -42,13 +41,8 @@ const store = useAppStore()
 
 const isCoboPact = computed(() => props.pact?.submissionMode === 'cobo')
 const isLocalDraft = computed(() => props.pact?.submissionMode === 'local-draft')
-const network = computed((): NetworkId => props.strategy?.network ?? 'base-sepolia')
 const agentAddress = computed(() => store.walletPreparation.agentWallet.address)
-const gasFaucetUrl = computed(() =>
-  network.value === 'arbitrum-sepolia'
-    ? 'https://faucet.quicknode.com/arbitrum/sepolia'
-    : 'https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet',
-)
+const gasFaucetUrl = 'https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet'
 
 function copyAgentAddress() {
   if (!agentAddress.value) return
@@ -215,14 +209,12 @@ const detailLines = computed(() => {
       <UiTxLink
         v-if="pact.firstExecutionTxHash"
         :hash="pact.firstExecutionTxHash"
-        :network="network"
         class="block break-all text-xs"
       />
       <p v-if="pact.redeemTxHash" class="text-sm text-trading-up">
         赎回已完成
         <UiTxLink
           :hash="pact.redeemTxHash"
-          :network="network"
           class="ml-1 break-all text-xs"
         />
       </p>
@@ -240,7 +232,7 @@ const detailLines = computed(() => {
     >
       <p v-if="pact.redeemTxHash" class="text-sm text-trading-up">
         赎回已完成
-        <UiTxLink :hash="pact.redeemTxHash" :network="network" class="ml-1 text-xs" />
+        <UiTxLink :hash="pact.redeemTxHash" class="ml-1 text-xs" />
       </p>
       <p v-else-if="showTerminatedRedeemGuide" class="text-sm text-body">
         此 Pact 已在 App 撤销。撤销不会自动取回 Compound 存款，请尝试下方「赎回至 Agent Wallet」。

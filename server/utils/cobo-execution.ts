@@ -1,5 +1,5 @@
 import { Configuration, TransactionRecordsApi, TransactionsApi } from '@cobo/agentic-wallet'
-import { arbitrumSepolia, baseSepolia } from 'viem/chains'
+import { NETWORK_LABELS } from '../../shared/constants/network'
 import type {
   AppState,
   NetworkId,
@@ -10,6 +10,7 @@ import type {
 } from '../../shared/types/app'
 import { assertAgentWalletHasGas, getAgentNativeEthBalance, resolveContractCallSponsor } from './agent-gas'
 import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
+import { APP_CHAIN } from './chain'
 import { extractCoboErrorMessage } from './cobo-client'
 import { submitContractCallAndWait } from './cobo-transaction'
 import { syncWalletSummaryFromCobo } from './cobo-preparation'
@@ -30,10 +31,6 @@ import {
   toUsdcBaseUnits,
 } from './yield-execution'
 import { createPublicClient, encodeFunctionData, erc20Abi, http } from 'viem'
-
-function chainForNetwork(network: NetworkId) {
-  return network === 'base-sepolia' ? baseSepolia : arbitrumSepolia
-}
 
 function createPactScopedTransactionsApi(apiKey: string): TransactionsApi {
   return new TransactionsApi(new Configuration({
@@ -62,7 +59,7 @@ async function readUsdcAllowance(
   usdcContract: `0x${string}`,
 ): Promise<bigint> {
   const client = createPublicClient({
-    chain: chainForNetwork(network),
+    chain: APP_CHAIN,
     transport: http(),
   })
   return client.readContract({
@@ -150,7 +147,7 @@ export async function executeFirstPactRecipe(
 
   const approveRequestId = buildExecutionRequestId(pact.id, 'approve', attempt)
   const supplyRequestId = buildExecutionRequestId(pact.id, 'supply', attempt)
-  const networkLabel = network === 'arbitrum-sepolia' ? 'Arbitrum Sepolia' : 'Base Sepolia'
+  const networkLabel = NETWORK_LABELS[network]
   const action = `${supplyRoute.protocolLabel} 存入 ${supplyUsdc} USDC（${networkLabel} 测试网）`
 
   try {
@@ -286,7 +283,7 @@ export async function redeemPactFunds(
   const transactionsApi = createPactScopedTransactionsApi(apiKey)
   const recordsApi = createPactScopedTransactionRecordsApi(apiKey)
   const requestId = buildRedeemRequestId(pact.id, attempt)
-  const networkLabel = network === 'arbitrum-sepolia' ? 'Arbitrum Sepolia' : 'Base Sepolia'
+  const networkLabel = NETWORK_LABELS[network]
   const action = `${supplyRoute.protocolLabel} 赎回 ${amountUsdc} USDC 至 Agent Wallet（${networkLabel}）`
 
   const withdrawCalldata = encodeYieldWithdrawCalldata(

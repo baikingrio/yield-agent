@@ -33,7 +33,7 @@ Aave / Compound / testnet yield action
 - Agent Wallet 有余额，也必须继续受 Pact 预算限制；
 - 只有白名单协议和 Recipe 可以执行；
 - 越权动作需要被明确拒绝，并留下可解释的审计记录；
-- 当前仅面向 Base / Arbitrum Sepolia 测试网，不涉及主网真实资产。
+- 当前仅面向 Base Sepolia 测试网，不涉及主网真实资产。
 
 ## 技术栈
 

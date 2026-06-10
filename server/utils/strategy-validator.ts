@@ -4,6 +4,7 @@ import type {
   NetworkId,
   StrategyProposal,
 } from '../../shared/types/app'
+import { DEFAULT_NETWORK } from '../../shared/constants/network'
 import { MAX_MAX_SPEND_USDC, MIN_MAX_SPEND_USDC } from '../../shared/types/app'
 import { normalizeNumericField, parseNumericField } from '../../shared/utils/numeric-field'
 
@@ -27,10 +28,6 @@ export function validateStrategyPayload(
   const fee = parseNumericField(data.agentFee)
   const user = parseNumericField(data.userSplit)
   const spendRangeMessage = `请输入 ${MIN_MAX_SPEND_USDC}–${MAX_MAX_SPEND_USDC.toLocaleString('en-US')} USDC`
-
-  if (state.walletPreparation.ready && data.network !== state.walletPreparation.network) {
-    errors.network = `必须与 Agent Wallet 注资网络一致（${state.walletPreparation.network}）`
-  }
 
   if (spend === null || spend < MIN_MAX_SPEND_USDC || spend > MAX_MAX_SPEND_USDC) {
     errors.maxSpend = spendRangeMessage
@@ -63,9 +60,8 @@ export function validateStrategyPayload(
 
 export function normalizeStrategyProposal(
   proposal: Partial<StrategyProposal>,
-  fallbackNetwork: NetworkId,
+  fallbackNetwork: NetworkId = DEFAULT_NETWORK,
 ): StrategyProposal | null {
-  const network = proposal.network === 'arbitrum-sepolia' ? 'arbitrum-sepolia' : 'base-sepolia'
   const asset = proposal.asset?.trim() || 'USDC'
   const riskLevel = ['conservative', 'balanced', 'aggressive'].includes(String(proposal.riskLevel))
     ? String(proposal.riskLevel)
@@ -75,9 +71,7 @@ export function normalizeStrategyProposal(
   if (!maxSpend) return null
 
   return {
-    network: proposal.network === 'base-sepolia' || proposal.network === 'arbitrum-sepolia'
-      ? proposal.network
-      : fallbackNetwork,
+    network: DEFAULT_NETWORK,
     asset,
     targetApy: proposal.targetApy?.trim() || undefined,
     riskLevel,

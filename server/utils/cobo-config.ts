@@ -1,4 +1,5 @@
 import type { CawEnvironment, NetworkId } from '../../shared/types/app'
+import { DEFAULT_NETWORK } from '../../shared/constants/network'
 
 export interface YieldProtocolContracts {
   /** Aave V3 Pool — supply / withdraw */
@@ -37,18 +38,6 @@ export const NETWORK_CHAIN_CONFIG: Record<NetworkId, NetworkChainConfig> = {
       uniswapSwapRouter: '0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4',
     },
   },
-  'arbitrum-sepolia': {
-    coboChainId: 'TARBITRUM_SEPOLIA',
-    coboTokenId: 'TARBITRUM_SEPOLIA_USDC',
-    evmChainId: 421614,
-    usdcContract: '0x75faf114eafb1BDbe2F5586D9cf644344d1172FA',
-    usdcDecimals: 6,
-    explorerTxBase: 'https://sepolia.arbiscan.io/tx/',
-    yieldProtocols: {
-      aavePool: '0xBfC91D59fdAA134A4ED45f7B584cAf96D7792Eff',
-      uniswapSwapRouter: '0x101F443B4d1b059569D643917553c771E1b9663E',
-    },
-  },
 }
 
 export function buildYieldContractCallTargets(
@@ -70,7 +59,7 @@ export function buildYieldContractCallTargets(
   return targets
 }
 
-export function getNetworkChainConfig(network: NetworkId): NetworkChainConfig {
+export function getNetworkChainConfig(network: NetworkId = DEFAULT_NETWORK): NetworkChainConfig {
   return NETWORK_CHAIN_CONFIG[network]
 }
 

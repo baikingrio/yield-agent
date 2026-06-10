@@ -5,14 +5,13 @@ import { EXECUTION_STEPS } from './strategy-templates'
 
 interface UseStrategyPipelineOptions {
   form: StrategyForm
-  networkMismatch: Ref<boolean>
   isFormValid: Ref<boolean>
   validateBeforeSubmit: () => boolean
 }
 
 export function useStrategyPipeline(options: UseStrategyPipelineOptions) {
   const store = useAppStore()
-  const { form, networkMismatch, validateBeforeSubmit, isFormValid } = options
+  const { form, validateBeforeSubmit, isFormValid } = options
 
   const pipeline = ref<PipelineStage>('preview-ready')
   const executionStep = ref(0)
@@ -100,12 +99,6 @@ export function useStrategyPipeline(options: UseStrategyPipelineOptions) {
     if (!store.preparation?.ready) {
       pipeline.value = 'failed'
       pipelineError.value = '请先在控制台完成 Agent Wallet 设置，再创建 Pact 策略。'
-      return
-    }
-
-    if (networkMismatch.value) {
-      pipeline.value = 'failed'
-      pipelineError.value = '策略网络必须与 Agent Wallet 注资网络一致。'
       return
     }
 

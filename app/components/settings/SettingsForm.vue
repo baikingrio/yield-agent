@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { AppSettings, NetworkId } from '../../../shared/types/app'
+import type { AppSettings } from '../../../shared/types/app'
+import { NETWORK_LABELS } from '#shared/types/app'
 
 const props = defineProps<{
   settings: AppSettings | null
@@ -8,7 +9,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   save: [body: {
-    network: NetworkId
     defaultAgentFee: number
     userSplit: number
     apiKey?: string
@@ -16,7 +16,6 @@ const emit = defineEmits<{
   }]
 }>()
 
-const network = ref<NetworkId>('base-sepolia')
 const apiKey = ref('')
 const defaultAgentFee = ref(15)
 const userSplit = ref(85)
@@ -27,7 +26,6 @@ watch(
   () => props.settings,
   (s) => {
     if (!s) return
-    network.value = s.network
     defaultAgentFee.value = s.defaultAgentFee
     userSplit.value = s.userSplit
     developerMode.value = s.developerMode === true
@@ -38,7 +36,6 @@ watch(
 function onSubmit() {
   saved.value = false
   emit('save', {
-    network: network.value,
     defaultAgentFee: defaultAgentFee.value,
     userSplit: userSplit.value,
     apiKey: apiKey.value.trim() || undefined,
@@ -57,15 +54,10 @@ watch(
 <template>
   <form class="max-w-md space-y-5" @submit.prevent="onSubmit">
     <div>
-      <label for="settings-network" class="mb-1.5 block text-xs text-muted">默认网络</label>
-      <select
-        id="settings-network"
-        v-model="network"
-        class="h-10 w-full rounded-md border border-hairline bg-surface px-3 text-sm text-on-dark"
-      >
-        <option value="base-sepolia">Base Sepolia 测试网</option>
-        <option value="arbitrum-sepolia">Arbitrum Sepolia 测试网</option>
-      </select>
+      <span class="mb-1.5 block text-xs text-muted">网络</span>
+      <p class="flex h-10 items-center rounded-md border border-hairline bg-surface px-3 text-sm text-on-dark">
+        {{ NETWORK_LABELS['base-sepolia'] }} 测试网
+      </p>
     </div>
 
     <div>

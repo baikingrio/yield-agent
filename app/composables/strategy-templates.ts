@@ -55,8 +55,8 @@ export const TEMPLATE_PRESETS: Record<StrategyTemplateKey, {
   'balanced-supply': {
     title: '平衡型收益策略',
     description: '允许小额调整，但仍受预算、白名单协议和期限限制。',
-    nlText: '我想在 Arbitrum Sepolia 上用 800 USDC 做一个平衡收益策略，允许小额兑换后存入 Aave 或 Compound，收益 88% 给我，12% 给 Agent。',
-    form: { ...DEFAULT_FORM, network: 'arbitrum-sepolia', riskLevel: 'balanced', maxSpend: '800', agentFee: '12', userSplit: '88' },
+    nlText: '我想在 Base Sepolia 上用 800 USDC 做一个平衡收益策略，允许小额兑换后存入 Aave 或 Compound，收益 88% 给我，12% 给 Agent。',
+    form: { ...DEFAULT_FORM, riskLevel: 'balanced', maxSpend: '800', agentFee: '12', userSplit: '88' },
   },
   custom: {
     title: '自定义策略',

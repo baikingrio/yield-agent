@@ -4,7 +4,7 @@ import { getState, persistCurrentState } from '../../utils/app-store'
 import { toPublicSettings } from '../../utils/settings'
 
 const schema = z.object({
-  network: z.enum(['base-sepolia', 'arbitrum-sepolia']).optional(),
+  network: z.literal('base-sepolia').optional(),
   defaultAgentFee: z.number().min(0).max(30).optional(),
   userSplit: z.number().min(0).max(100).optional(),
   apiKey: z.string().optional(),
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const settings = getState().settings
   const data = parsed.data
 
-  if (data.network) settings.network = data.network as NetworkId
+  if (data.network) settings.network = 'base-sepolia'
   if (data.defaultAgentFee !== undefined) settings.defaultAgentFee = data.defaultAgentFee
   if (data.userSplit !== undefined) settings.userSplit = data.userSplit
   if (data.apiKey?.trim()) {

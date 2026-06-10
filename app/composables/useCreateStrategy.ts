@@ -75,17 +75,6 @@ export function useCreateStrategy() {
     return `${prep.funding.availableUsdc.toLocaleString('zh-CN')} ${form.asset}`
   })
 
-  const preparationNetworkLabel = computed(() => {
-    const prep = store.preparation
-    if (!prep?.ready) return null
-    return NETWORK_LABELS[prep.network]
-  })
-
-  const networkMismatch = computed(() => {
-    const prep = store.preparation
-    return !!prep?.ready && form.network !== prep.network
-  })
-
   const previewLines = computed(() => [
     { label: '意图', value: intentSummary.value },
     { label: '资金来源', value: fundingSourceLabel.value },
@@ -113,12 +102,10 @@ export function useCreateStrategy() {
     const fee = parseNumericField(form.agentFee)
     const user = parseNumericField(form.userSplit)
 
-    if (store.preparation?.ready && form.network !== store.preparation.network) {
-      next.maxSpend = '策略网络必须与 Agent Wallet 注资网络一致'
-    }
+    const spendRangeMessage = `请输入 ${MIN_MAX_SPEND_USDC}–${MAX_MAX_SPEND_USDC.toLocaleString('en-US')} USDC`
 
     if (spend === null || spend < MIN_MAX_SPEND_USDC || spend > MAX_MAX_SPEND_USDC) {
-      next.maxSpend = `请输入 ${MIN_MAX_SPEND_USDC}–${MAX_MAX_SPEND_USDC.toLocaleString('en-US')} USDC`
+      next.maxSpend = spendRangeMessage
     } else if (store.preparation?.ready) {
       const available = store.preparation.funding.availableUsdc
       if (spend > available) {
@@ -165,7 +152,6 @@ export function useCreateStrategy() {
     syncPipelineFromFormValidity,
   } = useStrategyPipeline({
     form,
-    networkMismatch,
     isFormValid,
     validateBeforeSubmit: () => validateForm(true),
   })
@@ -260,8 +246,6 @@ export function useCreateStrategy() {
     customTemplateComingSoon,
     preparationReady,
     availableBalanceLabel,
-    preparationNetworkLabel,
-    networkMismatch,
     fundingSourceLabel,
     isFormValid,
     stepIndex,

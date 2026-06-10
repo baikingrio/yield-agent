@@ -6,7 +6,7 @@ const schema = z.object({
   text: z.string().min(1),
   limits: z.object({
     availableUsdc: z.number().nonnegative(),
-    network: z.enum(['base-sepolia', 'arbitrum-sepolia']),
+    network: z.literal('base-sepolia'),
   }),
 })
 

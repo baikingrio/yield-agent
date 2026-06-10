@@ -1,7 +1,7 @@
 import { createPublicClient, erc20Abi, http } from 'viem'
-import { arbitrumSepolia, baseSepolia } from 'viem/chains'
 import type { AppState, NetworkId, WalletPreparation } from '../../shared/types/app'
 import { getNetworkChainConfig } from './cobo-config'
+import { APP_CHAIN } from './chain'
 import {
   createCoboBalanceApi,
   extractCoboErrorMessage,
@@ -109,8 +109,7 @@ export async function fetchUsdcBalanceOnChain(
   address: string,
 ): Promise<number> {
   const chainConfig = getNetworkChainConfig(network)
-  const chain = network === 'base-sepolia' ? baseSepolia : arbitrumSepolia
-  const client = createPublicClient({ chain, transport: http() })
+  const client = createPublicClient({ chain: APP_CHAIN, transport: http() })
 
   try {
     const raw = await client.readContract({

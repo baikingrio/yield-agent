@@ -12,7 +12,7 @@ import type { AppState } from '../../shared/types/app'
 const SYSTEM_PROMPT = `You are YieldAgent strategy parser. Reply with JSON only, no markdown.
 Schema:
 {
-  "network": "base-sepolia" | "arbitrum-sepolia",
+  "network": "base-sepolia",
   "asset": "USDC",
   "targetApy": string optional,
   "riskLevel": "conservative" | "balanced" | "aggressive",
@@ -92,8 +92,6 @@ function fallbackRegexParse(text: string, limits: StrategyParseLimits): Strategy
     || text.match(/目标\s*(\d+(?:\.\d+)?)\s*%/)
   if (apy?.[1]) proposal.targetApy = apy[1]
 
-  if (lower.includes('arbitrum') || lower.includes('仲裁')) proposal.network = 'arbitrum-sepolia'
-  if (lower.includes('base') || lower.includes('基地')) proposal.network = 'base-sepolia'
 
   return normalizeStrategyProposal(proposal, limits.network)
 }

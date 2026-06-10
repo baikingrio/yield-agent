@@ -1,16 +1,15 @@
 import { WagmiPlugin } from '@wagmi/vue'
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { createConfig, http } from '@wagmi/vue'
-import { arbitrumSepolia, baseSepolia } from '@wagmi/vue/chains'
+import { baseSepolia } from '@wagmi/vue/chains'
 import { injected } from '@wagmi/vue/connectors'
 
 export default defineNuxtPlugin((nuxtApp) => {
   const config = createConfig({
-    chains: [baseSepolia, arbitrumSepolia],
+    chains: [baseSepolia],
     connectors: [injected()],
     transports: {
       [baseSepolia.id]: http(),
-      [arbitrumSepolia.id]: http(),
     },
   })
 

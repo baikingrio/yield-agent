@@ -1,14 +1,11 @@
 import { useConnect, useConnection, useDisconnect } from '@wagmi/vue'
-import { arbitrumSepolia, baseSepolia } from '@wagmi/vue/chains'
+import { baseSepolia } from '@wagmi/vue/chains'
 import { injected } from '@wagmi/vue/connectors'
 import { DASHBOARD_HOME } from '#shared/constants/dashboard-routes'
 import { NETWORK_LABELS } from '#shared/types/app'
 import type { NetworkId } from '#shared/types/app'
 
-const CHAIN_TO_NETWORK: Record<number, NetworkId> = {
-  [baseSepolia.id]: 'base-sepolia',
-  [arbitrumSepolia.id]: 'arbitrum-sepolia',
-}
+const EXPECTED_NETWORK: NetworkId = 'base-sepolia'
 
 function useWalletConnectClient() {
   const store = useAppStore()
@@ -20,22 +17,19 @@ function useWalletConnectClient() {
   const connectMutation = useConnect()
   const disconnectMutation = useDisconnect()
 
-  const expectedNetwork = computed(
-    () => store.preparation?.network ?? store.settings?.network ?? 'base-sepolia',
-  )
+  const expectedNetwork = computed(() => EXPECTED_NETWORK)
 
-  const connectedNetwork = computed(() => {
-    const id = chainId.value
-    return id ? CHAIN_TO_NETWORK[id] : null
-  })
+  const connectedNetwork = computed(() =>
+    chainId.value === baseSepolia.id ? EXPECTED_NETWORK : null,
+  )
 
   const connectedNetworkLabel = computed(() =>
     connectedNetwork.value ? NETWORK_LABELS[connectedNetwork.value] : null,
   )
 
   const networkMismatch = computed(() => {
-    if (!isConnected.value || !connectedNetwork.value) return false
-    return connectedNetwork.value !== expectedNetwork.value
+    if (!isConnected.value || !chainId.value) return false
+    return chainId.value !== baseSepolia.id
   })
 
   const busy = computed(
@@ -64,7 +58,7 @@ function useWalletConnectClient() {
     store.clearError()
     shouldRedirectAfterSync.value = options?.redirect !== false
     try {
-      await connectMutation.mutateAsync({ connector: injected() })
+      await connectMutation.mutateAsync({ connector: injected(), chainId: baseSepolia.id })
     } catch (err) {
       shouldRedirectAfterSync.value = false
       pageError.value = err instanceof Error ? err.message : '连接钱包失败'
@@ -150,7 +144,7 @@ function useWalletConnectStub() {
     isConnected: ref(false),
     connectedNetwork: computed(() => null),
     connectedNetworkLabel: computed(() => null),
-    expectedNetwork: computed(() => 'base-sepolia' as NetworkId),
+    expectedNetwork: computed(() => EXPECTED_NETWORK),
     networkMismatch: computed(() => false),
     busy: computed(() => false),
     pageError,

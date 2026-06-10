@@ -12,7 +12,7 @@ const RISK_NAMES: Record<string, string> = {
 }
 
 const schema = z.object({
-  network: z.enum(['base-sepolia', 'arbitrum-sepolia']),
+  network: z.literal('base-sepolia'),
   asset: z.string().min(1),
   targetApy: z.string().optional(),
   riskLevel: z.string().min(1),

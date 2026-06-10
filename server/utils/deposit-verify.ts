@@ -1,7 +1,7 @@
 import { createPublicClient, erc20Abi, http, parseEventLogs } from 'viem'
-import { arbitrumSepolia, baseSepolia } from 'viem/chains'
 import type { NetworkId } from '../../shared/types/app'
 import { getNetworkChainConfig } from './cobo-config'
+import { APP_CHAIN } from './chain'
 
 export async function verifyUsdcDeposit(params: {
   txHash: string
@@ -11,8 +11,7 @@ export async function verifyUsdcDeposit(params: {
   minAmountUsdc: number
 }): Promise<void> {
   const chainConfig = getNetworkChainConfig(params.network)
-  const chain = params.network === 'base-sepolia' ? baseSepolia : arbitrumSepolia
-  const client = createPublicClient({ chain, transport: http() })
+  const client = createPublicClient({ chain: APP_CHAIN, transport: http() })
 
   const receipt = await client.waitForTransactionReceipt({
     hash: params.txHash as `0x${string}`,

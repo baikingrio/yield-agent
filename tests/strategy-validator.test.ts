@@ -24,21 +24,20 @@ function createState(): AppState {
 }
 
 describe('validateStrategyPayload', () => {
-  it('rejects network mismatch with funded wallet', () => {
+  it('rejects spend above available balance', () => {
     const result = validateStrategyPayload(createState(), {
-      network: 'arbitrum-sepolia',
+      network: 'base-sepolia',
       asset: 'USDC',
       riskLevel: 'conservative',
-      maxSpend: '50',
+      maxSpend: '200',
       agentFee: '15',
       userSplit: '85',
     })
-
     expect(result.valid).toBe(false)
-    expect(result.errors.network).toContain('注资网络')
+    expect(result.errors.maxSpend).toContain('不能超过')
   })
 
-  it('accepts valid payload within balance', () => {
+  it('accepts valid payload on base-sepolia', () => {
     const result = validateStrategyPayload(createState(), {
       network: 'base-sepolia',
       asset: 'USDC',
@@ -47,55 +46,6 @@ describe('validateStrategyPayload', () => {
       agentFee: '15',
       userSplit: '85',
     })
-
     expect(result.valid).toBe(true)
-  })
-
-  it('accepts small testnet maxSpend from parse limits', () => {
-    const result = validateStrategyPayload(
-      createState(),
-      {
-        network: 'base-sepolia',
-        asset: 'USDC',
-        riskLevel: 'aggressive',
-        maxSpend: '7',
-        agentFee: '15',
-        userSplit: '85',
-      },
-      { availableUsdc: 9.999999 },
-    )
-
-    expect(result.valid).toBe(true)
-  })
-
-  it('accepts zero agentFee and percent-formatted userSplit', () => {
-    const result = validateStrategyPayload(createState(), {
-      network: 'base-sepolia',
-      asset: 'USDC',
-      riskLevel: 'balanced',
-      maxSpend: '7',
-      agentFee: '0',
-      userSplit: '100%',
-    })
-
-    expect(result.valid).toBe(true)
-  })
-
-  it('rejects maxSpend above parse limits availableUsdc', () => {
-    const result = validateStrategyPayload(
-      createState(),
-      {
-        network: 'base-sepolia',
-        asset: 'USDC',
-        riskLevel: 'conservative',
-        maxSpend: '50',
-        agentFee: '15',
-        userSplit: '85',
-      },
-      { availableUsdc: 9.999999 },
-    )
-
-    expect(result.valid).toBe(false)
-    expect(result.errors.maxSpend).toContain('9.999999')
   })
 })

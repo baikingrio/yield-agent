@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { NetworkId } from '#shared/types/app'
-
 useHead({ title: '设置 · YieldAgent' })
 
 const store = useAppStore()
@@ -30,7 +28,6 @@ async function load() {
 }
 
 async function handleSave(body: {
-  network: NetworkId
   defaultAgentFee: number
   userSplit: number
   apiKey?: string

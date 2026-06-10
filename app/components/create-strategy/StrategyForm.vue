@@ -10,8 +10,6 @@ const props = defineProps<{
   nlFilled: boolean
   nlParsing?: boolean
   availableBalanceLabel: string
-  preparationNetworkLabel: string | null
-  networkMismatch: boolean
   agentSplit: string
 }>()
 
@@ -105,15 +103,12 @@ const monoControlClass = `${controlClass} font-mono`
           <h3 id="network-heading" class="text-sm font-semibold text-on-dark">网络与资产</h3>
           <div class="grid gap-4 sm:grid-cols-2">
             <div>
-              <label for="network" class="mb-1.5 block text-xs text-muted-strong">网络</label>
-              <select
-                id="network"
-                v-model="props.form.network"
-                :class="controlClass"
+              <span class="mb-1.5 block text-xs text-muted-strong">网络</span>
+              <p
+                class="flex h-11 items-center rounded-md border border-hairline bg-canvas px-3 text-sm text-on-dark"
               >
-                <option value="base-sepolia">Base Sepolia 测试网</option>
-                <option value="arbitrum-sepolia">Arbitrum Sepolia 测试网</option>
-              </select>
+                Base Sepolia 测试网
+              </p>
             </div>
             <div>
               <span class="mb-1.5 block text-xs text-muted-strong">资产</span>
@@ -121,11 +116,6 @@ const monoControlClass = `${controlClass} font-mono`
                 class="flex h-11 items-center rounded-md border border-hairline bg-canvas px-3 font-mono text-sm text-on-dark"
               >
                 {{ props.form.asset }}
-              </p>
-            </div>
-            <div v-if="props.networkMismatch && props.preparationNetworkLabel" class="sm:col-span-2">
-              <p class="rounded-md border border-trading-down/30 bg-canvas px-3 py-2 text-xs text-trading-down">
-                当前 Agent Wallet 注资在 {{ props.preparationNetworkLabel }}，与所选网络不一致。
               </p>
             </div>
             <div class="sm:col-span-2">

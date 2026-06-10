@@ -45,11 +45,10 @@ describe('buildYieldPactPolicies', () => {
 })
 
 describe('buildYieldContractCallTargets', () => {
-  it('omits Compound on Arbitrum Sepolia where Comet is not deployed', () => {
-    const targets = buildYieldContractCallTargets('arbitrum-sepolia', 'conservative')
+  it('includes Compound Comet on Base Sepolia', () => {
+    const targets = buildYieldContractCallTargets('base-sepolia', 'conservative')
     const addresses = targets.map((t) => t.contract_addr.toLowerCase())
-    expect(addresses).toContain('0xbfC91D59fdAA134A4ED45f7B584cAf96D7792Eff'.toLowerCase())
-    expect(addresses.some((a) => a.includes('571621'))).toBe(false)
+    expect(addresses).toContain('0x571621ce60cebb0c1d442b5afb38b1663c6bf017')
   })
 
   it('includes Uniswap router for aggressive Base Sepolia strategies', () => {
@@ -62,9 +61,5 @@ describe('buildYieldContractCallTargets', () => {
 describe('strategyWhitelist', () => {
   it('includes Compound on Base Sepolia', () => {
     expect(strategyWhitelist('conservative', 'base-sepolia')).toEqual(['Aave 存入', 'Compound 存入'])
-  })
-
-  it('excludes Compound on Arbitrum Sepolia', () => {
-    expect(strategyWhitelist('conservative', 'arbitrum-sepolia')).toEqual(['Aave 存入'])
   })
 })

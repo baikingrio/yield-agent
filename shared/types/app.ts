@@ -1,6 +1,5 @@
-export type NetworkId = 'base-sepolia' | 'arbitrum-sepolia'
-
-export { NETWORK_LABELS } from '../constants/network'
+export type { NetworkId } from '../constants/network'
+export { DEFAULT_NETWORK, NETWORK_LABELS, normalizeNetwork } from '../constants/network'
 
 /** 测试网允许小额策略；maxSpend 为 Pact 总支出上限（非单日）。 */
 export const MIN_MAX_SPEND_USDC = 1

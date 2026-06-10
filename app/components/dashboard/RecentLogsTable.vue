@@ -97,7 +97,7 @@ function statusClass(status: string) {
             </td>
             <td class="px-5 py-2.5 font-mono text-xs text-muted-strong">{{ TYPE_LABELS[log.type] }}</td>
             <td class="px-5 py-2.5">
-              <UiTxLink v-if="log.txHash" :hash="log.txHash" network="base-sepolia" />
+              <UiTxLink v-if="log.txHash" :hash="log.txHash" />
               <span v-else class="text-xs text-muted">—</span>
             </td>
             <td class="px-5 py-2.5 text-xs font-medium" :class="statusClass(log.status)">

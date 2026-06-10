@@ -8,6 +8,7 @@ import type {
   WalletSummary,
   YieldPoint,
 } from '../../shared/types/app'
+import { normalizeAppStateNetworks } from '../../shared/constants/network'
 import { createInitialState } from '../fixtures/initial-state'
 import { loadPersistedSession } from '../utils/app-state-persistence'
 import { stripLegacySeedData } from '../utils/strip-legacy-seed'
@@ -121,6 +122,10 @@ export function hydrateInitialState(): AppState {
       const prepStrip = stripLegacyPrepFixtures(state)
       state = prepStrip.state
       if (prepStrip.changed) dirty = true
+
+      const networkNorm = normalizeAppStateNetworks(state)
+      state = networkNorm.state
+      if (networkNorm.changed) dirty = true
 
       if (dirty) saveStateToDatabase(state)
       return state

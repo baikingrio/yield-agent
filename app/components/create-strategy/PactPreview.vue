@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DASHBOARD_HOME, DASHBOARD_PACTS } from '#shared/constants/dashboard-routes'
-import type { NetworkId, Pact } from '../../../shared/types/app'
+import type { Pact } from '../../../shared/types/app'
 import type { PipelineStage } from '~/composables/strategy-templates'
 
 const props = defineProps<{
@@ -10,7 +10,6 @@ const props = defineProps<{
   preparationReady: boolean
   canSubmit: boolean
   blockedReason?: string
-  network: NetworkId
   submitting: boolean
   previewTxHash: string
   pipelineError: string
@@ -210,7 +209,6 @@ const approvalGuidePact = computed((): Pact => ({
         <UiTxLink
           v-if="props.previewTxHash"
           :hash="props.previewTxHash"
-          :network="props.network"
           class="block break-all text-xs"
         />
       </div>

@@ -13,7 +13,7 @@ const preparationReady = computed(() => Boolean(store.preparation?.ready))
       </main>
     </div>
     <div class="mt-auto px-4 pb-8 md:px-6">
-      <div class="mx-auto max-w-5xl">
+      <div class="mx-auto max-w-7xl">
         <LandingSiteFooter />
       </div>
     </div>

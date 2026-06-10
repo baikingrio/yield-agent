@@ -29,7 +29,10 @@ const props = defineProps<{
   series: YieldSeries | null
   loading?: boolean
   range: YieldRange
+  variant?: 'default' | 'secondary'
 }>()
+
+const isSecondary = computed(() => props.variant === 'secondary')
 
 const emit = defineEmits<{
   'update:range': [YieldRange]
@@ -116,10 +119,21 @@ const srRows = computed(() => (props.series?.points ?? []).slice(-3))
 </script>
 
 <template>
-  <section aria-labelledby="yield-chart-heading" class="rounded-lg border border-hairline bg-surface px-5 py-4">
+  <section
+    aria-labelledby="yield-chart-heading"
+    class="rounded-lg border border-hairline bg-surface px-5 py-4"
+    :class="isSecondary ? 'opacity-90' : ''"
+  >
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h2 id="yield-chart-heading" class="text-base font-semibold text-on-dark">累计收益</h2>
+        <p v-if="isSecondary" class="text-xs text-muted-strong">辅助数据</p>
+        <h2
+          id="yield-chart-heading"
+          class="font-semibold text-on-dark"
+          :class="isSecondary ? 'mt-0.5 text-sm' : 'text-base'"
+        >
+          累计收益
+        </h2>
         <p v-if="series" class="mt-1 font-mono text-xs text-muted">
           区间合计 {{ series.totalUsdc.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) }} USDC
         </p>
@@ -160,7 +174,7 @@ const srRows = computed(() => (props.series?.points ?? []).slice(-3))
     </div>
 
     <ClientOnly v-else>
-      <div class="relative mt-4 h-48 w-full md:h-56">
+      <div class="relative mt-4 w-full" :class="isSecondary ? 'h-36' : 'h-48 md:h-56'">
         <Line :data="chartData" :options="chartOptions" />
       </div>
       <table class="sr-only">

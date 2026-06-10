@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { DASHBOARD_CREATE_STRATEGY, DASHBOARD_PACTS } from '#shared/constants/dashboard-routes'
 import type { Pact, Strategy } from '../../../shared/types/app'
-import { pickActivePact } from '~/utils/active-pact'
+import { formatLivePactSummary, listLivePacts } from '~/utils/active-pact'
 
 const props = defineProps<{
   pacts: Pact[]
@@ -9,73 +9,52 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
-const view = computed(() => pickActivePact(props.pacts, props.strategies))
-
-const statusLabel = computed(() => {
-  const status = view.value?.pact.status
-  if (status === 'active') return '生效中'
-  if (status === 'awaiting-approval') return '待 Cobo App 审批'
-  if (status === 'pending') return '待审批'
-  return status ?? '—'
-})
+const livePacts = computed(() => listLivePacts(props.pacts, props.strategies))
+const summaryLabel = computed(() => formatLivePactSummary(props.pacts))
 </script>
 
 <template>
-  <section class="rounded-lg border border-hairline bg-surface p-5">
-    <div class="flex flex-wrap items-start justify-between gap-3">
+  <section
+    class="overflow-hidden rounded-lg border border-hairline bg-surface"
+    aria-labelledby="active-pact-heading"
+  >
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-5 py-4">
       <div>
-        <p class="font-mono text-xs text-muted-strong">Pact 边界</p>
-        <h2 class="mt-1 text-lg font-semibold text-on-dark">当前 Active Pact</h2>
+        <h2 id="active-pact-heading" class="text-base font-semibold text-on-dark">Pact 边界</h2>
+        <p v-if="livePacts.length" class="mt-0.5 text-xs text-muted">{{ summaryLabel }}</p>
       </div>
-      <UiStatusChip
-        v-if="view"
-        :label="statusLabel"
-        :tone="view.pact.status === 'active' ? 'active' : 'pending'"
-      />
-    </div>
-
-    <div v-if="loading" class="mt-4 h-20 animate-pulse rounded-md bg-surface-elevated" />
-
-    <div v-else-if="!view" class="mt-4 space-y-3 text-sm text-muted">
-      <p>暂无生效中的 Pact。创建策略后将在此展示支出上限与白名单。</p>
       <NuxtLink
-        :to="`${DASHBOARD_CREATE_STRATEGY}?template=conservative-usdc`"
-        class="inline-flex text-sm font-medium text-primary no-underline hover:text-primary-active"
+        v-if="livePacts.length > 1"
+        :to="DASHBOARD_PACTS"
+        class="text-xs font-semibold text-primary no-underline hover:text-primary-active"
       >
-        创建首个策略 →
+        全部 Pact
       </NuxtLink>
     </div>
 
-    <dl v-else class="mt-4 grid gap-3 sm:grid-cols-2">
-      <div class="rounded-md border border-hairline bg-surface-elevated p-3">
-        <dt class="text-xs text-muted">最大支出</dt>
-        <dd class="mt-1 font-mono text-sm text-on-dark">{{ view.pact.maxSpend }} USDC</dd>
-      </div>
-      <div class="rounded-md border border-hairline bg-surface-elevated p-3">
-        <dt class="text-xs text-muted">运行期限</dt>
-        <dd class="mt-1 text-sm text-on-dark">{{ view.pact.durationDays }} 天</dd>
-      </div>
-      <div class="rounded-md border border-hairline bg-surface-elevated p-3 sm:col-span-2">
-        <dt class="text-xs text-muted">允许 Recipes</dt>
-        <dd class="mt-2 flex flex-wrap gap-2">
-          <span
-            v-for="recipe in view.pact.whitelist"
-            :key="recipe"
-            class="rounded-full border border-hairline px-2 py-0.5 font-mono text-xs text-body"
-          >
-            {{ recipe }}
-          </span>
-          <span v-if="!view.pact.whitelist.length" class="text-sm text-muted">—</span>
-        </dd>
-      </div>
-    </dl>
+    <div v-if="loading" class="px-5 py-6">
+      <div class="h-24 animate-pulse rounded-md bg-surface-elevated" />
+    </div>
 
-    <NuxtLink
-      v-if="view"
-      :to="`${DASHBOARD_PACTS}?id=${view.pact.id}`"
-      class="mt-4 inline-flex text-xs font-medium text-primary no-underline hover:text-primary-active"
-    >
-      查看 Pact 详情 →
-    </NuxtLink>
+    <div v-else-if="!livePacts.length" class="space-y-4 px-5 py-6">
+      <p class="text-sm text-body">
+        尚无生效中或待审批的 Pact。创建策略后，各策略的支出上限、Recipe 白名单与期限将列在此处。
+      </p>
+      <NuxtLink
+        :to="`${DASHBOARD_CREATE_STRATEGY}?template=conservative-usdc`"
+        class="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary no-underline transition-colors hover:bg-primary-active"
+      >
+        创建首个策略
+      </NuxtLink>
+    </div>
+
+    <div v-else>
+      <DashboardPactBoundaryEntry
+        v-for="view in livePacts"
+        :key="view.pact.id"
+        :view="view"
+        :compact-header="livePacts.length > 1"
+      />
+    </div>
   </section>
 </template>

@@ -41,54 +41,70 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-8">
-    <header class="space-y-2">
-      <div class="inline-flex rounded-full border border-hairline bg-surface px-3 py-1 font-mono text-xs text-muted-strong">
-        测试网 · Agent Wallet
-      </div>
-      <h1 class="text-2xl font-semibold text-on-dark">控制台</h1>
-      <p class="mt-2 max-w-prose text-sm text-muted">
-        展示 CAW Agent Wallet 余额、Active Pact、执行日志与 tx hash。收益图为辅助信息；越权拒绝会出现在审计轨迹中。
-      </p>
-    </header>
+  <div class="mx-auto max-w-7xl">
+    <DashboardOpsStrip
+      :wallet="store.wallet"
+      :pacts="store.pacts"
+      :loading="initialLoading"
+      @refresh="loadDashboard"
+    />
 
     <div
       v-if="showCreated"
-      class="rounded-md border border-trading-up/30 bg-surface px-4 py-3 text-sm text-trading-up"
+      class="mt-4 rounded-md border border-trading-up/30 bg-surface px-4 py-3 text-sm text-trading-up"
       role="status"
     >
-      策略已创建，可在下方列表或 Pact 管理中查看。
+      策略已创建。可在下方审计轨迹或 Pact 管理中查看执行状态。
     </div>
 
     <UiPageAlert
       v-if="store.error"
+      class="mt-4"
       :message="store.error"
       @retry="loadDashboard"
     />
 
-    <DashboardWalletBar :wallet="store.wallet" :loading="initialLoading" />
+    <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] lg:items-start">
+      <div class="min-w-0 space-y-6">
+        <DashboardActivePactCard
+          :pacts="store.pacts"
+          :strategies="store.strategies"
+          :loading="initialLoading"
+        />
 
-    <DashboardActivePactCard
-      :pacts="store.pacts"
-      :strategies="store.strategies"
-      :loading="initialLoading"
-    />
+        <DashboardDenialDemoCard :pacts="store.pacts" />
 
-    <DashboardDenialDemoCard :pacts="store.pacts" />
+        <DashboardRecentLogsTable
+          :logs="store.logs"
+          :loading="initialLoading"
+          variant="ledger"
+        />
+      </div>
 
-    <DashboardRecentLogsTable :logs="store.logs" :loading="initialLoading" />
+      <aside class="space-y-6 lg:sticky lg:top-[calc(3.5rem+1.5rem)]">
+        <DashboardWalletBar
+          :wallet="store.wallet"
+          :loading="initialLoading"
+          layout="rail"
+        />
 
-    <DashboardStrategyList
-      :strategies="store.strategies"
-      :pacts="store.pacts"
-      :loading="initialLoading"
-    />
+        <DashboardStrategyList
+          :strategies="store.strategies"
+          :pacts="store.pacts"
+          :loading="initialLoading"
+          variant="rail"
+        />
+      </aside>
+    </div>
 
-    <DashboardYieldChart
-      :series="store.yieldSeries"
-      :loading="initialLoading"
-      :range="store.yieldRange"
-      @update:range="onRangeChange"
-    />
+    <div class="mt-8 border-t border-hairline pt-8">
+      <DashboardYieldChart
+        :series="store.yieldSeries"
+        :loading="initialLoading"
+        :range="store.yieldRange"
+        variant="secondary"
+        @update:range="onRangeChange"
+      />
+    </div>
   </div>
 </template>

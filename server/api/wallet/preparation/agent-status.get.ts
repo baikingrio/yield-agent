@@ -1,4 +1,4 @@
-import { getState } from '../../../utils/app-store'
+import { flushCurrentState, getState } from '../../../utils/app-store'
 import { pollCoboAgentWalletStatus, syncFundingFromExistingBalance } from '../../../utils/cobo-preparation'
 import { getWalletPreparation } from '../../../utils/wallet-preparation'
 import { CoboNotConfiguredError } from '../../../utils/cobo-client'
@@ -10,6 +10,7 @@ export default defineEventHandler(async () => {
   try {
     const response = await pollCoboAgentWalletStatus(state)
     await syncFundingFromExistingBalance(state)
+    flushCurrentState()
     return {
       ...response,
       preparation: getWalletPreparation(state),

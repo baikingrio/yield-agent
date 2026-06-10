@@ -1,7 +1,7 @@
 import type { AppState } from '../../shared/types/app'
 import { createInitialState } from '../fixtures/initial-state'
 import { hydrateInitialState, saveStateToDatabase } from '../db/repository'
-import { schedulePersistAppState } from './app-state-persistence'
+import { flushPersistAppState, schedulePersistAppState } from './app-state-persistence'
 
 let state: AppState = hydrateInitialState()
 
@@ -21,4 +21,8 @@ export function setState(next: AppState): void {
 
 export function persistCurrentState(): void {
   schedulePersistAppState(state)
+}
+
+export function flushCurrentState(): void {
+  flushPersistAppState(state)
 }

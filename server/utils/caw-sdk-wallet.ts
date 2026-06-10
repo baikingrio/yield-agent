@@ -2,7 +2,7 @@ import type { AppState } from '../../shared/types/app'
 import { getNetworkChainConfig } from './cobo-config'
 import { createCoboWalletsApi, withCoboRetry } from './cobo-client'
 import { ensureCawCredentials } from './caw-credentials'
-import { touchPreparation } from './wallet-preparation'
+import { markAgentWalletPreparing } from './wallet-preparation'
 
 export async function getWalletStatusFromSdk(state: AppState, walletUuid: string): Promise<string | null> {
   try {
@@ -43,9 +43,10 @@ export async function resolveEvmAddressFromSdk(
 }
 
 function rememberPendingAgentWallet(state: AppState, walletUuid: string): void {
-  const prep = state.walletPreparation
-  prep.agentWallet.coboWalletId = walletUuid
-  touchPreparation(prep, state)
+  markAgentWalletPreparing(state, {
+    coboWalletId: walletUuid,
+    pairing: { status: 'unpaired', code: null, expiresAt: null },
+  })
 }
 
 export async function bootstrapViaSdkCreate(state: AppState): Promise<void> {

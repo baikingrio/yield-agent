@@ -33,6 +33,14 @@ export function loadPersistedSession(): PersistedSession | null {
   }
 }
 
+function writeAppState(state: AppState): void {
+  try {
+    saveStateToDatabase(state)
+  } catch {
+    // Best-effort persistence; ignore write failures in dev.
+  }
+}
+
 export function schedulePersistAppState(state: AppState): void {
   // Vitest 单测中的 touchPreparation 不应污染本地 .data/yieldagent.db
   if (process.env.VITEST) return
@@ -40,12 +48,17 @@ export function schedulePersistAppState(state: AppState): void {
   if (persistTimer) clearTimeout(persistTimer)
   persistTimer = setTimeout(() => {
     persistTimer = null
-    try {
-      saveStateToDatabase(state)
-    } catch {
-      // Best-effort persistence; ignore write failures in dev.
-    }
+    writeAppState(state)
   }, 200)
+}
+
+export function flushPersistAppState(state: AppState): void {
+  if (process.env.VITEST) return
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  writeAppState(state)
 }
 
 export function clearPersistedSession(): void {

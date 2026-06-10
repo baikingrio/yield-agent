@@ -281,7 +281,12 @@ async function ensureBootstrapMode(state: AppState): Promise<AgentBootstrapMode 
   const detected = await detectBootstrapMode()
   if (detected === 'unavailable') return null
 
-  setBootstrapState(state, { mode: detected })
+  const patch: Partial<AgentBootstrapState> = { mode: detected }
+  if (state.walletPreparation.agentWallet.coboWalletId) {
+    patch.phase = 'bootstrapping'
+    patch.message = '正在等待 MPC 钱包 vault 就绪'
+  }
+  setBootstrapState(state, patch)
   return detected
 }
 
@@ -399,6 +404,13 @@ export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstra
   await ensureBootstrapMode(state)
   const bootstrap = getBootstrapState(prep)
 
+  if (prep.agentWallet.coboWalletId && bootstrap.phase === 'idle') {
+    setBootstrapState(state, {
+      phase: 'bootstrapping',
+      message: bootstrap.message ?? '正在等待 MPC 钱包 vault 就绪',
+    })
+  }
+
   try {
     const tss = await checkTssReadiness(state, prep.agentWallet.coboWalletId)
     setBootstrapState(state, { tssOnline: tss.online, message: tss.message })
@@ -454,10 +466,18 @@ export async function pollAgentBootstrap(state: AppState): Promise<AgentBootstra
     }
 
     await ensureCawCredentials(state)
-    const walletUuid = prep.agentWallet.coboWalletId
+    let walletUuid = prep.agentWallet.coboWalletId
     if (!walletUuid) {
       await bootstrapViaSdkCreate(state)
-      return buildStatusResponse(state, false)
+      walletUuid = prep.agentWallet.coboWalletId
+      if (!walletUuid) {
+        return buildStatusResponse(state, false)
+      }
+      setBootstrapState(state, {
+        phase: 'bootstrapping',
+        walletStatus: 'preparing',
+        message: '正在通过 SDK 创建 MPC 钱包并等待 vault 就绪',
+      })
     }
 
     const walletStatus = await getWalletStatusFromSdk(state, walletUuid)

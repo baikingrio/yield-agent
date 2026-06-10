@@ -170,7 +170,7 @@ export function useWalletPreparation() {
   }
 
   async function runDeposit() {
-    if (stepLocked('funding') || prep.value?.funding.status === 'ready') return
+    if (stepLocked('funding')) return
     const amount = Number(depositAmount.value)
     if (Number.isNaN(amount) || amount < 10 || amount > 10_000) {
       pageError.value = '请输入 10–10,000 USDC'

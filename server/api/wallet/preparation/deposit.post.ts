@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { getState, persistCurrentState } from '../../../utils/app-store'
-import { confirmUsdcDeposit } from '../../../utils/cobo-preparation'
+import { topUpUsdcDeposit } from '../../../utils/wallet-ops'
 
 const TX_HASH_RE = /^0x[a-fA-F0-9]{64}$/
 
@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   const state = getState()
 
   try {
-    const result = await confirmUsdcDeposit(state, parsed.data.amountUsdc, parsed.data.txHash)
+    const result = await topUpUsdcDeposit(state, parsed.data.amountUsdc, parsed.data.txHash)
 
     state.logs.unshift({
       id: `log-deposit-${Date.now()}`,

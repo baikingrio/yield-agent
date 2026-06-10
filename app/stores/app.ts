@@ -395,6 +395,21 @@ export const useAppStore = defineStore('app', () => {
     })
   }
 
+  async function fetchWithdrawInfo(amountUsdc?: number) {
+    return $fetch<import('../../shared/types/app').WithdrawInfo>('/api/wallet/withdraw-info', {
+      query: amountUsdc !== undefined ? { amountUsdc } : undefined,
+    })
+  }
+
+  async function withdrawFromAgentWallet(amountUsdc: number) {
+    const result = await $fetch<import('../../shared/types/app').WithdrawResult>('/api/wallet/withdraw', {
+      method: 'POST',
+      body: { amountUsdc },
+    })
+    await Promise.all([fetchWallet(), fetchPreparation(), fetchLogs({ limit: 10 })])
+    return result
+  }
+
   async function fetchAgentGasStatus() {
     return $fetch<import('../../shared/types/app').AgentGasStatus>('/api/wallet/preparation/gas-status')
   }
@@ -462,6 +477,8 @@ export const useAppStore = defineStore('app', () => {
     importAgentWalletFromCli,
     depositToAgentWallet,
     fetchDepositInfo,
+    fetchWithdrawInfo,
+    withdrawFromAgentWallet,
     fetchAgentGasStatus,
     resetPreparation,
     clearError,

@@ -1,4 +1,12 @@
-import { BalanceApi, Configuration, IdentityApi, PactsApi, WalletsApi } from '@cobo/agentic-wallet'
+import {
+  BalanceApi,
+  Configuration,
+  IdentityApi,
+  PactsApi,
+  TransactionRecordsApi,
+  TransactionsApi,
+  WalletsApi,
+} from '@cobo/agentic-wallet'
 import type { AppState } from '../../shared/types/app'
 import { getCoboBasePath } from './cobo-config'
 
@@ -83,6 +91,14 @@ export function createCoboBalanceApi(state: AppState): BalanceApi {
 
 export function createCoboPactsApi(state: AppState): PactsApi {
   return new PactsApi(createConfiguration(state))
+}
+
+export function createCoboTransactionsApi(state: AppState): TransactionsApi {
+  return new TransactionsApi(createConfiguration(state))
+}
+
+export function createCoboTransactionRecordsApi(state: AppState): TransactionRecordsApi {
+  return new TransactionRecordsApi(createConfiguration(state))
 }
 
 export function createCoboIdentityApi(basePath?: string): IdentityApi {

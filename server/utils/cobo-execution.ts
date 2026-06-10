@@ -1,6 +1,4 @@
 import { Configuration, TransactionRecordsApi, TransactionsApi } from '@cobo/agentic-wallet'
-import type { UserTransactionRead } from '@cobo/agentic-wallet'
-import { createPublicClient, encodeFunctionData, erc20Abi, http } from 'viem'
 import { arbitrumSepolia, baseSepolia } from 'viem/chains'
 import type {
   AppState,
@@ -13,6 +11,7 @@ import type {
 import { assertAgentWalletHasGas, getAgentNativeEthBalance, resolveContractCallSponsor } from './agent-gas'
 import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
 import { extractCoboErrorMessage } from './cobo-client'
+import { submitContractCallAndWait } from './cobo-transaction'
 import { syncWalletSummaryFromCobo } from './cobo-preparation'
 import { syncYieldSnapshotFromChain } from './yield-snapshot'
 import { resolveRedeemApiKey } from './pact-credentials'
@@ -23,18 +22,14 @@ import {
   buildRedeemRequestId,
   encodeYieldSupplyCalldata,
   encodeYieldWithdrawCalldata,
-  formatTransactionFailureMessage,
   isStaleFirstExecution,
-  isTerminalTransactionFailure,
-  isTerminalTransactionSuccess,
   nextFirstExecutionAttempt,
   nextRedeemAttempt,
   resolveFirstSupplyAmountUsdc,
   resolveFirstYieldSupplyRoute,
   toUsdcBaseUnits,
 } from './yield-execution'
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+import { createPublicClient, encodeFunctionData, erc20Abi, http } from 'viem'
 
 function chainForNetwork(network: NetworkId) {
   return network === 'base-sepolia' ? baseSepolia : arbitrumSepolia
@@ -76,82 +71,6 @@ async function readUsdcAllowance(
     functionName: 'allowance',
     args: [owner, spender],
   })
-}
-
-async function waitForTransactionResult(
-  recordsApi: TransactionRecordsApi,
-  walletId: string,
-  requestId: string,
-  stepLabel: string,
-): Promise<UserTransactionRead> {
-  const maxAttempts = 45
-  const delayMs = 2000
-
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const resp = await recordsApi.getUserTransactionByRequestId(walletId, requestId)
-    const tx = resp.data.result
-    if (!tx) throw new Error('未找到交易记录，请稍后重试')
-
-    if (isTerminalTransactionSuccess(tx.status, tx.status_display)) return tx
-    if (isTerminalTransactionFailure(tx.status, tx.status_display)) {
-      throw new Error(formatTransactionFailureMessage(
-        stepLabel,
-        tx.status_display,
-        tx.status,
-        tx.data?.failed_reason,
-      ))
-    }
-
-    if (attempt < maxAttempts - 1) await sleep(delayMs)
-  }
-
-  throw new Error(`${stepLabel}确认超时，请稍后在历史记录查看状态后重试`)
-}
-
-async function submitContractCallAndWait(
-  transactionsApi: TransactionsApi,
-  recordsApi: TransactionRecordsApi,
-  walletId: string,
-  walletAddress: string,
-  sponsor: boolean,
-  params: {
-    chainId: string
-    contractAddr: `0x${string}`
-    calldata: `0x${string}`
-    requestId: string
-    description: string
-    stepLabel: string
-  },
-): Promise<UserTransactionRead> {
-  const resp = await transactionsApi.contractCall(walletId, {
-    chain_id: params.chainId,
-    contract_addr: params.contractAddr,
-    calldata: params.calldata,
-    src_addr: walletAddress,
-    request_id: params.requestId,
-    sponsor,
-    description: params.description,
-  })
-
-  const submit = resp.data.result
-  if (submit.pending_operation_id || submit.approval_id) {
-    throw new Error('合约调用待额外审批，请在 Cobo App 完成审批后重试')
-  }
-
-  if (isTerminalTransactionFailure(submit.status, submit.status_display)) {
-    throw new Error(formatTransactionFailureMessage(
-      params.stepLabel,
-      submit.status_display,
-      submit.status,
-    ))
-  }
-
-  if (isTerminalTransactionSuccess(submit.status, submit.status_display) && submit.transaction_hash) {
-    const byRequest = await recordsApi.getUserTransactionByRequestId(walletId, params.requestId)
-    return byRequest.data.result
-  }
-
-  return waitForTransactionResult(recordsApi, walletId, params.requestId, params.stepLabel)
 }
 
 function appendExecutionLog(

@@ -20,7 +20,7 @@ export type AgentBootstrapPhase =
 export type FundingStatus = 'idle' | 'processing' | 'ready'
 export type StrategyStatus = 'active' | 'paused' | 'completed'
 export type PactStatus = 'pending' | 'active' | 'completed' | 'terminated' | 'awaiting-approval'
-export type LogType = 'swap' | 'supply' | 'revenue' | 'pact'
+export type LogType = 'swap' | 'supply' | 'revenue' | 'pact' | 'withdraw'
 export type YieldRange = '7d' | '30d'
 export type CawEnvironment = 'dev' | 'prod' | 'custom'
 export type CawPactMode = 'local-draft' | 'cobo-pact' | 'pact-execution-ready'
@@ -253,6 +253,26 @@ export interface DepositInfo {
   coboChainId: string
   coboTokenId: string
   minAmount: number
+}
+
+export interface WithdrawInfo {
+  eoaAddress: string
+  agentAddress: string
+  network: NetworkId
+  coboChainId: string
+  coboTokenId: string
+  liquidUsdc: number
+  suppliedUsdc: number
+  maxWithdrawUsdc: number
+  minAmount: number
+  maxAmount: number
+}
+
+export interface WithdrawResult {
+  txHash: string | null
+  amountUsdc: number
+  status: string
+  liquidUsdc: number
 }
 
 export interface AgentGasWrongChainHint {

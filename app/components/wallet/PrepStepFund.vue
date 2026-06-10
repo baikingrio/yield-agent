@@ -70,6 +70,9 @@ async function copyAddress(addr: string) {
         Tx：
         <UiTxLink :hash="prep.funding.lastTxHash" :network="prep.network" />
       </p>
+      <p class="text-xs text-muted">
+        后续可在控制台「资金管理」中补充或提取 idle USDC。
+      </p>
     </div>
 
     <form v-else class="mt-4 space-y-4" @submit.prevent="emit('deposit')">

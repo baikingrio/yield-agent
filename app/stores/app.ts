@@ -277,11 +277,12 @@ export const useAppStore = defineStore('app', () => {
     return result
   }
 
-  async function executePact(id: string) {
+  async function executePact(id: string, options?: { timeout?: number }) {
     const result = await $fetch<import('../../shared/types/app').PactExecutionResult>(`/api/pacts/${id}/execute`, {
       method: 'POST',
+      timeout: options?.timeout ?? (import.meta.client && window.location.hostname.includes('vercel.app') ? 55_000 : 120_000),
     })
-    await fetchPact(id)
+    await fetchPact(id, { sync: true })
     await fetchLogs({ limit: 10, pactId: id })
     return result
   }

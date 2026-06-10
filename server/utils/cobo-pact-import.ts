@@ -108,7 +108,7 @@ export function importCoboPactIntoState(
     submissionMessage: resolveCoboPactSubmissionMessage(remote.status),
     executionCredentialStored: localStatus === 'active' && Boolean(remote.api_key),
     firstExecutionCompleted: (remote.progress_tx_count ?? 0) > 0,
-    firstExecutionAt: remote.activated_at,
+    firstExecutionAt: (remote.progress_tx_count ?? 0) > 0 ? remote.activated_at : undefined,
   }
 
   state.strategies.push(strategy)

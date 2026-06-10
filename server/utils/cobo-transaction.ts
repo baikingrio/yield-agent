@@ -8,13 +8,28 @@ import {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+export class ExecutionStillPendingError extends Error {
+  constructor(
+    readonly requestId: string,
+    readonly stepLabel: string,
+  ) {
+    super(`${stepLabel}确认中，请稍后刷新或重试`)
+    this.name = 'ExecutionStillPendingError'
+  }
+}
+
+/** Vercel serverless ~60s cap — keep in-request polling short; client resumes later. */
+export function getTransactionPollMaxAttempts(): number {
+  return process.env.VERCEL === '1' ? 10 : 45
+}
+
 export async function waitForTransactionResult(
   recordsApi: TransactionRecordsApi,
   walletId: string,
   requestId: string,
   stepLabel: string,
+  maxAttempts = getTransactionPollMaxAttempts(),
 ): Promise<UserTransactionRead> {
-  const maxAttempts = 45
   const delayMs = 2000
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
@@ -35,7 +50,7 @@ export async function waitForTransactionResult(
     if (attempt < maxAttempts - 1) await sleep(delayMs)
   }
 
-  throw new Error(`${stepLabel}确认超时，请稍后在历史记录查看状态后重试`)
+  throw new ExecutionStillPendingError(requestId, stepLabel)
 }
 
 async function finalizeSubmission(

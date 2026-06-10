@@ -12,8 +12,9 @@ import { assertAgentWalletHasGas, getAgentNativeEthBalance, resolveContractCallS
 import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
 import { APP_CHAIN } from './chain'
 import { extractCoboErrorMessage } from './cobo-client'
-import { submitContractCallAndWait } from './cobo-transaction'
+import { ExecutionStillPendingError, submitContractCallAndWait } from './cobo-transaction'
 import { syncWalletSummaryFromCobo } from './cobo-preparation'
+import { applyPresetDemoWallet } from './pacttrader-demo-wallet'
 import { syncYieldSnapshotFromChain } from './yield-snapshot'
 import { resolveRedeemApiKey } from './pact-credentials'
 import { resolvePactExecutionApiKey } from './pact-credentials'
@@ -23,7 +24,10 @@ import {
   buildRedeemRequestId,
   encodeYieldSupplyCalldata,
   encodeYieldWithdrawCalldata,
+  formatTransactionFailureMessage,
   isStaleFirstExecution,
+  isTerminalTransactionFailure,
+  isTerminalTransactionSuccess,
   nextFirstExecutionAttempt,
   nextRedeemAttempt,
   resolveFirstSupplyAmountUsdc,
@@ -88,10 +92,100 @@ function appendExecutionLog(
   })
 }
 
+function pendingExecutionResult(action: string, txHash = ''): PactExecutionResult {
+  return {
+    txHash,
+    status: '链上确认中',
+    action,
+    pending: true,
+  }
+}
+
+async function lookupTransactionByRequestId(
+  recordsApi: TransactionRecordsApi,
+  walletId: string,
+  requestId: string,
+) {
+  try {
+    const resp = await recordsApi.getUserTransactionByRequestId(walletId, requestId)
+    return resp.data.result ?? null
+  } catch {
+    return null
+  }
+}
+
+function finalizeSuccessfulSupply(
+  state: AppState,
+  pact: Pact,
+  action: string,
+  supplyTx: { transaction_hash?: string, status_display?: string, id?: string },
+): PactExecutionResult {
+  const txHash = supplyTx.transaction_hash || ''
+  const status = supplyTx.status_display || 'Success'
+  pact.firstExecutionCompleted = true
+  pact.firstExecutionAt = new Date().toISOString()
+  pact.firstExecutionTxHash = txHash
+  appendExecutionLog(state, pact.id, action, txHash, status)
+  return {
+    txHash,
+    status,
+    coboTransactionId: supplyTx.id,
+    action,
+  }
+}
+
+async function tryResumeFirstExecution(
+  state: AppState,
+  pact: Pact,
+  recordsApi: TransactionRecordsApi,
+  walletId: string,
+  action: string,
+): Promise<PactExecutionResult | null> {
+  const attempt = pact.firstExecutionAttempt
+  if (!attempt) return null
+
+  const supplyRequestId = buildExecutionRequestId(pact.id, 'supply', attempt)
+  const supplyTx = await lookupTransactionByRequestId(recordsApi, walletId, supplyRequestId)
+  if (supplyTx) {
+    if (isTerminalTransactionSuccess(supplyTx.status, supplyTx.status_display)) {
+      await syncYieldSnapshotFromChain(state).catch(() => {})
+      return finalizeSuccessfulSupply(state, pact, action, supplyTx)
+    }
+    if (isTerminalTransactionFailure(supplyTx.status, supplyTx.status_display)) {
+      throw new Error(formatTransactionFailureMessage(
+        `${action}（恢复）`,
+        supplyTx.status_display,
+        supplyTx.status,
+        supplyTx.data?.failed_reason,
+      ))
+    }
+    return pendingExecutionResult(action, supplyTx.transaction_hash || '')
+  }
+
+  const approveRequestId = buildExecutionRequestId(pact.id, 'approve', attempt)
+  const approveTx = await lookupTransactionByRequestId(recordsApi, walletId, approveRequestId)
+  if (approveTx) {
+    if (isTerminalTransactionFailure(approveTx.status, approveTx.status_display)) {
+      throw new Error(formatTransactionFailureMessage(
+        `USDC 授权（恢复）`,
+        approveTx.status_display,
+        approveTx.status,
+        approveTx.data?.failed_reason,
+      ))
+    }
+    if (!isTerminalTransactionSuccess(approveTx.status, approveTx.status_display)) {
+      return pendingExecutionResult(`USDC 授权 ${action.split(' ')[0] ?? ''}`.trim())
+    }
+  }
+
+  return null
+}
+
 export async function executeFirstPactRecipe(
   state: AppState,
   pactId: string,
 ): Promise<PactExecutionResult> {
+  applyPresetDemoWallet(state)
   const pact = findPact(state, pactId)
   if (!pact) throw new Error('Pact not found')
   if (pact.status !== 'active') {
@@ -137,18 +231,25 @@ export async function executeFirstPactRecipe(
     throw new Error('Agent Wallet 无可用 USDC，请先完成充值后再执行存入')
   }
 
-  const attempt = nextFirstExecutionAttempt(pact)
-  pact.firstExecutionAttempt = attempt
-
   const amount = toUsdcBaseUnits(supplyUsdc, chainConfig.usdcDecimals)
   const supplyRoute = resolveFirstYieldSupplyRoute(chainConfig)
   const transactionsApi = createPactScopedTransactionsApi(apiKey)
   const recordsApi = createPactScopedTransactionRecordsApi(apiKey)
 
-  const approveRequestId = buildExecutionRequestId(pact.id, 'approve', attempt)
-  const supplyRequestId = buildExecutionRequestId(pact.id, 'supply', attempt)
   const networkLabel = NETWORK_LABELS[network]
   const action = `${supplyRoute.protocolLabel} 存入 ${supplyUsdc} USDC（${networkLabel} 测试网）`
+
+  let attempt = pact.firstExecutionAttempt
+  if (!attempt) {
+    attempt = nextFirstExecutionAttempt(pact)
+    pact.firstExecutionAttempt = attempt
+  }
+
+  const approveRequestId = buildExecutionRequestId(pact.id, 'approve', attempt)
+  const supplyRequestId = buildExecutionRequestId(pact.id, 'supply', attempt)
+
+  const resumed = await tryResumeFirstExecution(state, pact, recordsApi, walletId, action)
+  if (resumed) return resumed
 
   try {
     const allowance = await readUsdcAllowance(
@@ -165,14 +266,23 @@ export async function executeFirstPactRecipe(
         args: [supplyRoute.approveSpender, amount],
       })
 
-      await submitContractCallAndWait(transactionsApi, recordsApi, walletId, walletAddress, sponsor, {
-        chainId: chainConfig.coboChainId,
-        contractAddr: chainConfig.usdcContract,
-        calldata: approveCalldata,
-        requestId: approveRequestId,
-        description: `YieldAgent approve USDC for ${supplyRoute.protocolLabel} (${supplyUsdc} USDC)`,
-        stepLabel: `USDC 授权 ${supplyRoute.protocolLabel}`,
-      })
+      try {
+        await submitContractCallAndWait(transactionsApi, recordsApi, walletId, walletAddress, sponsor, {
+          chainId: chainConfig.coboChainId,
+          contractAddr: chainConfig.usdcContract,
+          calldata: approveCalldata,
+          requestId: approveRequestId,
+          description: `YieldAgent approve USDC for ${supplyRoute.protocolLabel} (${supplyUsdc} USDC)`,
+          stepLabel: `USDC 授权 ${supplyRoute.protocolLabel}`,
+        })
+      } catch (err) {
+        if (err instanceof ExecutionStillPendingError) {
+          pact.firstExecutionCompleted = false
+          pact.firstExecutionTxHash = ''
+          return pendingExecutionResult(err.stepLabel)
+        }
+        throw err
+      }
     }
 
     const supplyCalldata = encodeYieldSupplyCalldata(
@@ -190,23 +300,14 @@ export async function executeFirstPactRecipe(
       stepLabel: `${supplyRoute.protocolLabel} 存入`,
     })
 
-    const txHash = supplyTx.transaction_hash || ''
-    const status = supplyTx.status_display || 'Success'
-
-    pact.firstExecutionCompleted = true
-    pact.firstExecutionAt = new Date().toISOString()
-    pact.firstExecutionTxHash = txHash
-
-    appendExecutionLog(state, pact.id, action, txHash, status)
     await syncYieldSnapshotFromChain(state).catch(() => {})
-
-    return {
-      txHash,
-      status,
-      coboTransactionId: supplyTx.id,
-      action,
-    }
+    return finalizeSuccessfulSupply(state, pact, action, supplyTx)
   } catch (err) {
+    if (err instanceof ExecutionStillPendingError) {
+      pact.firstExecutionCompleted = false
+      pact.firstExecutionTxHash = ''
+      return pendingExecutionResult(err.stepLabel)
+    }
     pact.firstExecutionCompleted = false
     pact.firstExecutionTxHash = ''
     appendExecutionLog(

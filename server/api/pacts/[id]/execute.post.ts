@@ -7,6 +7,8 @@ import { resolvePactExecutionApiKey } from '../../../utils/pact-credentials'
 import { findPactById } from '../../../utils/pact-lookup'
 import { pactResolveHttpError, resolvePactById } from '../../../utils/pact-resolve'
 
+export const maxDuration = 60
+
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) {

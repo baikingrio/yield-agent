@@ -11,6 +11,8 @@ import {
 
 const POLL_MS = 4000
 const MAX_POLL_ATTEMPTS = 75
+const EXECUTION_POLL_MS = 5000
+const MAX_EXECUTION_POLL_ATTEMPTS = 36
 
 export function usePactManagement() {
   const route = useRoute()
@@ -111,6 +113,60 @@ export function usePactManagement() {
     })
   }
 
+  function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  async function pollExecutionUntilDone(pactId: string) {
+    for (let attempt = 0; attempt < MAX_EXECUTION_POLL_ATTEMPTS; attempt += 1) {
+      await sleep(EXECUTION_POLL_MS)
+      try {
+        const result = await store.executePact(pactId, { timeout: 55_000 })
+        if (!result.pending) {
+          actionBanner.value = {
+            tone: 'success',
+            message: `首次 Recipe 已执行，tx：${result.txHash || '已提交'}`,
+          }
+          return
+        }
+        actionBanner.value = {
+          tone: 'info',
+          message: result.action ? `${result.action}，等待链上确认…` : '交易已提交，等待链上确认…',
+        }
+      } catch (e: unknown) {
+        const message = extractApiErrorMessage(e, 'Recipe 执行失败')
+        const retryable = /确认中|timeout|超时|network|fetch/i.test(message)
+        if (!retryable && attempt > 2) {
+          executeError.value = message
+          actionBanner.value = { tone: 'error', message }
+          throw e
+        }
+        actionBanner.value = {
+          tone: 'info',
+          message: '链上确认中，继续等待…',
+        }
+      }
+    }
+    executeError.value = '链上确认超时。请稍后点击「执行首次 Recipe」重试。'
+    actionBanner.value = { tone: 'error', message: executeError.value }
+  }
+
+  async function runFirstExecution(pactId: string) {
+    const result = await store.executePact(pactId, { timeout: 55_000 })
+    if (!result.pending) {
+      actionBanner.value = {
+        tone: 'success',
+        message: `首次 Recipe 已执行，tx：${result.txHash || '已提交'}`,
+      }
+      return
+    }
+    actionBanner.value = {
+      tone: 'info',
+      message: result.action ? `${result.action}，等待链上确认…` : '交易已提交，等待链上确认…',
+    }
+    await pollExecutionUntilDone(pactId)
+  }
+
   async function tryAutoExecute(pactId: string) {
     const pact = store.pacts.find((p) => p.id === pactId)
     if (!pact || pact.submissionMode !== 'cobo' || pact.status !== 'active') return
@@ -131,14 +187,21 @@ export function usePactManagement() {
     executing.value = true
     executeError.value = ''
     try {
-      const result = await store.executePact(pactId)
-      actionBanner.value = {
-        tone: 'success',
-        message: `首次 Recipe 已执行，tx：${result.txHash || '已提交'}`,
-      }
+      await runFirstExecution(pactId)
       clearPollTimer()
     } catch (e: unknown) {
-      executeError.value = extractApiErrorMessage(e, 'Recipe 执行失败')
+      const message = extractApiErrorMessage(e, 'Recipe 执行失败')
+      const retryable = /确认中|timeout|超时|network|fetch/i.test(message)
+      if (retryable) {
+        try {
+          await pollExecutionUntilDone(pactId)
+          clearPollTimer()
+          return
+        } catch {
+          // fall through to error banner
+        }
+      }
+      executeError.value = message
       actionBanner.value = {
         tone: 'error',
         message: executeError.value,
@@ -402,11 +465,7 @@ export function usePactManagement() {
     executing.value = true
     executeError.value = ''
     try {
-      const result = await store.executePact(selectedId.value)
-      actionBanner.value = {
-        tone: 'success',
-        message: `首次 Recipe 已执行，tx：${result.txHash || '已提交'}`,
-      }
+      await runFirstExecution(selectedId.value)
     } catch (e: unknown) {
       executeError.value = extractApiErrorMessage(e, 'Recipe 执行失败')
       actionBanner.value = { tone: 'error', message: executeError.value }

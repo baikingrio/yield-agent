@@ -98,6 +98,8 @@ export interface PactExecutionResult {
   status: string
   coboTransactionId?: string
   action: string
+  /** 交易已提交，链上确认中（Vercel 等短超时环境由前端继续轮询） */
+  pending?: boolean
 }
 
 export interface PactRedeemResult {

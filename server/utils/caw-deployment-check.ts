@@ -59,7 +59,7 @@ function buildNextActions(blockers: CawDeploymentBlocker[]): string[] {
     actions.push('在 Hermes 主机运行 caw node start 并确认节点在线')
   }
   if (blockers.includes('wallet_preparing')) {
-    actions.push('若超过 5 分钟仍为 preparing：重置准备流程后优先「导入已 onboard 钱包」')
+    actions.push('若超过 5 分钟仍为 preparing：重置准备流程后重新创建 Agent Wallet')
   }
   if (actions.length === 0) {
     actions.push('部署自检通过，可继续 Agent Wallet 初始化')

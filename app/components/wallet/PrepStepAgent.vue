@@ -14,13 +14,11 @@ const props = defineProps<{
   bootstrapPhaseLabel: string
   bootstrapMessage: string | null
   bootstrapUserCopy: BootstrapUserCopy
-  preferImportFirst?: boolean
   coboConfigured: boolean
 }>()
 
 const emit = defineEmits<{
   create: []
-  import: []
 }>()
 
 const copied = ref(false)
@@ -171,42 +169,14 @@ async function copyAddress(addr: string) {
       </button>
     </div>
     <div v-else class="mt-4 flex flex-wrap gap-3">
-      <template v-if="preferImportFirst">
-        <button
-          type="button"
-          class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors duration-150 hover:bg-primary-active disabled:opacity-50"
-          :disabled="locked || busy || agentPolling"
-          @click="emit('import')"
-        >
-          导入已 onboard 钱包
-        </button>
-        <button
-          type="button"
-          class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-4 text-sm font-semibold text-muted transition-colors duration-150 hover:bg-surface-elevated hover:text-on-dark disabled:opacity-50"
-          :disabled="locked || busy || agentPolling"
-          @click="emit('create')"
-        >
-          {{ createLabel }}
-        </button>
-      </template>
-      <template v-else>
-        <button
-          type="button"
-          class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-4 text-sm font-semibold text-on-dark transition-colors duration-150 hover:bg-surface-elevated disabled:opacity-50"
-          :disabled="locked || busy || agentPolling"
-          @click="emit('create')"
-        >
-          {{ createLabel }}
-        </button>
-        <button
-          type="button"
-          class="inline-flex h-10 items-center justify-center rounded-md border border-hairline px-4 text-sm font-semibold text-muted transition-colors duration-150 hover:bg-surface-elevated hover:text-on-dark disabled:opacity-50"
-          :disabled="locked || busy || agentPolling"
-          @click="emit('import')"
-        >
-          导入已 onboard 钱包
-        </button>
-      </template>
+      <button
+        type="button"
+        class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary transition-colors duration-150 hover:bg-primary-active disabled:opacity-50"
+        :disabled="locked || busy || agentPolling"
+        @click="emit('create')"
+      >
+        {{ createLabel }}
+      </button>
     </div>
   </section>
 </template>

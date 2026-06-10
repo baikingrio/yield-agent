@@ -45,8 +45,6 @@ export function useWalletPreparation() {
     maxPollAttempts: MAX_AGENT_POLL_ATTEMPTS,
   }))
 
-  const preferImportFirst = computed(() => store.deploymentCheck?.preferEnvKey ?? false)
-
   const createAgentLabel = computed(() => {
     if (busy.value || agentPolling.value) return '初始化中…'
     if (prep.value?.steps.agent_wallet === 'in_progress') return '继续初始化'
@@ -155,20 +153,6 @@ export function useWalletPreparation() {
     }
   }
 
-  async function runImportAgent() {
-    if (stepLocked('agent_wallet')) return
-    pageError.value = null
-    stopAgentPolling()
-    busy.value = true
-    try {
-      await store.importAgentWalletFromCli()
-    } catch {
-      pageError.value = store.error
-    } finally {
-      busy.value = false
-    }
-  }
-
   async function runDeposit() {
     if (stepLocked('funding')) return
     const amount = Number(depositAmount.value)
@@ -227,7 +211,6 @@ export function useWalletPreparation() {
     agentPollAttempt,
     maxAgentPollAttempts: MAX_AGENT_POLL_ATTEMPTS,
     bootstrapUserCopy,
-    preferImportFirst,
     depositPhase,
     depositAmount,
     pageError,
@@ -243,7 +226,6 @@ export function useWalletPreparation() {
     stepLocked,
     init,
     runCreateAgent,
-    runImportAgent,
     runDeposit,
     runReset,
     continueUrl,

@@ -13,13 +13,11 @@ const {
   agentPolling,
   agentPollAttempt,
   maxAgentPollAttempts,
-  preferImportFirst,
   coboConfigured,
   networkLabel,
   stepLocked,
   init,
   runCreateAgent,
-  runImportAgent,
   runDeposit,
   runReset,
   continueUrl,
@@ -76,10 +74,8 @@ const {
           :bootstrap-user-copy="bootstrapUserCopy"
           :agent-poll-attempt="agentPollAttempt"
           :max-agent-poll-attempts="maxAgentPollAttempts"
-          :prefer-import-first="preferImportFirst"
           :cobo-configured="coboConfigured"
           @create="runCreateAgent"
-          @import="runImportAgent"
         />
         <WalletPrepStepFund
           :prep="prep"

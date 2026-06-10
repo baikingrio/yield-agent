@@ -41,7 +41,7 @@ export function mapBootstrapUserCopy(input: BootstrapUserCopyInput): BootstrapUs
     if (messageIncludes(message, '不匹配') || messageIncludes(message, 'not authorized')) {
       return {
         title: '凭证与钱包不匹配',
-        body: '当前 API Key 无权操作此 Agent Wallet。请使用 Hermes 的 Key，重置后优先「导入已 onboard 钱包」。',
+        body: '当前 API Key 无权操作此 Agent Wallet。请使用 Hermes 的 Key，重置后重新创建 Agent Wallet。',
         severity: 'error',
         ctaLabel: '查看部署自检',
         ctaHref: SETTINGS_HREF,
@@ -74,7 +74,7 @@ export function mapBootstrapUserCopy(input: BootstrapUserCopyInput): BootstrapUs
   if (phase === 'bootstrapping' && timedOut) {
     return {
       title: '初始化耗时较长',
-      body: 'Vault 仍未就绪。请按下方运维清单逐项检查，或重置后导入 Hermes 上已 active 的钱包。',
+      body: 'Vault 仍未就绪。请按下方运维清单逐项检查，或重置后重新创建 Agent Wallet。',
       severity: 'warning',
       ctaLabel: '打开部署自检',
       ctaHref: SETTINGS_HREF,
@@ -121,7 +121,7 @@ export function mapBootstrapUserCopy(input: BootstrapUserCopyInput): BootstrapUs
 
   return {
     title: '准备 Agent Wallet',
-    body: message ?? '点击「创建 Agent Wallet」或「导入已 onboard 钱包」开始。',
+    body: message ?? '点击「创建 Agent Wallet」开始。',
     severity: 'info',
     ctaLabel: null,
     ctaHref: null,

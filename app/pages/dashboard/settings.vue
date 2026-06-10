@@ -16,9 +16,13 @@ async function load() {
     await Promise.all([
       store.fetchSettings(),
       store.fetchCawReadiness(),
-      store.fetchDeploymentCheck().catch(() => null),
-      store.fetchCawOnboardStatus(),
+      store.fetchDeploymentCheck({ sync: false }).catch(() => null),
+      store.fetchCawOnboardStatus({ sync: false }),
       store.fetchStrategyAgentReadiness(),
+    ])
+    void Promise.all([
+      store.fetchDeploymentCheck({ sync: true }).catch(() => null),
+      store.fetchCawOnboardStatus({ sync: true }).catch(() => null),
     ])
   } finally {
     loading.value = false
@@ -56,7 +60,7 @@ async function refreshDeploymentCheck() {
   cawBusy.value = true
   store.clearError()
   try {
-    await store.fetchDeploymentCheck()
+    await store.fetchDeploymentCheck({ sync: true })
   } finally {
     cawBusy.value = false
   }
@@ -76,7 +80,7 @@ async function refreshCawOnboardStatus() {
   cawBusy.value = true
   store.clearError()
   try {
-    await store.fetchCawOnboardStatus()
+    await store.fetchCawOnboardStatus({ sync: true })
   } finally {
     cawBusy.value = false
   }

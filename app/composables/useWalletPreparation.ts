@@ -97,7 +97,7 @@ export function useWalletPreparation() {
       const response = await store.pollAgentWalletStatus()
       if (response.done && prep.value?.agentWallet.pairing?.status === 'paired') {
         stopAgentPolling()
-        void Promise.all([store.fetchWallet(), store.fetchSettings(), store.fetchCawReadiness()])
+        void Promise.all([store.fetchWallet({ sync: true }), store.fetchSettings(), store.fetchCawReadiness()])
         return
       }
     } catch {
@@ -120,7 +120,7 @@ export function useWalletPreparation() {
       await Promise.all([
         store.fetchPreparation(),
         store.fetchSettings(),
-        store.fetchDeploymentCheck().catch(() => null),
+        store.fetchDeploymentCheck({ sync: false }).catch(() => null),
       ])
       const needsBootstrapPoll = prep.value?.steps.agent_wallet === 'in_progress'
       const needsPairingPoll = Boolean(

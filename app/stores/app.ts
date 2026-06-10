@@ -46,9 +46,10 @@ export const useAppStore = defineStore('app', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchWallet() {
+  async function fetchWallet(options?: { sync?: boolean }) {
     try {
-      wallet.value = await $fetch<WalletSummary>('/api/wallet')
+      const query = options?.sync ? { sync: 'true' } : undefined
+      wallet.value = await $fetch<WalletSummary>('/api/wallet', { query })
     } catch (e) {
       error.value = apiErrorMessage(e)
       throw e
@@ -140,9 +141,10 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function fetchDeploymentCheck() {
+  async function fetchDeploymentCheck(options?: { sync?: boolean }) {
     try {
-      deploymentCheck.value = await $fetch<CawDeploymentCheck>('/api/caw/deployment-check')
+      const query = options?.sync ? { sync: 'true' } : undefined
+      deploymentCheck.value = await $fetch<CawDeploymentCheck>('/api/caw/deployment-check', { query })
       return deploymentCheck.value
     } catch (e) {
       error.value = apiErrorMessage(e)
@@ -178,9 +180,10 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function fetchCawOnboardStatus() {
+  async function fetchCawOnboardStatus(options?: { sync?: boolean }) {
     try {
-      cawOnboardStatus.value = await $fetch<CawOnboardStatus>('/api/caw/onboard/status')
+      const query = options?.sync ? { sync: 'true' } : undefined
+      cawOnboardStatus.value = await $fetch<CawOnboardStatus>('/api/caw/onboard/status', { query })
       return cawOnboardStatus.value
     } catch (e) {
       error.value = apiErrorMessage(e)
@@ -290,7 +293,7 @@ export const useAppStore = defineStore('app', () => {
     })
     await Promise.all([
       fetchPact(id),
-      fetchWallet(),
+      fetchWallet({ sync: true }),
       fetchLogs({ limit: 10, pactId: id }),
     ])
     return result
@@ -316,7 +319,10 @@ export const useAppStore = defineStore('app', () => {
     try {
       preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation')
       if (preparation.value.ready) {
-        await fetchWallet()
+        if (!wallet.value) {
+          await fetchWallet({ sync: false })
+        }
+        void fetchWallet({ sync: true })
       }
     } catch (e) {
       error.value = apiErrorMessage(e)
@@ -361,7 +367,7 @@ export const useAppStore = defineStore('app', () => {
       method: 'POST',
     })
     applyAgentBootstrapResponse(response)
-    void Promise.all([fetchWallet(), fetchSettings(), fetchCawReadiness()])
+    void Promise.all([fetchWallet({ sync: true }), fetchSettings(), fetchCawReadiness()])
     return preparation.value
   }
 
@@ -376,7 +382,7 @@ export const useAppStore = defineStore('app', () => {
       method: 'POST',
     })
     agentBootstrap.value = preparation.value?.agentBootstrap ?? null
-    void Promise.all([fetchWallet(), fetchSettings(), fetchCawReadiness()])
+    void Promise.all([fetchWallet({ sync: true }), fetchSettings(), fetchCawReadiness()])
     return preparation.value
   }
 
@@ -385,7 +391,7 @@ export const useAppStore = defineStore('app', () => {
       method: 'POST',
       body: { amountUsdc, txHash },
     })
-    await Promise.all([fetchWallet(), fetchLogs({ limit: 10 })])
+    await Promise.all([fetchWallet({ sync: true }), fetchLogs({ limit: 10 })])
     return preparation.value
   }
 
@@ -406,7 +412,7 @@ export const useAppStore = defineStore('app', () => {
       method: 'POST',
       body: { amountUsdc },
     })
-    await Promise.all([fetchWallet(), fetchPreparation(), fetchLogs({ limit: 10 })])
+    await Promise.all([fetchWallet({ sync: true }), fetchPreparation(), fetchLogs({ limit: 10 })])
     return result
   }
 
@@ -418,7 +424,7 @@ export const useAppStore = defineStore('app', () => {
     preparation.value = await $fetch<WalletPreparation>('/api/wallet/preparation/reset', {
       method: 'POST',
     })
-    await fetchWallet()
+    await fetchWallet({ sync: true })
     return preparation.value
   }
 

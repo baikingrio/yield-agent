@@ -6,6 +6,13 @@ import {
   DASHBOARD_PACTS,
 } from '#shared/constants/dashboard-routes'
 
+const props = withDefaults(defineProps<{
+  /** Dashboard layout provides the divider; skip the component border. */
+  embedded?: boolean
+}>(), {
+  embedded: false,
+})
+
 const store = useAppStore()
 const { isConnected } = useWalletConnect()
 
@@ -22,7 +29,7 @@ const links = [
 </script>
 
 <template>
-  <footer class="border-t border-hairline pt-10">
+  <footer :class="props.embedded ? undefined : 'border-t border-hairline pt-10'">
     <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <UiAppLogo variant="full" size="sm" />

@@ -1,8 +1,9 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { CawOnboardPrompt, CawOnboardStatus } from '../../shared/types/app'
+import type { AppState, CawOnboardPrompt, CawOnboardStatus } from '../../shared/types/app'
 
 const execFileAsync = promisify(execFile)
+const STATUS_CLI_TIMEOUT_MS = 8_000
 
 export type CawOnboardPhase = 'unknown' | 'active' | 'needs_input' | 'running' | 'error'
 
@@ -14,9 +15,12 @@ interface CawOnboardStepResult extends CawOnboardStatus {
   rawPhase: string | null
 }
 
-async function defaultRunner(args: string[]): Promise<{ stdout: string; stderr?: string }> {
+async function execCaw(
+  args: string[],
+  timeoutMs: number,
+): Promise<{ stdout: string; stderr?: string }> {
   const { stdout, stderr } = await execFileAsync('caw', args, {
-    timeout: 120_000,
+    timeout: timeoutMs,
     maxBuffer: 1024 * 1024,
     env: {
       ...process.env,
@@ -24,6 +28,14 @@ async function defaultRunner(args: string[]): Promise<{ stdout: string; stderr?:
     },
   })
   return { stdout, stderr }
+}
+
+async function defaultRunner(args: string[]): Promise<{ stdout: string; stderr?: string }> {
+  return execCaw(args, 120_000)
+}
+
+async function statusRunner(args: string[]): Promise<{ stdout: string; stderr?: string }> {
+  return execCaw(args, STATUS_CLI_TIMEOUT_MS)
 }
 
 function parseJson(stdout: string): Record<string, unknown> {
@@ -99,14 +111,58 @@ async function runJson(args: string[], options: CawCliOptions): Promise<Record<s
   }
 }
 
-export async function getCawOnboardStatus(options: CawCliOptions = {}): Promise<CawOnboardStatus> {
-  const statusPayload = await runJson(['status'], options)
-  let walletPayload: Record<string, unknown> = {}
-  try {
-    walletPayload = await runJson(['wallet', 'current'], options)
-  } catch {
-    walletPayload = {}
+export function buildCawOnboardStatusFromState(state: AppState): CawOnboardStatus {
+  const prep = state.walletPreparation
+  const agent = prep.agentWallet
+  const bootstrap = prep.agentBootstrap
+  const paired = agent.pairing?.status === 'paired'
+  const walletUuid = agent.coboWalletId
+  const walletCreated = agent.created && Boolean(walletUuid)
+
+  let phase: CawOnboardPhase = 'unknown'
+  if (paired && walletCreated) {
+    phase = 'active'
+  } else if (bootstrap?.phase === 'failed') {
+    phase = 'error'
+  } else if (
+    bootstrap?.phase === 'pairing'
+    || bootstrap?.phase === 'bootstrapping'
+    || bootstrap?.phase === 'tss_check'
+    || prep.steps.agent_wallet === 'in_progress'
+  ) {
+    phase = 'running'
   }
+
+  const walletStatus = bootstrap?.walletStatus
+    ?? (paired ? 'active' : walletCreated ? 'preparing' : null)
+
+  return {
+    healthy: walletCreated || prep.steps.eoa === 'completed',
+    walletStatus,
+    walletPaired: paired,
+    agentId: state.settings.agentId ?? null,
+    agentName: null,
+    walletUuid,
+    walletName: null,
+    apiUrl: null,
+    phase,
+    sessionId: bootstrap?.sessionId ?? null,
+    needsInput: false,
+    prompts: [],
+    nextAction: bootstrap?.message ?? null,
+    lastError: bootstrap?.phase === 'failed' ? (bootstrap.message ?? null) : null,
+  }
+}
+
+export async function getCawOnboardStatus(options: CawCliOptions = {}): Promise<CawOnboardStatus> {
+  const cliOptions: CawCliOptions = {
+    ...options,
+    runner: options.runner ?? statusRunner,
+  }
+  const [statusPayload, walletPayload] = await Promise.all([
+    runJson(['status'], cliOptions),
+    runJson(['wallet', 'current'], cliOptions).catch(() => ({})),
+  ])
   return statusFrom(statusPayload, walletPayload)
 }
 

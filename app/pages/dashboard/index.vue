@@ -15,12 +15,13 @@ async function loadDashboard() {
   store.loading = true
   try {
     await Promise.all([
-      store.fetchWallet(),
+      store.fetchWallet({ sync: false }),
       store.fetchStrategies(),
       store.fetchPacts(),
       store.fetchLogs({ limit: 10 }),
       store.fetchYieldSeries(undefined, { sync: true }),
     ])
+    void store.fetchWallet({ sync: true })
   } finally {
     store.loading = false
     initialLoading.value = false

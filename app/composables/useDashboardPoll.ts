@@ -7,6 +7,7 @@ export function useDashboardPoll() {
   function poll() {
     store.fetchLogs({ limit: 10 }).catch(() => {})
     store.fetchYieldSeries(undefined, { sync: true }).catch(() => {})
+    store.fetchWallet({ sync: true }).catch(() => {})
   }
 
   onMounted(() => {

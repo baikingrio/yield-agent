@@ -228,7 +228,7 @@ export function useCreateStrategy() {
     try {
       await Promise.all([store.fetchPreparation(), store.fetchSettings()])
       if (!store.preparation?.ready) {
-        await store.fetchWallet()
+        await store.fetchWallet({ sync: false })
       }
     } catch { /* page shows gate */ }
   })

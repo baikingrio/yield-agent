@@ -1,7 +1,56 @@
 import { describe, expect, it } from 'vitest'
-import { getCawOnboardStatus, runCawOnboardStep } from '../server/utils/caw-onboard'
+import type { AppState } from '../shared/types/app'
+import {
+  buildCawOnboardStatusFromState,
+  getCawOnboardStatus,
+  runCawOnboardStep,
+} from '../server/utils/caw-onboard'
+
+function createState(): AppState {
+  return {
+    wallet: { address: '', totalAssetsUsdc: 0, currentApy: 0, cumulativeYieldUsdc: 0 },
+    walletPreparation: {
+      network: 'base-sepolia',
+      eoa: { connected: true, address: '0xEoa', label: 'Demo EOA' },
+      agentWallet: {
+        created: true,
+        address: '0xAgent',
+        coboWalletId: 'wallet-1',
+        pairing: { status: 'paired', code: null, expiresAt: null },
+      },
+      funding: { status: 'ready', depositedUsdc: 500, availableUsdc: 500, lastTxHash: null },
+      steps: { eoa: 'completed', agent_wallet: 'completed', funding: 'completed' },
+      ready: true,
+      updatedAt: new Date(0).toISOString(),
+    },
+    strategies: [],
+    pacts: [],
+    logs: [],
+    yieldSeries7d: [],
+    yieldSeries30d: [],
+    settings: {
+      network: 'base-sepolia',
+      apiKeyConfigured: true,
+      defaultAgentFee: 10,
+      userSplit: 90,
+      agentId: 'agent-1',
+    },
+  }
+}
 
 describe('caw onboard utility', () => {
+  it('builds onboard status from local state without CLI', () => {
+    const result = buildCawOnboardStatusFromState(createState())
+    expect(result).toMatchObject({
+      healthy: true,
+      walletStatus: 'active',
+      walletPaired: true,
+      phase: 'active',
+      agentId: 'agent-1',
+      walletUuid: 'wallet-1',
+    })
+  })
+
   it('returns sanitized active wallet status without API keys', async () => {
     const result = await getCawOnboardStatus({
       runner: async (args) => {

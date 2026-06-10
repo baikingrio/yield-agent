@@ -217,33 +217,63 @@ export function usePactManagement() {
     schedulePoll(pact.id, pollAttempt.value)
   }
 
+  async function syncVisibleLivePacts() {
+    const targets = new Set<string>()
+    if (selectedId.value) targets.add(selectedId.value)
+
+    for (const pact of store.pacts) {
+      if (pact.submissionMode !== 'cobo') continue
+      if (!['pending', 'active', 'awaiting-approval'].includes(pact.status)) continue
+      if (!pactMatchesFilter(pact, statusFilter.value)) continue
+      targets.add(pact.id)
+    }
+
+    if (!targets.size) return
+
+    await Promise.all(
+      [...targets].map((id) => store.fetchPact(id, { sync: true }).catch(() => {})),
+    )
+    await store.fetchPacts(pactListFetchStatus(statusFilter.value), { sync: false })
+  }
+
   async function load(options?: { sync?: boolean }) {
     loading.value = true
     store.clearError()
     actionBanner.value = null
     try {
-      await store.fetchPreparation().catch(() => {})
-      await store.fetchStrategies()
-      await store.fetchPacts(pactListFetchStatus(statusFilter.value), { sync: options?.sync ?? true })
+      const preparationTask = store.preparation
+        ? Promise.resolve()
+        : store.fetchPreparation().catch(() => {})
 
-      const qid = route.query.id
-      if (typeof qid === 'string') {
-        await store.fetchPact(qid).catch(() => {})
-      }
-
-      const pact = selectedPact.value
-      if (pact) {
-        autoExecuteAttempted.value = false
-        executeError.value = ''
-        if (pact.status === 'active'
-          && (!pact.firstExecutionCompleted || !pact.firstExecutionTxHash?.trim())) {
-          await tryAutoExecute(pact.id)
-        } else {
-          maybeStartPolling(pact)
-        }
-      }
+      await Promise.all([
+        preparationTask,
+        store.fetchStrategies(),
+        store.fetchPacts(pactListFetchStatus(statusFilter.value), { sync: false }),
+      ])
     } finally {
       loading.value = false
+    }
+
+    const pact = selectedPact.value
+    if (pact) {
+      autoExecuteAttempted.value = false
+      executeError.value = ''
+      if (pact.status === 'awaiting-approval' || pact.status === 'pending') {
+        maybeStartPolling(pact)
+      }
+    }
+
+    if (options?.sync !== false) {
+      void syncVisibleLivePacts().then(() => {
+        const refreshed = selectedPact.value
+        if (!refreshed) return
+        if (refreshed.status === 'active'
+          && (!refreshed.firstExecutionCompleted || !refreshed.firstExecutionTxHash?.trim())) {
+          void tryAutoExecute(refreshed.id)
+        } else if (refreshed.status === 'awaiting-approval' || refreshed.status === 'pending') {
+          maybeStartPolling(refreshed)
+        }
+      })
     }
   }
 

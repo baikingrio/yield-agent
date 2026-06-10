@@ -222,7 +222,7 @@ HERMES_PROFILE=default
 
 当前版本使用 SQLite 持久化策略、Pact 与审计日志，并接入真实测试网钱包准备与 Cobo Pact 提交流程：
 
-- `GET /api/wallet`：Agent Wallet 摘要
+- `GET /api/wallet`：Agent Wallet 摘要（默认返回本地缓存；`?sync=true` 时从 Cobo 同步 USDC 余额）
 - `GET /api/wallet/preparation`：钱包准备状态
 - `POST /api/wallet/preparation/connect-eoa`：连接 EOA
 - `POST /api/wallet/preparation/create-agent`：创建 CAW Agent Wallet

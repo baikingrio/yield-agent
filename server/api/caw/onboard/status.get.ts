@@ -1,6 +1,11 @@
-import { getCawOnboardStatus } from '../../../utils/caw-onboard'
+import { getState } from '../../../utils/app-store'
+import { buildCawOnboardStatusFromState, getCawOnboardStatus } from '../../../utils/caw-onboard'
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
+  if (getQuery(event).sync !== 'true') {
+    return buildCawOnboardStatusFromState(getState())
+  }
+
   try {
     return await getCawOnboardStatus()
   } catch (err) {

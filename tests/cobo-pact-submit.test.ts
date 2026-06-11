@@ -68,7 +68,7 @@ describe('submitYieldPactToCobo fallback behavior', () => {
     delete process.env.CAW_FORCE_LOCAL_DRAFT
   })
 
-  it('allows local draft when developerMode is enabled in settings', async () => {
+  it('throws when developerMode is enabled but Cobo is not configured', async () => {
     delete process.env.CAW_FORCE_LOCAL_DRAFT
     const state = createReadyState()
     state.settings.coboApiKey = ''
@@ -76,7 +76,7 @@ describe('submitYieldPactToCobo fallback behavior', () => {
     state.settings.developerMode = true
     const { submitYieldPactToCobo } = await import('../server/utils/cobo-pact')
 
-    const result = await submitYieldPactToCobo(state, {
+    await expect(submitYieldPactToCobo(state, {
       network: 'base-sepolia',
       asset: 'USDC',
       targetApy: '8',
@@ -84,13 +84,10 @@ describe('submitYieldPactToCobo fallback behavior', () => {
       maxSpend: '500',
       agentFee: '15',
       userSplit: '85',
-    }, 'pact-dev-mode-1')
-
-    expect(result.mode).toBe('local-draft')
-    expect(result.pactId).toBe('pact-dev-mode-1')
+    }, 'pact-dev-mode-1')).rejects.toThrow('Cobo API 未配置')
   })
 
-  it('keeps Vercel preset demo strategy creation usable when the placeholder wallet is absent in Cobo', async () => {
+  it('throws for preset demo mode when Cobo cannot find the configured wallet', async () => {
     delete process.env.CAW_FORCE_LOCAL_DRAFT
     submitPact.mockRejectedValueOnce(new Error('Wallet not found'))
     const state = createReadyState()
@@ -98,7 +95,7 @@ describe('submitYieldPactToCobo fallback behavior', () => {
     state.walletPreparation.agentWallet.coboWalletId = 'pacttrader-hackathon-demo-wallet'
     const { submitYieldPactToCobo } = await import('../server/utils/cobo-pact')
 
-    const result = await submitYieldPactToCobo(state, {
+    await expect(submitYieldPactToCobo(state, {
       network: 'base-sepolia',
       asset: 'USDC',
       targetApy: '8',
@@ -106,11 +103,7 @@ describe('submitYieldPactToCobo fallback behavior', () => {
       maxSpend: '5',
       agentFee: '15',
       userSplit: '85',
-    }, 'pact-vercel-demo-1')
-
-    expect(result.mode).toBe('local-draft')
-    expect(result.pactId).toBe('pact-vercel-demo-1')
-    expect(result.message).toContain('Wallet not found')
+    }, 'pact-vercel-demo-1')).rejects.toThrow('Wallet not found')
   })
 
   it('throws when Cobo submission fails and local draft is not forced', async () => {

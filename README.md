@@ -1,10 +1,10 @@
-# PactTrader / YieldAgent
+# YieldAgent
 
-PactTrader（代码仓库沿用 `yield-agent`）是一个面向 AI Web3 School / Cobo Agentic Commerce Hackathon 的 **Pact-first DeFi 策略 Agent 控制台**。
+YieldAgent 是一个面向 AI Web3 School / Cobo Agentic Commerce Hackathon 的 **Pact-first DeFi 策略 Agent 控制台**。
 
 项目目标不是让 AI Agent 无限接管用户钱包，而是通过 **Cobo Agentic Wallet（CAW）+ Pact 权限边界**，让 Agent 只能在用户明确授权的预算、资产、网络、协议、期限和审计要求内提出并执行策略动作。
 
-当前版本是 **测试网 / Demo-first Hackathon 原型**：评审可以从落地页点击 **Try Demo** 直接进入控制台，先理解 PactTrader 的 CAW / Pact 安全模型；真实 EOA 连接、CAW 配对、测试网资金注入和真实执行保留为高级路径。
+当前版本是 **测试网 / Demo-first Hackathon 原型**：评审可以从落地页点击 **Try Demo** 直接进入控制台，先理解 YieldAgent 的 CAW / Pact 安全模型；真实 EOA 连接、CAW 配对、测试网资金注入和真实执行保留为高级路径。
 
 > 核心原则：**Agent proposes. Policy decides. CAW executes only when allowed.**
 
@@ -16,7 +16,7 @@ PactTrader（代码仓库沿用 `yield-agent`）是一个面向 AI Web3 School /
 - **执行凭证边界已收紧**：active Pact 执行必须使用 Cobo 返回的 pact-scoped key / Pact 子 Key；缺少子 Key 时会刷新 Pact credential 或停止，不再 silent fallback 到 Agent 主 Key。
 - **`src_addr` 显式传入**：Cobo contract call 要求来源地址，执行时使用 Agent Wallet EVM 地址。
 - **SQLite 状态存储**：本地默认 `.data/yieldagent.db`；Vercel 未配置持久路径时使用 `/tmp/yieldagent.db`，适合 Demo 但不适合长期多用户生产。
-- **重点回归用例**：`tests/pacttrader-demo-wallet.test.ts`、`tests/wallet-api.test.ts`、`tests/pact-credentials.test.ts` 覆盖 preset wallet 与 Pact credential 边界。
+- **重点回归用例**：preset demo wallet、wallet API 与 Pact credential 相关测试覆盖 preset wallet 与 Pact credential 边界。
 
 ## 核心流程
 
@@ -89,7 +89,6 @@ Aave / Compound / testnet yield action
 
 - 产品定义：[`PRODUCT.md`](./PRODUCT.md)
 - Demo Story：[`docs/demo-story.md`](./docs/demo-story.md)
-- Hackathon Demo 架构：[`docs/PactTrader_Hackathon_Demo_Architecture.md`](./docs/PactTrader_Hackathon_Demo_Architecture.md)
 - PRD：[`docs/YieldAgent_Collective_PRD.md`](./docs/YieldAgent_Collective_PRD.md)
 - 技术架构与任务拆解：[`docs/YieldAgent_Technical_Architecture.md`](./docs/YieldAgent_Technical_Architecture.md)
 - CAW 接入说明：[`docs/caw-integration.md`](./docs/caw-integration.md)
@@ -177,7 +176,7 @@ pnpm preview
 针对当前 Demo / Pact credential 边界的快速验证：
 
 ```bash
-pnpm test -- tests/pacttrader-demo-wallet.test.ts tests/wallet-api.test.ts tests/pact-credentials.test.ts
+pnpm test -- tests/wallet-api.test.ts tests/pact-credentials.test.ts
 ```
 
 可选生成静态产物：
@@ -358,7 +357,7 @@ Dashboard 策略卡片在 `awaiting-approval` 时显示「待 Cobo App 审批」
 
 ## 安全边界
 
-YieldAgent / PactTrader 的 Demo 和真实路径都应坚持：
+YieldAgent 的 Demo 和真实路径都应坚持：
 
 - 用户主动准备资金，Agent 不直接接管用户完整钱包。
 - 每次策略执行必须绑定 Pact。

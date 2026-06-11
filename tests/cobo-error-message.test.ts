@@ -12,6 +12,11 @@ describe('extractCoboErrorMessage', () => {
     expect(isInvalidApiKeyError(err)).toBe(true)
   })
 
+  it('humanizes source_address_not_on_wallet', () => {
+    expect(extractCoboErrorMessage({ response: { data: { error: 'source_address_not_on_wallet' } } }))
+      .toContain('PACTTRADER_DEMO_CAW_WALLET_ID')
+  })
+
   it('extracts FastAPI validation detail from 422 responses', () => {
     const err = {
       response: {

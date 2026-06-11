@@ -25,6 +25,7 @@ import {
 } from './cobo-transaction'
 import { syncWalletSummaryFromCobo } from './cobo-preparation'
 import { applyPresetDemoWallet } from './pacttrader-demo-wallet'
+import { ensureAgentWalletEvmAddress } from './agent-wallet-address'
 import { syncYieldSnapshotFromChain } from './yield-snapshot'
 import { resolveExecutionCredentials } from './pact-credentials'
 import { readYieldSuppliedAmount } from './yield-position'
@@ -310,8 +311,9 @@ export async function executeFirstPactRecipe(
   const { apiKey } = credentials
 
   const walletId = state.walletPreparation.agentWallet.coboWalletId
-  const walletAddress = state.walletPreparation.agentWallet.address
-  if (!walletId || !walletAddress) throw new Error('Agent Wallet 未就绪')
+  if (!walletId) throw new Error('Agent Wallet 未就绪')
+
+  const walletAddress = await ensureAgentWalletEvmAddress(state)
 
   const strategy = state.strategies.find((item) => item.id === pact.strategyId)
   const network = (strategy?.network ?? state.walletPreparation.network) as NetworkId
@@ -459,8 +461,9 @@ export async function redeemPactFunds(
   }
 
   const walletId = state.walletPreparation.agentWallet.coboWalletId
-  const walletAddress = state.walletPreparation.agentWallet.address
-  if (!walletId || !walletAddress) throw new Error('Agent Wallet 未就绪')
+  if (!walletId) throw new Error('Agent Wallet 未就绪')
+
+  const walletAddress = await ensureAgentWalletEvmAddress(state)
 
   const strategy = state.strategies.find((item) => item.id === pact.strategyId)
   const network = (strategy?.network ?? state.walletPreparation.network) as NetworkId
@@ -562,13 +565,12 @@ export async function simulatePactDenial(
   const walletId = state.walletPreparation.agentWallet.coboWalletId
   if (!walletId) throw new Error('Agent Wallet 未就绪')
 
+  const walletAddress = await ensureAgentWalletEvmAddress(state)
+
   const strategy = state.strategies.find((item) => item.id === pact.strategyId)
   const network = (strategy?.network ?? state.walletPreparation.network) as NetworkId
   const chainConfig = getNetworkChainConfig(network)
   const transactionsApi = createPactScopedTransactionsApi(apiKey.trim())
-
-  const walletAddress = state.walletPreparation.agentWallet.address
-  if (!walletAddress) throw new Error('Agent Wallet 未就绪')
 
   const deniedContract = '0x000000000000000000000000000000000000dEaD'
   const action = `Agent 尝试调用非白名单合约 ${deniedContract.slice(0, 10)}…（模拟越权）`

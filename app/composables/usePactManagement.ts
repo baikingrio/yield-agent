@@ -129,13 +129,15 @@ export function usePactManagement() {
           }
           return
         }
+        const pendingDetail = [result.coboStatus, result.hint].filter(Boolean).join(' — ')
         actionBanner.value = {
           tone: 'info',
-          message: result.action ? `${result.action}，等待链上确认…` : '交易已提交，等待链上确认…',
+          message: pendingDetail
+            || (result.action ? `${result.action}，等待链上确认…` : '交易已提交，等待链上确认…'),
         }
       } catch (e: unknown) {
         const message = extractApiErrorMessage(e, 'Recipe 执行失败')
-        const retryable = /确认中|timeout|超时|network|fetch/i.test(message)
+        const retryable = /确认中|timeout|超时|network|fetch|TSS|队列/i.test(message)
         if (!retryable && attempt > 2) {
           executeError.value = message
           actionBanner.value = { tone: 'error', message }
@@ -151,8 +153,11 @@ export function usePactManagement() {
     actionBanner.value = { tone: 'error', message: executeError.value }
   }
 
-  async function runFirstExecution(pactId: string) {
-    const result = await store.executePact(pactId, { timeout: 55_000 })
+  async function runFirstExecution(pactId: string, options?: { bumpAttempt?: boolean }) {
+    const result = await store.executePact(pactId, {
+      timeout: 55_000,
+      bumpAttempt: options?.bumpAttempt,
+    })
     if (!result.pending) {
       actionBanner.value = {
         tone: 'success',
@@ -160,9 +165,11 @@ export function usePactManagement() {
       }
       return
     }
+    const pendingDetail = [result.coboStatus, result.hint].filter(Boolean).join(' — ')
     actionBanner.value = {
       tone: 'info',
-      message: result.action ? `${result.action}，等待链上确认…` : '交易已提交，等待链上确认…',
+      message: pendingDetail
+        || (result.action ? `${result.action}，等待链上确认…` : '交易已提交，等待链上确认…'),
     }
     await pollExecutionUntilDone(pactId)
   }
@@ -465,7 +472,7 @@ export function usePactManagement() {
     executing.value = true
     executeError.value = ''
     try {
-      await runFirstExecution(selectedId.value)
+      await runFirstExecution(selectedId.value, { bumpAttempt: true })
     } catch (e: unknown) {
       executeError.value = extractApiErrorMessage(e, 'Recipe 执行失败')
       actionBanner.value = { tone: 'error', message: executeError.value }

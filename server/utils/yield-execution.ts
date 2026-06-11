@@ -172,11 +172,19 @@ export function toUsdcBaseUnits(amountUsdc: number, decimals: number): bigint {
 
 export function isTerminalTransactionSuccess(status: number, statusDisplay?: string): boolean {
   const display = statusDisplay?.trim().toLowerCase()
-  return status === 900 || display === 'success'
+  return status === 900 || display === 'success' || display === 'completed'
 }
 
 export function isTerminalTransactionFailure(status: number, statusDisplay?: string): boolean {
   const display = statusDisplay?.trim().toLowerCase()
   return status === 901 || status === 902 || status === 903
     || display === 'failed' || display === 'rejected' || display === 'cancelled'
+    || display === 'denied' || display === 'blocked' || display === 'timeout'
+}
+
+export function isTransactionAwaitingExternalApproval(statusDisplay?: string): boolean {
+  const display = statusDisplay?.trim().toLowerCase() ?? ''
+  return display.includes('approval')
+    || display.includes('awaiting')
+    || display.includes('pending approval')
 }

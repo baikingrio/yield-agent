@@ -1,9 +1,10 @@
+import { getQuery } from 'h3'
 import { getState, persistCurrentState } from '../../../utils/app-store'
 import { extractCoboErrorMessage } from '../../../utils/cobo-client'
 import { refreshCoboPactStatus } from '../../../utils/cobo-pact'
 import { executeFirstPactRecipe } from '../../../utils/cobo-execution'
 import { isCoboSubmittedPact, pactExecutionBlockedReason } from '../../../utils/pact-execution-guard'
-import { resolvePactExecutionApiKey } from '../../../utils/pact-credentials'
+import { refreshPactCredentialFromCobo, resolvePactExecutionApiKey } from '../../../utils/pact-credentials'
 import { findPactById } from '../../../utils/pact-lookup'
 import { pactResolveHttpError, resolvePactById } from '../../../utils/pact-resolve'
 
@@ -57,7 +58,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, data: { error: blockedAfterSync } })
   }
 
-  if (!resolvePactExecutionApiKey(state, pact.id)) {
+  let executionApiKey = resolvePactExecutionApiKey(state, pact.id)
+  if (!executionApiKey) {
+    executionApiKey = await refreshPactCredentialFromCobo(state, pact.id).catch(() => null)
+    persistCurrentState()
+  }
+  if (!executionApiKey) {
     throw createError({
       statusCode: 502,
       data: {
@@ -66,6 +72,13 @@ export default defineEventHandler(async (event) => {
           : '未找到 pact-scoped 执行凭证。请在 Cobo App 完成审批后，于 Pact 管理页点击「我已批准，刷新状态」再试。',
       },
     })
+  }
+
+  if (getQuery(event).bumpAttempt === 'true' && !pact.firstExecutionCompleted) {
+    pact.firstExecutionAttempt = (pact.firstExecutionAttempt ?? 0) + 1
+    pact.firstExecutionCompleted = false
+    pact.firstExecutionTxHash = ''
+    persistCurrentState()
   }
 
   try {

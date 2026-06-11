@@ -9,6 +9,7 @@ import {
   isStaleFirstExecution,
   isTerminalTransactionFailure,
   isTerminalTransactionSuccess,
+  isTransactionAwaitingExternalApproval,
   needsFirstExecution,
   nextFirstExecutionAttempt,
   resolveFirstSupplyAmountUsdc,
@@ -56,6 +57,8 @@ describe('yield-execution helpers', () => {
     expect(isTerminalTransactionSuccess(300, 'Processing')).toBe(false)
     expect(isTerminalTransactionFailure(901, 'Failed')).toBe(true)
     expect(isTerminalTransactionFailure(300, 'Processing')).toBe(false)
+    expect(isTerminalTransactionFailure(901, 'Denied')).toBe(true)
+    expect(isTransactionAwaitingExternalApproval('Awaiting Approval')).toBe(true)
   })
 
   it('builds unique request ids per attempt', () => {

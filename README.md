@@ -1,15 +1,16 @@
-# YieldAgent
+# PactTrader
 
-YieldAgent 是一个面向 AI Web3 School / Cobo Agentic Commerce Hackathon 的 **Pact-first DeFi 收益策略 Agent 控制台**。
+PactTrader 是一个面向 AI Web3 School / Cobo Agentic Commerce Hackathon 的 **Pact-first DeFi 策略 Agent 控制台**。
 
 项目目标不是让 AI Agent 无限接管用户钱包，而是通过 **Cobo Agentic Wallet（CAW）+ Pact 权限边界**，让用户只把一小块可控测试网资金交给 Agent，并明确限制预算、资产、网络、Recipe、期限、分账比例和审计路径。
 
-当前版本是测试网产品原型，用于展示：
+当前版本是测试网 / Demo-first 产品原型，用于展示：
 
-- 用户从 EOA 钱包准备资金到 CAW Agent Wallet 的流程；
+- 落地页点击 **Try Demo** 后直接进入控制台，评审无需先连接浏览器钱包；
+- 预置 CAW Agent Wallet / Demo state 下展示 PactTrader 主流程；
 - Agent 在 Pact 约束下创建和执行收益策略；
 - 允许执行、越权拒绝、tx hash、审计日志和收益看板；
-- 测试网 Agent Wallet 资金准备：wagmi EOA 连接、CAW SDK 创建钱包、USDC 转入校验、Cobo 余额同步。
+- 真实 EOA 连接、CAW 配对和测试网注资保留为高级体验路径。
 
 > 核心原则：**Pact before profit**。先展示 Agent 被允许做什么，再展示 Agent 实际做了什么。
 
@@ -50,13 +51,13 @@ Aave / Compound / testnet yield action
 
 应用使用两套 layout：
 
-- **`default`**：落地页（`/`），顶栏含 Logo、控制台入口与钱包状态，无侧栏
-- **`dashboard`**：控制台（`/dashboard/*`），顶栏仅 Logo 与钱包状态，左侧 `DashboardSidebar` + 右侧子页面内容
+- **`default`**：落地页（`/`），顶栏含 Logo 与 `Try Demo` 入口，无侧栏
+- **`dashboard`**：控制台（`/dashboard/*`），顶栏含 Logo 与钱包状态，左侧 `DashboardSidebar` + 右侧子页面内容
 
 | 路径 | Layout | 说明 |
 |------|--------|------|
-| `/` | `default` | 产品落地页；Header / Hero 提供「连接钱包」入口 |
-| `/dashboard` | `dashboard` | 控制台概览；未完成 Agent Wallet 设置时仅展示引导流（无侧栏） |
+| `/` | `default` | 产品落地页；Header / Hero 提供 `Try Demo` 入口 |
+| `/dashboard` | `dashboard` | 控制台概览；Demo preset 下可直接进入，真实钱包路径在控制台内继续完成 |
 | `/dashboard/create-strategy` | `dashboard` | 创建策略：模板、自然语言、Pact Preview |
 | `/dashboard/pacts` | `dashboard` | Pact 管理：状态与权限边界 |
 | `/dashboard/history` | `dashboard` | 交易历史 / Audit Trail |
@@ -67,6 +68,7 @@ Aave / Compound / testnet yield action
 ## 文档
 
 - 产品定义：[`PRODUCT.md`](./PRODUCT.md)
+- Demo Story：[`docs/demo-story.md`](./docs/demo-story.md) 与 [`docs/PactTrader_Hackathon_Demo_Architecture.md`](./docs/PactTrader_Hackathon_Demo_Architecture.md)
 - PRD：[`docs/YieldAgent_Collective_PRD.md`](./docs/YieldAgent_Collective_PRD.md)
 - 技术架构、目录结构与任务拆解：[`docs/YieldAgent_Technical_Architecture.md`](./docs/YieldAgent_Technical_Architecture.md)
 - CAW 接入说明：[`docs/caw-integration.md`](./docs/caw-integration.md)

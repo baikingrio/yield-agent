@@ -90,6 +90,29 @@ describe('submitYieldPactToCobo fallback behavior', () => {
     expect(result.pactId).toBe('pact-dev-mode-1')
   })
 
+  it('keeps Vercel preset demo strategy creation usable when the placeholder wallet is absent in Cobo', async () => {
+    delete process.env.CAW_FORCE_LOCAL_DRAFT
+    submitPact.mockRejectedValueOnce(new Error('Wallet not found'))
+    const state = createReadyState()
+    state.walletPreparation.demoMode = 'preset'
+    state.walletPreparation.agentWallet.coboWalletId = 'pacttrader-hackathon-demo-wallet'
+    const { submitYieldPactToCobo } = await import('../server/utils/cobo-pact')
+
+    const result = await submitYieldPactToCobo(state, {
+      network: 'base-sepolia',
+      asset: 'USDC',
+      targetApy: '8',
+      riskLevel: 'conservative',
+      maxSpend: '5',
+      agentFee: '15',
+      userSplit: '85',
+    }, 'pact-vercel-demo-1')
+
+    expect(result.mode).toBe('local-draft')
+    expect(result.pactId).toBe('pact-vercel-demo-1')
+    expect(result.message).toContain('Wallet not found')
+  })
+
   it('throws when Cobo submission fails and local draft is not forced', async () => {
     delete process.env.CAW_FORCE_LOCAL_DRAFT
     submitPact.mockRejectedValueOnce(new Error('API key pact authorization is not authorized for this wallet'))

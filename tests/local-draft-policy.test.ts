@@ -18,6 +18,12 @@ describe('isLocalDraftAllowed', () => {
     expect(isLocalDraftAllowed(state)).toBe(true)
   })
 
+  it('returns true when preset demo wallet mode is active', () => {
+    const state = createInitialState()
+    state.walletPreparation.demoMode = 'preset'
+    expect(isLocalDraftAllowed(state)).toBe(true)
+  })
+
   it('returns true when CAW_FORCE_LOCAL_DRAFT env is set', () => {
     process.env.CAW_FORCE_LOCAL_DRAFT = 'true'
     const state = createInitialState()

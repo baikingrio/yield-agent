@@ -306,7 +306,7 @@ export async function executeFirstPactRecipe(
 
   const credentials = resolveExecutionCredentials(state, pact)
   if (!credentials) {
-    throw new Error('未找到执行凭证。Vercel 部署请配置 AGENT_WALLET_API_KEY（Agent 主 Key，非 Pact 子 Key）')
+    throw new Error('未找到 active Pact 的 pact-scoped 执行凭证（Pact 子 Key）。请同步 Cobo Pact 状态后再执行 Recipe。')
   }
   const { apiKey } = credentials
 

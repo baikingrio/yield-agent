@@ -41,14 +41,14 @@ describe('resolveExecutionCredentials', () => {
     expect(creds).toEqual({ apiKey: 'pact-scoped-key', mode: 'pact-scoped' })
   })
 
-  it('falls back to principal key on Vercel split deploy when no pact-scoped key is cached', () => {
+  it('does not use the principal key to execute an active Cobo pact when no pact-scoped key is cached', () => {
     process.env.VERCEL = '1'
     process.env.AGENT_WALLET_API_KEY = 'principal-key'
     const state = createInitialState()
     state.settings.coboApiKey = 'settings-key'
 
     const creds = resolveExecutionCredentials(state, makePact())
-    expect(creds).toEqual({ apiKey: 'principal-key', mode: 'principal' })
+    expect(creds).toBeNull()
   })
 
   it('uses pact-scoped key on local runtime when cached', () => {
@@ -60,10 +60,10 @@ describe('resolveExecutionCredentials', () => {
     expect(creds).toEqual({ apiKey: 'pact-scoped-key', mode: 'pact-scoped' })
   })
 
-  it('explains principal key requirement for split deploy errors', () => {
+  it('explains that active Cobo execution requires a pact-scoped key', () => {
     process.env.VERCEL = '1'
     const state = createInitialState()
-    expect(executionCredentialErrorMessage(state, makePact())).toContain('AGENT_WALLET_API_KEY')
-    expect(executionCredentialErrorMessage(state, makePact())).toContain('主 Key')
+    expect(executionCredentialErrorMessage(state, makePact())).toContain('pact-scoped')
+    expect(executionCredentialErrorMessage(state, makePact())).toContain('Pact 子 Key')
   })
 })

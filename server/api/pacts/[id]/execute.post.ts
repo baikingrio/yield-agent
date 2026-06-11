@@ -1,6 +1,6 @@
 import { getQuery } from 'h3'
 import { getState, persistCurrentState } from '../../../utils/app-store'
-import { extractCoboErrorMessage, preferEnvCoboApiKey } from '../../../utils/cobo-client'
+import { extractCoboErrorMessage } from '../../../utils/cobo-client'
 import { refreshCoboPactStatus } from '../../../utils/cobo-pact'
 import { executeFirstPactRecipe } from '../../../utils/cobo-execution'
 import { isCoboSubmittedPact, pactExecutionBlockedReason } from '../../../utils/pact-execution-guard'
@@ -63,7 +63,7 @@ export default defineEventHandler(async (event) => {
   }
 
   let executionApiKey = resolveExecutionCredentials(state, pact)?.apiKey ?? null
-  if (!executionApiKey && !preferEnvCoboApiKey()) {
+  if (!executionApiKey) {
     await refreshPactCredentialFromCobo(state, pact.id).catch(() => null)
     persistCurrentState()
     executionApiKey = resolveExecutionCredentials(state, pact)?.apiKey ?? null

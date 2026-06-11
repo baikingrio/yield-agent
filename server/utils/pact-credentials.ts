@@ -19,6 +19,10 @@ export function resolveExecutionCredentials(state: AppState, pact: Pact): Execut
     return { apiKey: pactKey, mode: 'pact-scoped' }
   }
 
+  if (pact.submissionMode === 'cobo' && pact.status === 'active') {
+    return null
+  }
+
   try {
     return { apiKey: getCoboApiKey(state), mode: 'principal' }
   } catch {
@@ -30,8 +34,11 @@ export function executionCredentialErrorMessage(
   state: AppState,
   pact: Pact,
 ): string {
+  if (pact.submissionMode === 'cobo' && pact.status === 'active') {
+    return '未找到 active Pact 的 pact-scoped 执行凭证（Pact 子 Key）。请先同步 Cobo Pact 状态以缓存审批返回的执行 Key；若部署在 Vercel，请确认后端能用 Agent 主 Key 读取该 Pact 详情。'
+  }
   if (preferEnvCoboApiKey()) {
-    return 'Vercel/Hermes 分体部署需配置 AGENT_WALLET_API_KEY（Hermes 上 caw wallet current --show-api-key 的 Agent 主 Key，不是 Pact 子 Key）'
+    return 'Vercel/Hermes 分体部署需配置 AGENT_WALLET_API_KEY（Hermes 上 caw wallet current --show-api-key 的 Agent 主 Key，用于同步 Pact；执行 active Pact 仍需 Cobo 返回的 Pact 子 Key）'
   }
   if (pact.status === 'completed') {
     return 'Pact 已在 Cobo 侧完成，无法继续执行。请重新创建策略与 Pact。'

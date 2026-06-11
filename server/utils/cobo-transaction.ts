@@ -139,11 +139,11 @@ export async function submitContractCallAndWait(
     stepLabel: string
   },
 ): Promise<UserTransactionRead> {
-  void walletAddress
   const resp = await transactionsApi.contractCall(walletId, {
     chain_id: params.chainId,
     contract_addr: params.contractAddr,
     calldata: params.calldata,
+    src_addr: walletAddress,
     request_id: params.requestId,
     sponsor,
     description: params.description,

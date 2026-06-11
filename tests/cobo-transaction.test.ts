@@ -8,7 +8,7 @@ vi.mock('../server/utils/yield-execution', () => ({
 }))
 
 describe('submitContractCallAndWait', () => {
-  it('omits explicit src_addr so Cobo can auto-select the wallet address for pact-scoped execution', async () => {
+  it('passes explicit src_addr because Cobo contract calls require the source wallet address', async () => {
     const contractCall = vi.fn(async () => ({
       data: {
         result: {
@@ -45,8 +45,8 @@ describe('submitContractCallAndWait', () => {
       },
     )
 
-    expect(contractCall).toHaveBeenCalledWith('wallet-1', expect.not.objectContaining({
-      src_addr: expect.any(String),
+    expect(contractCall).toHaveBeenCalledWith('wallet-1', expect.objectContaining({
+      src_addr: '0x382a91e60038085bc07e6f1e32739dcfa816c5a1',
     }))
   })
 })

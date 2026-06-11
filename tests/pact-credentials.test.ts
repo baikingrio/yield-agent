@@ -30,7 +30,18 @@ afterEach(() => {
 })
 
 describe('resolveExecutionCredentials', () => {
-  it('prefers principal key on Vercel split deploy', () => {
+  it('uses pact-scoped key on Vercel split deploy when the active pact returned one', () => {
+    process.env.VERCEL = '1'
+    process.env.AGENT_WALLET_API_KEY = 'principal-key'
+    const state = createInitialState()
+    state.settings.coboApiKey = 'settings-key'
+    storePactCredential('pact-1', 'pact-scoped-key')
+
+    const creds = resolveExecutionCredentials(state, makePact())
+    expect(creds).toEqual({ apiKey: 'pact-scoped-key', mode: 'pact-scoped' })
+  })
+
+  it('falls back to principal key on Vercel split deploy when no pact-scoped key is cached', () => {
     process.env.VERCEL = '1'
     process.env.AGENT_WALLET_API_KEY = 'principal-key'
     const state = createInitialState()

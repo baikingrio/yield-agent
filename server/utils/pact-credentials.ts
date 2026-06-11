@@ -13,19 +13,7 @@ export interface ExecutionCredentials {
   mode: ExecutionCredentialMode
 }
 
-/**
- * Vercel + Hermes split deploy: pact-scoped keys can submit txs but cannot drive wallet TSS signing.
- * Use the Agent principal key (AGENT_WALLET_API_KEY) for contract calls in that runtime.
- */
 export function resolveExecutionCredentials(state: AppState, pact: Pact): ExecutionCredentials | null {
-  if (preferEnvCoboApiKey()) {
-    try {
-      return { apiKey: getCoboApiKey(state), mode: 'principal' }
-    } catch {
-      return null
-    }
-  }
-
   const pactKey = resolvePactExecutionApiKey(state, pact.id)
   if (pactKey) {
     return { apiKey: pactKey, mode: 'pact-scoped' }

@@ -1,9 +1,12 @@
 import { z } from 'zod'
+import { MAX_WALLET_OP_USDC, MIN_WALLET_OP_USDC } from '#shared/types/app'
 import { getState, persistCurrentState } from '../../utils/app-store'
 import { withdrawUsdcToEoa } from '../../utils/wallet-ops'
 
+const amountRangeError = `请输入 ${MIN_WALLET_OP_USDC}–${MAX_WALLET_OP_USDC.toLocaleString('en-US')} USDC`
+
 const schema = z.object({
-  amountUsdc: z.number().min(10).max(10_000),
+  amountUsdc: z.number().min(MIN_WALLET_OP_USDC).max(MAX_WALLET_OP_USDC),
 })
 
 export default defineEventHandler(async (event) => {
@@ -11,7 +14,7 @@ export default defineEventHandler(async (event) => {
   const parsed = schema.safeParse(body)
 
   if (!parsed.success) {
-    throw createError({ statusCode: 400, data: { error: '请输入 10–10,000 USDC' } })
+    throw createError({ statusCode: 400, data: { error: amountRangeError } })
   }
 
   const state = getState()

@@ -22,7 +22,7 @@ export function canEnterDashboard(input: DashboardAccessInput): boolean {
 
 export function landingPrimaryCta(_input: { preparation: WalletPreparation | null | undefined }): LandingCta {
   return {
-    label: 'Try Demo',
+    label: '进入 Demo',
     href: DASHBOARD_HOME,
   }
 }

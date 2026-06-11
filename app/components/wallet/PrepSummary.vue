@@ -46,9 +46,9 @@ function shortId(id: string | null | undefined) {
         <dd class="mt-1 font-mono text-xs text-muted">{{ shortId(prep.agentWallet.coboWalletId) }}</dd>
       </div>
       <div>
-        <dt class="text-xs text-muted">可用余额</dt>
-        <dd class="mt-1 font-mono text-sm text-trading-up">
-          {{ prep?.funding.availableUsdc?.toLocaleString('zh-CN') ?? '0' }} USDC
+        <dt class="text-xs text-muted">资金状态</dt>
+        <dd class="mt-1 text-sm text-trading-up">
+          {{ prep?.funding.status === 'ready' ? '已同步' : '待注资' }}
         </dd>
       </div>
       <div v-if="prep?.ready" class="rounded-md border border-trading-up/30 bg-canvas px-3 py-2 text-xs text-trading-up">

@@ -101,8 +101,8 @@ const formDisabled = computed(() =>
             <dd class="mt-1 text-sm font-semibold text-on-dark">{{ fundingSourceLabel }}</dd>
           </div>
           <div>
-            <dt class="text-xs text-muted">可用余额</dt>
-            <dd class="mt-1 font-mono text-sm text-on-dark">{{ availableBalanceLabel }}</dd>
+            <dt class="text-xs text-muted">资金状态</dt>
+            <dd class="mt-1 text-sm text-on-dark">{{ availableBalanceLabel }}</dd>
           </div>
           <div>
             <dt class="text-xs text-muted">Pact 将限制</dt>

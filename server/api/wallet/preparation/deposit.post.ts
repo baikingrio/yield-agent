@@ -1,11 +1,12 @@
 import { z } from 'zod'
+import { MAX_WALLET_OP_USDC, MIN_WALLET_OP_USDC } from '#shared/types/app'
 import { getState, persistCurrentState } from '../../../utils/app-store'
 import { topUpUsdcDeposit } from '../../../utils/wallet-ops'
 
 const TX_HASH_RE = /^0x[a-fA-F0-9]{64}$/
 
 const schema = z.object({
-  amountUsdc: z.number().min(10).max(10_000),
+  amountUsdc: z.number().min(MIN_WALLET_OP_USDC).max(MAX_WALLET_OP_USDC),
   txHash: z.string().regex(TX_HASH_RE, '无效的交易哈希'),
 })
 

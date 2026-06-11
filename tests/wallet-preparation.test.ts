@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AppState } from '../shared/types/app'
-import { markAgentWalletCreated } from '../server/utils/wallet-preparation'
+import { applyDepositToState, markAgentWalletCreated } from '../server/utils/wallet-preparation'
 
 function createState(): AppState {
   return {
@@ -45,5 +45,40 @@ describe('markAgentWalletCreated', () => {
     })
 
     expect(prep.steps.agent_wallet).toBe('completed')
+  })
+})
+
+describe('preparation ready reconciliation', () => {
+  it('marks ready after funding completes even when funding step lagged', () => {
+    const state = createState()
+    state.walletPreparation.agentWallet = {
+      created: true,
+      address: '0xAgent',
+      coboWalletId: 'wallet-1',
+      pairing: { status: 'paired', code: null, expiresAt: null },
+    }
+    state.walletPreparation.steps.agent_wallet = 'completed'
+
+    const prep = applyDepositToState(state, 25, '0x' + 'a'.repeat(64))
+
+    expect(prep.funding.status).toBe('ready')
+    expect(prep.steps.funding).toBe('completed')
+    expect(prep.ready).toBe(true)
+  })
+
+  it('marks preset demo preparation ready when funded', () => {
+    const state = createState()
+    state.walletPreparation.demoMode = 'preset'
+    state.walletPreparation.agentWallet = {
+      created: true,
+      address: '0xAgent',
+      coboWalletId: 'wallet-1',
+      pairing: { status: 'paired', code: null, expiresAt: null },
+    }
+    state.walletPreparation.steps.agent_wallet = 'completed'
+
+    const prep = applyDepositToState(state, 5, null)
+
+    expect(prep.ready).toBe(true)
   })
 })

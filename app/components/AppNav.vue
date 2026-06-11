@@ -30,7 +30,7 @@ withDefaults(
         :to="DASHBOARD_HOME"
         class="inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold text-on-primary no-underline transition-colors duration-150 hover:bg-primary-active md:px-4"
       >
-        Try Demo
+        进入 Demo
       </NuxtLink>
     </nav>
 

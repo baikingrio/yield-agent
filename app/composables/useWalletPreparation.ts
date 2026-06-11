@@ -1,5 +1,5 @@
 import { DASHBOARD_CREATE_STRATEGY } from '#shared/constants/dashboard-routes'
-import { NETWORK_LABELS } from '#shared/types/app'
+import { MAX_WALLET_OP_USDC, MIN_WALLET_OP_USDC, NETWORK_LABELS } from '#shared/types/app'
 import type { AgentBootstrapPhase, NetworkId, PrepStep } from '#shared/types/app'
 import { mapBootstrapUserCopy } from '#shared/utils/bootstrap-user-copy'
 
@@ -47,7 +47,7 @@ export function useWalletPreparation() {
   }))
 
   const createAgentLabel = computed(() => {
-    if (prep.value?.demoMode === 'preset') return '已使用预置 Demo Wallet'
+    if (prep.value?.demoMode === 'preset') return 'Agent Wallet 已就绪'
     if (busy.value || agentPolling.value) return '初始化中…'
     if (prep.value?.steps.agent_wallet === 'in_progress') return '继续初始化'
     if (prep.value?.agentWallet.created) return '重新生成配对码'
@@ -55,10 +55,9 @@ export function useWalletPreparation() {
   })
 
   const depositLabel = computed(() => {
-    const amt = depositAmount.value || '500'
     if (depositPhase.value === 'signing') return '请在钱包中确认转账…'
     if (depositPhase.value === 'confirming') return '确认到账中…'
-    return `转入 ${amt} USDC`
+    return '发起转入'
   })
 
   const coboConfigured = computed(
@@ -161,8 +160,8 @@ export function useWalletPreparation() {
   async function runDeposit() {
     if (stepLocked('funding')) return
     const amount = Number(depositAmount.value)
-    if (Number.isNaN(amount) || amount < 10 || amount > 10_000) {
-      pageError.value = '请输入 10–10,000 USDC'
+    if (Number.isNaN(amount) || amount < MIN_WALLET_OP_USDC || amount > MAX_WALLET_OP_USDC) {
+      pageError.value = `请输入 ${MIN_WALLET_OP_USDC}–${MAX_WALLET_OP_USDC.toLocaleString('en-US')} USDC`
       return
     }
     if (!coboConfigured.value) {
@@ -179,6 +178,7 @@ export function useWalletPreparation() {
       const txHash = await transferUsdc(info)
       depositPhase.value = 'confirming'
       await store.depositToAgentWallet(amount, txHash)
+      await store.fetchPreparation()
     } catch {
       pageError.value = transferError.value || store.error
     } finally {

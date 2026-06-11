@@ -63,8 +63,8 @@ async function copyAddress(addr: string) {
     </p>
 
     <div v-if="prep?.funding.status === 'ready'" class="mt-4 space-y-2 text-sm">
-      <p class="font-mono text-on-dark">
-        已注入 {{ prep.funding.depositedUsdc.toLocaleString('zh-CN') }} USDC
+      <p class="text-on-dark">
+        测试网 USDC 已到账
       </p>
       <p v-if="prep.funding.lastTxHash" class="text-xs text-muted">
         Tx：
@@ -96,7 +96,7 @@ async function copyAddress(addr: string) {
           id="deposit-amount"
           v-model="amount"
           type="number"
-          min="10"
+          min="1"
           max="10000"
           step="1"
           class="h-10 w-full max-w-xs rounded-md border border-hairline bg-canvas px-3 font-mono text-sm text-on-dark"

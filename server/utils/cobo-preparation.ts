@@ -151,17 +151,44 @@ export async function fetchUsdcBalanceFromCobo(
 }
 
 export async function syncFundingFromExistingBalance(state: AppState): Promise<WalletPreparation> {
+  touchPreparation(state.walletPreparation, state)
   const prep = state.walletPreparation
-  if (prep.steps.agent_wallet !== 'completed' || !prep.agentWallet.created) {
-    return prep
-  }
-  if (prep.funding.status === 'ready') {
+
+  if (!prep.agentWallet.coboWalletId?.trim() || !prep.agentWallet.address?.trim()) {
     return prep
   }
 
-  const balance = await fetchUsdcBalanceFromCobo(state)
+  let balance = 0
+  try {
+    balance = await fetchUsdcBalanceFromCobo(state)
+  } catch {
+    return prep
+  }
+
+  if (prep.funding.status === 'ready') {
+    if (balance > 0) {
+      prep.funding.availableUsdc = balance
+      prep.funding.depositedUsdc = Math.max(prep.funding.depositedUsdc, balance)
+      state.wallet.totalAssetsUsdc = balance
+      touchPreparation(prep, state)
+    }
+    return prep
+  }
+
   if (balance <= 0) {
     return prep
+  }
+
+  if (prep.steps.agent_wallet !== 'completed') {
+    prep.agentWallet.created = true
+    prep.steps.agent_wallet = 'completed'
+    if (prep.agentWallet.pairing?.status !== 'paired') {
+      prep.agentWallet.pairing = {
+        status: 'paired',
+        code: null,
+        expiresAt: null,
+      }
+    }
   }
 
   return applyDepositToState(state, balance, null)

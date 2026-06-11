@@ -72,13 +72,13 @@ export function useCreateStrategy() {
   const availableBalanceLabel = computed(() => {
     const prep = store.preparation
     if (!prep?.ready) return '—'
-    return `${prep.funding.availableUsdc.toLocaleString('zh-CN')} ${form.asset}`
+    return '已同步'
   })
 
   const previewLines = computed(() => [
     { label: '意图', value: intentSummary.value },
     { label: '资金来源', value: fundingSourceLabel.value },
-    { label: 'Agent Wallet 余额', value: availableBalanceLabel.value },
+    { label: '资金状态', value: availableBalanceLabel.value },
     { label: '支出上限', value: `${form.maxSpend || '—'} ${form.asset}` },
     { label: '网络', value: NETWORK_LABELS[form.network] },
     {
@@ -109,7 +109,7 @@ export function useCreateStrategy() {
     } else if (store.preparation?.ready) {
       const available = store.preparation.funding.availableUsdc
       if (spend > available) {
-        next.maxSpend = `不能超过 Agent Wallet 可用余额（${available} USDC）`
+        next.maxSpend = '不能超过 Agent Wallet 当前可用余额'
       }
     }
     if (fee === null || fee < 0 || fee > 30) {

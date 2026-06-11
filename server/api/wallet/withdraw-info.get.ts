@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { getState } from '../../utils/app-store'
-import { getWithdrawInfo, MAX_WALLET_OP_USDC, MIN_WALLET_OP_USDC } from '../../utils/wallet-ops'
+import { MAX_WALLET_OP_USDC, MIN_WALLET_OP_USDC } from '#shared/types/app'
+import { getWithdrawInfo } from '../../utils/wallet-ops'
 
 const schema = z.object({
   amountUsdc: z.coerce.number().min(MIN_WALLET_OP_USDC).max(MAX_WALLET_OP_USDC).optional(),
@@ -11,7 +12,8 @@ export default defineEventHandler(async (event) => {
   const parsed = schema.safeParse(query)
 
   if (!parsed.success) {
-    throw createError({ statusCode: 400, data: { error: '请输入 10–10,000 USDC' } })
+    const amountRangeError = `请输入 ${MIN_WALLET_OP_USDC}–${MAX_WALLET_OP_USDC.toLocaleString('en-US')} USDC`
+    throw createError({ statusCode: 400, data: { error: amountRangeError } })
   }
 
   const state = getState()

@@ -52,7 +52,42 @@ export function createInitialWalletPreparation(
   }
 }
 
+function reconcilePreparationSteps(prep: WalletPreparation): void {
+  if (prep.eoa.connected && prep.eoa.address?.trim()) {
+    prep.steps.eoa = 'completed'
+  }
+
+  const hasAgentIdentity = Boolean(
+    prep.agentWallet.coboWalletId?.trim()
+    && prep.agentWallet.address?.trim(),
+  )
+
+  if (hasAgentIdentity) {
+    prep.agentWallet.created = true
+  }
+
+  if (prep.demoMode === 'preset' && prep.agentWallet.coboWalletId) {
+    prep.agentWallet.pairing = {
+      status: 'paired',
+      code: null,
+      expiresAt: null,
+    }
+    if (hasAgentIdentity) {
+      prep.steps.agent_wallet = 'completed'
+    }
+  } else if (hasAgentIdentity && prep.agentWallet.pairing?.status === 'paired') {
+    prep.steps.agent_wallet = 'completed'
+  } else if (hasAgentIdentity && prep.funding.status === 'ready') {
+    prep.steps.agent_wallet = 'completed'
+  }
+
+  if (prep.funding.status === 'ready') {
+    prep.steps.funding = 'completed'
+  }
+}
+
 function syncReady(prep: WalletPreparation): void {
+  reconcilePreparationSteps(prep)
   prep.ready =
     prep.steps.eoa === 'completed'
     && prep.steps.agent_wallet === 'completed'

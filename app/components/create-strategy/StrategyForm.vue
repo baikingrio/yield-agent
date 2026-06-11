@@ -188,7 +188,7 @@ const monoControlClass = `${controlClass} font-mono`
               {{ props.errors.maxSpend }}
             </p>
             <p v-else id="max-spend-hint" class="mt-1 text-xs text-muted">
-              Agent Wallet 可用余额：{{ props.availableBalanceLabel }}
+              支出上限不能超过 Agent Wallet 当前可用余额
             </p>
           </div>
         </section>

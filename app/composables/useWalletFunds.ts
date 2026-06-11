@@ -1,5 +1,6 @@
 import { DASHBOARD_SETTINGS } from '#shared/constants/dashboard-routes'
 import type { AgentGasStatus, WithdrawInfo } from '#shared/types/app'
+import { MAX_WALLET_OP_USDC, MIN_WALLET_OP_USDC } from '#shared/types/app'
 
 export function useWalletFunds() {
   const store = useAppStore()
@@ -26,10 +27,9 @@ export function useWalletFunds() {
   )
 
   const topUpLabel = computed(() => {
-    const amt = topUpAmount.value || '100'
     if (topUpPhase.value === 'signing') return '请在钱包中确认转账…'
     if (topUpPhase.value === 'confirming') return '确认到账中…'
-    return `从 EOA 转入 ${amt} USDC`
+    return '从 EOA 补充 USDC'
   })
 
   const withdrawLabel = computed(() => {
@@ -78,8 +78,8 @@ export function useWalletFunds() {
   async function topUp() {
     if (!fundsUnlocked.value) return
     const amount = Number(topUpAmount.value)
-    if (Number.isNaN(amount) || amount < 10 || amount > 10_000) {
-      pageError.value = '请输入 10–10,000 USDC'
+    if (Number.isNaN(amount) || amount < MIN_WALLET_OP_USDC || amount > MAX_WALLET_OP_USDC) {
+      pageError.value = `请输入 ${MIN_WALLET_OP_USDC}–${MAX_WALLET_OP_USDC.toLocaleString('en-US')} USDC`
       return
     }
     if (!coboConfigured.value) {
@@ -109,8 +109,8 @@ export function useWalletFunds() {
   async function withdraw() {
     if (!fundsUnlocked.value) return
     const amount = Number(withdrawAmount.value)
-    if (Number.isNaN(amount) || amount < 10 || amount > 10_000) {
-      pageError.value = '请输入 10–10,000 USDC'
+    if (Number.isNaN(amount) || amount < MIN_WALLET_OP_USDC || amount > MAX_WALLET_OP_USDC) {
+      pageError.value = `请输入 ${MIN_WALLET_OP_USDC}–${MAX_WALLET_OP_USDC.toLocaleString('en-US')} USDC`
       return
     }
     if (!coboConfigured.value) {

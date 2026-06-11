@@ -4,6 +4,9 @@ export { DEFAULT_NETWORK, NETWORK_LABELS, normalizeNetwork } from '../constants/
 /** 测试网允许小额策略；maxSpend 为 Pact 总支出上限（非单日）。 */
 export const MIN_MAX_SPEND_USDC = 1
 export const MAX_MAX_SPEND_USDC = 1_000_000
+/** Agent Wallet 单笔充提下限（与策略最小支出一致）。 */
+export const MIN_WALLET_OP_USDC = MIN_MAX_SPEND_USDC
+export const MAX_WALLET_OP_USDC = 10_000
 
 export type PrepStep = 'eoa' | 'agent_wallet' | 'funding'
 export type PrepStepStatus = 'pending' | 'in_progress' | 'completed'

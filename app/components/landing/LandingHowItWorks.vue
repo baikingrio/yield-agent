@@ -15,8 +15,8 @@ const showDashboardEntry = computed(
 
 const steps = [
   {
-    title: '进入 Demo 环境',
-    body: '公开评审路径使用预置 Agent Wallet，无需先连接浏览器钱包；进入控制台即可查看资金、策略和审计状态。',
+    title: '进入控制台',
+    body: '查看 Agent Wallet 状态、策略列表与审计日志。',
     href: DASHBOARD_HOME,
     linkLabel: '前往控制台',
   },

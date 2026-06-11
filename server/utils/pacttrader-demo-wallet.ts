@@ -47,12 +47,17 @@ export function applyPresetDemoWallet(
   prep.network = normalizeNetwork(prep.network)
   prep.demoMode = 'preset'
   prep.agentWallet.coboWalletId = config.coboWalletId
+  prep.agentWallet.pairing = {
+    status: 'paired',
+    code: null,
+    expiresAt: null,
+  }
 
   if (config.eoaAddress) {
     prep.eoa = {
       connected: true,
       address: config.eoaAddress,
-      label: 'Hackathon Demo EOA',
+      label: 'Demo EOA',
     }
     prep.steps.eoa = 'completed'
   }
@@ -63,7 +68,7 @@ export function applyPresetDemoWallet(
     sessionId: null,
     walletStatus: 'active',
     tssOnline: true,
-    message: 'Hackathon Demo 使用预置 active Agent Wallet；链上地址与余额从 Cobo 同步。',
+    message: 'Agent Wallet 已就绪。',
   }
 
   touchPreparation(prep)

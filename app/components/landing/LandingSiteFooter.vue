@@ -54,7 +54,6 @@ const links = [
           </NuxtLink>
         </nav>
         <div class="flex items-center gap-2">
-          <span class="text-xs text-muted-strong">主题</span>
           <UiThemeToggle />
         </div>
       </div>

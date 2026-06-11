@@ -30,9 +30,9 @@ describe('demo access helpers', () => {
     })).toBe(false)
   })
 
-  it('uses Try Demo as the landing primary CTA', () => {
+  it('uses a Chinese label as the landing primary CTA', () => {
     expect(landingPrimaryCta({ preparation: null })).toEqual({
-      label: 'Try Demo',
+      label: '进入 Demo',
       href: '/dashboard',
     })
   })

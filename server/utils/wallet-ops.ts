@@ -1,4 +1,10 @@
-import type { AppState, WithdrawInfo, WithdrawResult } from '../../shared/types/app'
+import {
+  MAX_WALLET_OP_USDC,
+  MIN_WALLET_OP_USDC,
+  type AppState,
+  type WithdrawInfo,
+  type WithdrawResult,
+} from '../../shared/types/app'
 import { assertAgentWalletHasGas, getAgentNativeEthBalance, resolveContractCallSponsor } from './agent-gas'
 import {
   createCoboTransactionRecordsApi,
@@ -13,9 +19,6 @@ import { fetchUsdcBalanceFromCobo, syncWalletSummaryFromCobo } from './cobo-prep
 import { verifyUsdcDeposit } from './deposit-verify'
 import { applyDepositToState, touchPreparation } from './wallet-preparation'
 import { readYieldSuppliedAmount } from './yield-position'
-
-export const MIN_WALLET_OP_USDC = 10
-export const MAX_WALLET_OP_USDC = 10_000
 
 function assertAmountRange(amountUsdc: number): void {
   if (Number.isNaN(amountUsdc) || amountUsdc < MIN_WALLET_OP_USDC || amountUsdc > MAX_WALLET_OP_USDC) {

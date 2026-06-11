@@ -3,14 +3,19 @@ import type { AppState } from '../shared/types/app'
 import { applyPresetDemoWallet } from '../server/utils/pacttrader-demo-wallet'
 import { createInitialState } from '../server/fixtures/initial-state'
 
-const getState = vi.fn<() => AppState>()
-const flushCurrentState = vi.fn()
-const createCoboAgentWallet = vi.fn()
+const { getState, flushCurrentState, createCoboAgentWallet } = vi.hoisted(() => ({
+  getState: vi.fn<() => AppState>(),
+  flushCurrentState: vi.fn(),
+  createCoboAgentWallet: vi.fn(),
+}))
 
 vi.stubGlobal('defineEventHandler', <T>(fn: T) => fn)
 
 vi.mock('../server/utils/app-store', () => ({ getState, flushCurrentState }))
-vi.mock('../server/utils/cobo-preparation', () => ({ createCoboAgentWallet }))
+vi.mock('../server/utils/cobo-preparation', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../server/utils/cobo-preparation')>()
+  return { ...actual, createCoboAgentWallet }
+})
 vi.mock('../server/utils/cobo-client', () => ({ CoboNotConfiguredError: class CoboNotConfiguredError extends Error {} }))
 
 describe('POST /api/wallet/preparation/create-agent in demo preset mode', () => {
@@ -22,7 +27,7 @@ describe('POST /api/wallet/preparation/create-agent in demo preset mode', () => 
     const state = createInitialState()
     applyPresetDemoWallet(state, {
       PACTTRADER_DEMO_MODE: 'preset',
-      PACTTRADER_DEMO_AGENT_WALLET_ADDRESS: '0x2222222222222222222222222222222222222222',
+      PACTTRADER_DEMO_CAW_WALLET_ID: 'e7495f9d-22bf-40f3-94d7-0733176b70ff',
     })
     getState.mockReturnValue(state)
 
@@ -31,7 +36,7 @@ describe('POST /api/wallet/preparation/create-agent in demo preset mode', () => 
 
     expect(result.done).toBe(true)
     expect(result.preparation.demoMode).toBe('preset')
-    expect(result.preparation.agentWallet.pairing?.status).toBe('paired')
+    expect(result.bootstrap?.phase).toBe('paired')
     expect(createCoboAgentWallet).not.toHaveBeenCalled()
     expect(flushCurrentState).not.toHaveBeenCalled()
   })

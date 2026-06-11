@@ -1,100 +1,95 @@
 import type { AppState } from '../../shared/types/app'
 import { normalizeNetwork } from '../../shared/constants/network'
+import { ensureAgentWalletEvmAddress } from './agent-wallet-address'
+import { syncFundingFromExistingBalance } from './cobo-preparation'
 import { touchPreparation } from './wallet-preparation'
 
 export interface PresetDemoWalletConfig {
   enabled: boolean
-  eoaAddress: string
-  agentWalletAddress: string
-  coboWalletId: string
-  availableUsdc: number
+  /** Required when preset mode is enabled — Cobo Agent Wallet UUID */
+  coboWalletId: string | null
+  /** Optional display EOA; does not affect on-chain execution */
+  eoaAddress: string | null
 }
 
 type EnvLike = Record<string, string | undefined>
 
-const DEFAULT_DEMO_EOA = '0x1111111111111111111111111111111111111111'
-const DEFAULT_DEMO_AGENT_WALLET = '0x2222222222222222222222222222222222222222'
-const DEFAULT_DEMO_CAW_WALLET_ID = 'pacttrader-hackathon-demo-wallet'
-const DEFAULT_DEMO_AVAILABLE_USDC = 500
-
-function readPositiveNumber(value: string | undefined, fallback: number): number {
-  if (!value) return fallback
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed) || parsed < 0) return fallback
-  return parsed
-}
-
-function isPresetEnabled(env: EnvLike): boolean {
+export function isPresetDemoEnabled(env: EnvLike = process.env): boolean {
   return env.PACTTRADER_DEMO_MODE === 'preset'
-    || Boolean(env.PACTTRADER_DEMO_AGENT_WALLET_ADDRESS?.trim())
+    || Boolean(env.PACTTRADER_DEMO_CAW_WALLET_ID?.trim())
 }
 
 export function getPresetDemoWalletConfig(env: EnvLike = process.env): PresetDemoWalletConfig {
-  const enabled = isPresetEnabled(env)
+  const coboWalletId = env.PACTTRADER_DEMO_CAW_WALLET_ID?.trim() || null
   return {
-    enabled,
-    eoaAddress: env.PACTTRADER_DEMO_EOA_ADDRESS?.trim() || DEFAULT_DEMO_EOA,
-    agentWalletAddress: env.PACTTRADER_DEMO_AGENT_WALLET_ADDRESS?.trim() || DEFAULT_DEMO_AGENT_WALLET,
-    coboWalletId: env.PACTTRADER_DEMO_CAW_WALLET_ID?.trim() || DEFAULT_DEMO_CAW_WALLET_ID,
-    availableUsdc: readPositiveNumber(env.PACTTRADER_DEMO_AVAILABLE_USDC, DEFAULT_DEMO_AVAILABLE_USDC),
+    enabled: isPresetDemoEnabled(env),
+    coboWalletId,
+    eoaAddress: env.PACTTRADER_DEMO_EOA_ADDRESS?.trim() || null,
   }
 }
 
+/** Apply demo flags and wallet UUID only — no placeholder addresses or balances. */
 export function applyPresetDemoWallet(
   state: AppState,
   env: EnvLike = process.env,
 ): { state: AppState; applied: boolean } {
   const config = getPresetDemoWalletConfig(env)
-  if (!config.enabled) return { state, applied: false }
+  if (!config.enabled || !config.coboWalletId) {
+    return { state, applied: false }
+  }
 
   state.settings.network = normalizeNetwork(state.settings.network)
   state.settings.apiKeyConfigured = Boolean(
     state.settings.coboApiKey?.trim() || process.env.AGENT_WALLET_API_KEY?.trim(),
   )
 
-  state.wallet.address = config.agentWalletAddress
-  state.wallet.totalAssetsUsdc = config.availableUsdc
-  state.wallet.currentApy = state.wallet.currentApy || 8.4
-  state.wallet.cumulativeYieldUsdc = state.wallet.cumulativeYieldUsdc || 12.6
-
   const prep = state.walletPreparation
   prep.network = normalizeNetwork(prep.network)
   prep.demoMode = 'preset'
-  prep.eoa = {
-    connected: true,
-    address: config.eoaAddress,
-    label: 'Hackathon Demo EOA',
+  prep.agentWallet.coboWalletId = config.coboWalletId
+
+  if (config.eoaAddress) {
+    prep.eoa = {
+      connected: true,
+      address: config.eoaAddress,
+      label: 'Hackathon Demo EOA',
+    }
+    prep.steps.eoa = 'completed'
   }
-  prep.agentWallet = {
-    created: true,
-    address: config.agentWalletAddress,
-    coboWalletId: config.coboWalletId,
-    pairing: {
-      status: 'paired',
-      code: null,
-      expiresAt: null,
-    },
-  }
-  prep.funding = {
-    status: 'ready',
-    depositedUsdc: config.availableUsdc,
-    availableUsdc: config.availableUsdc,
-    lastTxHash: null,
-  }
+
   prep.agentBootstrap = {
     mode: 'sdk-create',
     phase: 'paired',
     sessionId: null,
     walletStatus: 'active',
     tssOnline: true,
-    message: 'Hackathon Demo 使用预置 active Agent Wallet；评委默认查看 Pact 边界、策略执行与审计日志。',
+    message: 'Hackathon Demo 使用预置 active Agent Wallet；链上地址与余额从 Cobo 同步。',
   }
-  prep.steps = {
-    eoa: 'completed',
-    agent_wallet: 'completed',
-    funding: 'completed',
-  }
+
   touchPreparation(prep)
 
   return { state, applied: true }
+}
+
+/** Resolve EVM address and USDC balance from Cobo for the configured demo wallet. */
+export async function hydratePresetDemoWalletFromCobo(state: AppState): Promise<boolean> {
+  const config = getPresetDemoWalletConfig()
+  if (!config.enabled || !config.coboWalletId) return false
+
+  applyPresetDemoWallet(state)
+  const prep = state.walletPreparation
+
+  try {
+    const address = await ensureAgentWalletEvmAddress(state)
+    prep.agentWallet.created = true
+    prep.agentWallet.address = address
+    prep.steps.agent_wallet = 'completed'
+    state.wallet.address = address
+  } catch {
+    return false
+  }
+
+  await syncFundingFromExistingBalance(state)
+  touchPreparation(prep)
+  return true
 }

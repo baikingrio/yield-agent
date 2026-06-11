@@ -1,14 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AppState } from '../shared/types/app'
 
-const getState = vi.fn<() => AppState>()
-const syncWalletSummaryFromCobo = vi.fn<(_state: AppState) => Promise<void>>()
+const { getState, persistCurrentState, syncWalletSummaryFromCobo } = vi.hoisted(() => ({
+  getState: vi.fn<() => AppState>(),
+  persistCurrentState: vi.fn(),
+  syncWalletSummaryFromCobo: vi.fn<(_state: AppState) => Promise<void>>(),
+}))
 
 vi.stubGlobal('defineEventHandler', <T>(fn: T) => fn)
 vi.stubGlobal('getQuery', (event: { query?: Record<string, string> }) => event.query ?? {})
 
-vi.mock('../server/utils/app-store', () => ({ getState }))
+vi.mock('../server/utils/app-store', () => ({ getState, persistCurrentState }))
 vi.mock('../server/utils/cobo-preparation', () => ({ syncWalletSummaryFromCobo }))
+vi.mock('../server/utils/pacttrader-demo-wallet', () => ({
+  getPresetDemoWalletConfig: () => ({ enabled: false }),
+  hydratePresetDemoWalletFromCobo: vi.fn(),
+}))
 
 function createState(): AppState {
   return {
@@ -66,5 +73,6 @@ describe('GET /api/wallet handler', () => {
     await handler({ query: { sync: 'true' } } as never)
 
     expect(syncWalletSummaryFromCobo).toHaveBeenCalledWith(state)
+    expect(persistCurrentState).toHaveBeenCalledOnce()
   })
 })

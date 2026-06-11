@@ -1,6 +1,10 @@
-import { getState } from '../../../utils/app-store'
+import { getState, persistCurrentState } from '../../../utils/app-store'
 import { detectBootstrapMode, syncPreparationFromCawCli } from '../../../utils/caw-wallet-bootstrap'
 import { syncFundingFromExistingBalance } from '../../../utils/cobo-preparation'
+import {
+  getPresetDemoWalletConfig,
+  hydratePresetDemoWalletFromCobo,
+} from '../../../utils/pacttrader-demo-wallet'
 import { getWalletPreparation } from '../../../utils/wallet-preparation'
 
 export default defineEventHandler(async () => {
@@ -22,6 +26,12 @@ export default defineEventHandler(async () => {
     }
   }
 
-  await syncFundingFromExistingBalance(state)
+  if (getPresetDemoWalletConfig().enabled) {
+    await hydratePresetDemoWalletFromCobo(state)
+  } else {
+    await syncFundingFromExistingBalance(state)
+  }
+
+  persistCurrentState()
   return getWalletPreparation(state)
 })

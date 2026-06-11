@@ -128,7 +128,7 @@ function humanizeCoboErrorMessage(message: string): string {
     return '当前 API Key 无权为该 Agent Wallet 提交 Pact。请确认 Wallet 步骤 2 已完成配对，并使用对应 Agent 的 API Key。'
   }
   if (normalized.includes('source_address_not_on_wallet')) {
-    return '合约调用的 src_addr 不属于当前 Agent Wallet。请核对 PACTTRADER_DEMO_CAW_WALLET_ID 与 AGENT_WALLET_API_KEY 匹配，并删除错误的 PACTTRADER_DEMO_AGENT_WALLET_ADDRESS（系统将自动从 Cobo 同步链上地址）。'
+    return '合约调用的 src_addr 不属于当前 Agent Wallet。请核对 PACTTRADER_DEMO_CAW_WALLET_ID 与 AGENT_WALLET_API_KEY 属于同一 Agent；链上地址将从 Cobo 自动同步。'
   }
   if (normalized.includes('recipe_slugs do not exist') || normalized.includes('recipe slug')) {
     return '关联的 Recipe slug 在 Cobo 环境中不存在。默认已省略占位 slug；若需绑定 Recipe，请在 .env 设置 CAW_PACT_RECIPE_SLUGS 为 Cobo 库中存在的 slug（逗号分隔）。'

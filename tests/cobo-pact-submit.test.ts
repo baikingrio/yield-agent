@@ -19,11 +19,11 @@ function createReadyState(): AppState {
     wallet: { address: '0xAgent', totalAssetsUsdc: 500, currentApy: 0, cumulativeYieldUsdc: 0 },
     walletPreparation: {
       network: 'base-sepolia',
-      eoa: { connected: true, address: '0x1111111111111111111111111111111111111111', label: 'EOA' },
+      eoa: { connected: true, address: '0x911984b11dF9B7Ad75e4CaDC9BEfAb7bC7830936', label: 'EOA' },
       agentWallet: {
         created: true,
-        address: '0x2222222222222222222222222222222222222222',
-        coboWalletId: 'wallet-1',
+        address: '0x382a91e60038085bc07e6f1e32739dcfa816c5a1',
+        coboWalletId: 'e7495f9d-22bf-40f3-94d7-0733176b70ff',
         pairing: { status: 'paired', code: null, expiresAt: null },
       },
       funding: { status: 'ready', depositedUsdc: 500, availableUsdc: 500, lastTxHash: null },
@@ -92,7 +92,7 @@ describe('submitYieldPactToCobo fallback behavior', () => {
     submitPact.mockRejectedValueOnce(new Error('Wallet not found'))
     const state = createReadyState()
     state.walletPreparation.demoMode = 'preset'
-    state.walletPreparation.agentWallet.coboWalletId = 'pacttrader-hackathon-demo-wallet'
+    state.walletPreparation.agentWallet.coboWalletId = '3752834b-c0fa-4f8d-b6b5-00b992d09923'
     const { submitYieldPactToCobo } = await import('../server/utils/cobo-pact')
 
     await expect(submitYieldPactToCobo(state, {

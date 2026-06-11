@@ -24,7 +24,7 @@ import {
   waitForTransactionResult,
 } from './cobo-transaction'
 import { syncWalletSummaryFromCobo } from './cobo-preparation'
-import { applyPresetDemoWallet } from './pacttrader-demo-wallet'
+import { applyPresetDemoWallet, hydratePresetDemoWalletFromCobo } from './pacttrader-demo-wallet'
 import { ensureAgentWalletEvmAddress } from './agent-wallet-address'
 import { syncYieldSnapshotFromChain } from './yield-snapshot'
 import { resolveExecutionCredentials } from './pact-credentials'
@@ -282,6 +282,7 @@ export async function executeFirstPactRecipe(
   pactId: string,
 ): Promise<PactExecutionResult> {
   applyPresetDemoWallet(state)
+  await hydratePresetDemoWalletFromCobo(state).catch(() => {})
   const pact = findPact(state, pactId)
   if (!pact) throw new Error('Pact not found')
   if (pact.status !== 'active') {

@@ -15,6 +15,7 @@ import type {
 } from '../../shared/types/app'
 import { assertAgentWalletHasGas, getAgentNativeEthBalance, resolveContractCallSponsor } from './agent-gas'
 import { getCoboBasePath, getNetworkChainConfig } from './cobo-config'
+import { preferEnvCoboApiKey } from './cobo-client'
 import { APP_CHAIN } from './chain'
 import { extractCoboErrorMessage } from './cobo-client'
 import {
@@ -25,8 +26,7 @@ import {
 import { syncWalletSummaryFromCobo } from './cobo-preparation'
 import { applyPresetDemoWallet } from './pacttrader-demo-wallet'
 import { syncYieldSnapshotFromChain } from './yield-snapshot'
-import { resolveRedeemApiKey } from './pact-credentials'
-import { resolvePactExecutionApiKey } from './pact-credentials'
+import { resolveExecutionCredentials } from './pact-credentials'
 import { readYieldSuppliedAmount } from './yield-position'
 import {
   buildExecutionRequestId,
@@ -266,7 +266,9 @@ async function tryResumeFirstExecution(
 
       return pendingExecutionResult(`USDC 授权 ${supplyRoute.protocolLabel}`, approveTx.transaction_hash || '', {
         coboStatus: approveWait.coboStatus ?? approveTx.status_display,
-        hint: '授权交易仍在 Cobo/TSS 队列中。请确认 Hermes 主机 `caw node status` 为 online 后重试',
+        hint: preferEnvCoboApiKey()
+          ? '授权可能由 Pact 子 Key 提交但 TSS 无法签名。请点击「执行首次 Recipe」重试（将换用 Agent 主 Key 重新提交）'
+          : '授权交易仍在 Cobo/TSS 队列中。请确认 Hermes 主机 `caw node status` 为 online 后重试',
       })
     }
   }
@@ -301,8 +303,11 @@ export async function executeFirstPactRecipe(
     pact.firstExecutionAt = undefined
   }
 
-  const apiKey = resolvePactExecutionApiKey(state, pact.id)
-  if (!apiKey) throw new Error('未找到 pact-scoped 执行凭证，请同步 Pact 状态后重试')
+  const credentials = resolveExecutionCredentials(state, pact)
+  if (!credentials) {
+    throw new Error('未找到执行凭证。Vercel 部署请配置 AGENT_WALLET_API_KEY（Agent 主 Key，非 Pact 子 Key）')
+  }
+  const { apiKey } = credentials
 
   const walletId = state.walletPreparation.agentWallet.coboWalletId
   const walletAddress = state.walletPreparation.agentWallet.address
@@ -448,7 +453,7 @@ export async function redeemPactFunds(
   if (!apiKey) {
     throw new Error(
       pact.status === 'active'
-        ? '未找到 pact-scoped 执行凭证，请同步 Pact 状态后重试'
+        ? '未找到执行凭证。Vercel 部署请配置 AGENT_WALLET_API_KEY（Agent 主 Key）'
         : 'Pact 已撤销且缺少 Agent 主 API Key，无法代为赎回。请在设置页配置 Cobo API Key 后重试。',
     )
   }
@@ -547,7 +552,8 @@ export async function simulatePactDenial(
   const pact = findPact(state, pactId)
   if (!pact) throw new Error('Pact not found')
 
-  const apiKey = resolvePactExecutionApiKey(state, pact.id)
+  const credentials = resolveExecutionCredentials(state, pact)
+  const apiKey = credentials?.apiKey
     || state.settings.coboApiKey
     || process.env.AGENT_WALLET_API_KEY
 

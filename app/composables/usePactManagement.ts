@@ -121,7 +121,10 @@ export function usePactManagement() {
     for (let attempt = 0; attempt < MAX_EXECUTION_POLL_ATTEMPTS; attempt += 1) {
       await sleep(EXECUTION_POLL_MS)
       try {
-        const result = await store.executePact(pactId, { timeout: 55_000 })
+        const result = await store.executePact(pactId, {
+          timeout: 55_000,
+          bumpAttempt: attempt > 0,
+        })
         if (!result.pending) {
           actionBanner.value = {
             tone: 'success',

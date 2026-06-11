@@ -1,10 +1,14 @@
 import { getQuery } from 'h3'
 import { getState, persistCurrentState } from '../../../utils/app-store'
-import { extractCoboErrorMessage } from '../../../utils/cobo-client'
+import { extractCoboErrorMessage, preferEnvCoboApiKey } from '../../../utils/cobo-client'
 import { refreshCoboPactStatus } from '../../../utils/cobo-pact'
 import { executeFirstPactRecipe } from '../../../utils/cobo-execution'
 import { isCoboSubmittedPact, pactExecutionBlockedReason } from '../../../utils/pact-execution-guard'
-import { refreshPactCredentialFromCobo, resolvePactExecutionApiKey } from '../../../utils/pact-credentials'
+import {
+  executionCredentialErrorMessage,
+  refreshPactCredentialFromCobo,
+  resolveExecutionCredentials,
+} from '../../../utils/pact-credentials'
 import { findPactById } from '../../../utils/pact-lookup'
 import { pactResolveHttpError, resolvePactById } from '../../../utils/pact-resolve'
 
@@ -58,19 +62,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, data: { error: blockedAfterSync } })
   }
 
-  let executionApiKey = resolvePactExecutionApiKey(state, pact.id)
-  if (!executionApiKey) {
-    executionApiKey = await refreshPactCredentialFromCobo(state, pact.id).catch(() => null)
+  let executionApiKey = resolveExecutionCredentials(state, pact)?.apiKey ?? null
+  if (!executionApiKey && !preferEnvCoboApiKey()) {
+    await refreshPactCredentialFromCobo(state, pact.id).catch(() => null)
     persistCurrentState()
+    executionApiKey = resolveExecutionCredentials(state, pact)?.apiKey ?? null
   }
   if (!executionApiKey) {
     throw createError({
       statusCode: 502,
-      data: {
-        error: pact.status === 'completed'
-          ? 'Pact 已在 Cobo 侧完成，无法继续执行。请重新创建策略与 Pact。'
-          : '未找到 pact-scoped 执行凭证。请在 Cobo App 完成审批后，于 Pact 管理页点击「我已批准，刷新状态」再试。',
-      },
+      data: { error: executionCredentialErrorMessage(state, pact) },
     })
   }
 

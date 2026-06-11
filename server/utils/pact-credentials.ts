@@ -4,7 +4,52 @@ import {
   storePactCredential,
 } from '../db/repository'
 import type { AppState, Pact } from '../../shared/types/app'
-import { createCoboPactsApi, getCoboApiKey } from './cobo-client'
+import { createCoboPactsApi, getCoboApiKey, preferEnvCoboApiKey } from './cobo-client'
+
+export type ExecutionCredentialMode = 'principal' | 'pact-scoped'
+
+export interface ExecutionCredentials {
+  apiKey: string
+  mode: ExecutionCredentialMode
+}
+
+/**
+ * Vercel + Hermes split deploy: pact-scoped keys can submit txs but cannot drive wallet TSS signing.
+ * Use the Agent principal key (AGENT_WALLET_API_KEY) for contract calls in that runtime.
+ */
+export function resolveExecutionCredentials(state: AppState, pact: Pact): ExecutionCredentials | null {
+  if (preferEnvCoboApiKey()) {
+    try {
+      return { apiKey: getCoboApiKey(state), mode: 'principal' }
+    } catch {
+      return null
+    }
+  }
+
+  const pactKey = resolvePactExecutionApiKey(state, pact.id)
+  if (pactKey) {
+    return { apiKey: pactKey, mode: 'pact-scoped' }
+  }
+
+  try {
+    return { apiKey: getCoboApiKey(state), mode: 'principal' }
+  } catch {
+    return null
+  }
+}
+
+export function executionCredentialErrorMessage(
+  state: AppState,
+  pact: Pact,
+): string {
+  if (preferEnvCoboApiKey()) {
+    return 'Vercel/Hermes 分体部署需配置 AGENT_WALLET_API_KEY（Hermes 上 caw wallet current --show-api-key 的 Agent 主 Key，不是 Pact 子 Key）'
+  }
+  if (pact.status === 'completed') {
+    return 'Pact 已在 Cobo 侧完成，无法继续执行。请重新创建策略与 Pact。'
+  }
+  return '未找到 pact-scoped 执行凭证。请在 Cobo App 完成审批后，于 Pact 管理页点击「我已批准，刷新状态」再试。'
+}
 
 export function cachePactCredentialFromCobo(
   state: AppState,
@@ -47,15 +92,8 @@ export function revokeStoredPactCredential(pactId: string): void {
 }
 
 export async function resolveRedeemApiKey(state: AppState, pact: Pact): Promise<string | null> {
-  if (pact.status === 'active') {
-    const cached = resolvePactExecutionApiKey(state, pact.id)
-    if (cached) return cached
-    try {
-      return await refreshPactCredentialFromCobo(state, pact.id)
-    } catch {
-      return null
-    }
-  }
+  const creds = resolveExecutionCredentials(state, pact)
+  if (creds) return creds.apiKey
 
   if (pact.status === 'terminated' || pact.status === 'completed') {
     try {

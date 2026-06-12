@@ -168,10 +168,13 @@ export type CawDeploymentBlocker =
   | 'wallet_preparing'
   | 'prefer_env_api_key'
   | 'ephemeral_database'
+  | 'postgres_unreachable'
 
 export interface CawDeploymentCheck {
   runtime: 'hermes-agent-host' | 'local' | 'unknown'
   databaseBackend: 'postgres' | 'sqlite' | 'ephemeral'
+  databaseUrlConfigured: boolean
+  postgresReachable: boolean | null
   apiKeyConfigured: boolean
   apiKeySource: 'settings' | 'env' | 'missing'
   preferEnvKey: boolean

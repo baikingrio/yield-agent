@@ -4,12 +4,14 @@ import type {
   CawDeploymentCheck,
 } from '../../shared/types/app'
 import { getDatabaseBackendLabel } from '../db/repository'
+import { isDatabaseUrlConfigured } from './postgres-probe'
 import { getCoboBasePath, getCoboEnvironment } from './cobo-config'
 
 export interface CawDeploymentProbe {
   tssOnline: boolean | null
   boundTssNodeId: string | null
   walletStatus: string | null
+  postgresReachable?: boolean | null
 }
 
 function apiKeySource(state: AppState): CawDeploymentCheck['apiKeySource'] {
@@ -38,13 +40,16 @@ function isEphemeralDatabase(): boolean {
 function buildEnvTemplate(mainNodeId: string | null): string {
   const env = getCoboEnvironment()
   const apiUrl = getCoboBasePath()
+  const databaseUrlLine = isDatabaseUrlConfigured()
+    ? 'DATABASE_URL=<已在 Vercel 环境变量中配置，密钥不在此显示>'
+    : 'DATABASE_URL=<Supabase Transaction pooler 连接串，端口 6543，?pgbouncer=true>'
   const lines = [
     `AGENT_WALLET_ENV=${env}`,
     `AGENT_WALLET_API_URL=${apiUrl}`,
     'AGENT_WALLET_API_KEY=<Hermes: caw wallet current --show-api-key>',
     `AGENT_WALLET_MAIN_NODE_ID=${mainNodeId ?? '<Hermes: caw node status tss_node_id>'}`,
     'AGENT_WALLET_TSS_RUNTIME=hermes-agent-host',
-    'DATABASE_URL=<Supabase Transaction pooler 连接串，端口 6543，?pgbouncer=true>',
+    databaseUrlLine,
     '# DATABASE_PATH=<仅本地 SQLite；Vercel 请改用 DATABASE_URL>',
   ]
   return lines.join('\n')
@@ -72,6 +77,9 @@ function buildNextActions(blockers: CawDeploymentBlocker[]): string[] {
   }
   if (blockers.includes('ephemeral_database')) {
     actions.push('在 Vercel 配置 Supabase DATABASE_URL（Transaction pooler），避免实例重启后状态丢失')
+  }
+  if (blockers.includes('postgres_unreachable')) {
+    actions.push('DATABASE_URL 已配置但无法连接 Supabase：请改用 Transaction pooler（端口 6543，?pgbouncer=true），确认密码已 URL 编码，并已执行 migration SQL')
   }
   if (actions.length === 0) {
     actions.push('部署自检通过，可继续 Agent Wallet 初始化')
@@ -116,6 +124,9 @@ export function buildCawDeploymentCheck(
   if (isEphemeralDatabase()) {
     blockers.push('ephemeral_database')
   }
+  if (isDatabaseUrlConfigured() && probe.postgresReachable === false) {
+    blockers.push('postgres_unreachable')
+  }
 
   const mainNodeMatchesBound = mainNodeId && probe.boundTssNodeId
     ? mainNodeId === probe.boundTssNodeId
@@ -124,6 +135,8 @@ export function buildCawDeploymentCheck(
   return {
     runtime: detectRuntime(),
     databaseBackend: getDatabaseBackendLabel(),
+    databaseUrlConfigured: isDatabaseUrlConfigured(),
+    postgresReachable: probe.postgresReachable ?? null,
     apiKeyConfigured,
     apiKeySource: source,
     preferEnvKey: shouldPreferEnv,

@@ -20,6 +20,7 @@ const blockerLabels: Record<string, string> = {
   wallet_preparing: '钱包仍在 preparing',
   prefer_env_api_key: '建议使用环境变量而非会话内 Key',
   ephemeral_database: 'Vercel 未配置持久化 DATABASE_URL（易重复创建钱包）',
+  postgres_unreachable: 'DATABASE_URL 已配置但无法连接 Supabase',
 }
 
 async function copyTemplate() {
@@ -71,7 +72,12 @@ async function copyTemplate() {
         </div>
         <div class="rounded-md border border-hairline bg-surface-elevated p-3">
           <dt class="text-xs text-muted">数据库</dt>
-          <dd class="mt-1 text-on-dark">{{ check.databaseBackend }}</dd>
+          <dd class="mt-1 text-on-dark">
+            {{ check.databaseBackend }}
+            <span v-if="check.databaseUrlConfigured" class="text-muted"> · URL 已配置</span>
+            <span v-if="check.postgresReachable === true" class="text-trading-up"> · 已连通</span>
+            <span v-else-if="check.postgresReachable === false" class="text-trading-down"> · 连接失败</span>
+          </dd>
         </div>
         <div class="rounded-md border border-hairline bg-surface-elevated p-3">
           <dt class="text-xs text-muted">MAIN_NODE_ID</dt>

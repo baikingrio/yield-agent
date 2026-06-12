@@ -96,4 +96,10 @@ describe('buildCawDeploymentCheck', () => {
     expect(check.envTemplate).toContain('node-abc')
     expect(check.envTemplate).not.toContain('session-key')
   })
+
+  it('marks DATABASE_URL as configured in env template when env var is set', () => {
+    vi.stubEnv('DATABASE_URL', 'postgresql://example')
+    const check = buildCawDeploymentCheck(createState())
+    expect(check.envTemplate).toContain('DATABASE_URL=<已在 Vercel 环境变量中配置')
+  })
 })

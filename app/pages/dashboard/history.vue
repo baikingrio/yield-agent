@@ -1,31 +1,39 @@
 <script setup lang="ts">
-import type { LogType } from '#shared/types/app'
+import type { LogEntry, LogType } from '#shared/types/app'
 import { DASHBOARD_HISTORY } from '#shared/constants/dashboard-routes'
+import { extractApiErrorMessage } from '~/utils/api-error'
 
 type LogFilter = LogType | 'all'
 
 useHead({ title: '交易历史 · YieldAgent' })
 
 const route = useRoute()
-const store = useAppStore()
 const filter = ref<LogFilter>('all')
-const loading = ref(true)
+const historyLogs = ref<LogEntry[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 const pactIdFilter = computed(() => {
   const q = route.query.pactId
   return typeof q === 'string' ? q : undefined
 })
 
+function buildQuery() {
+  return {
+    limit: 100,
+    ...(filter.value === 'all' ? {} : { type: filter.value }),
+    ...(pactIdFilter.value ? { pactId: pactIdFilter.value } : {}),
+  }
+}
+
 async function loadLogs() {
-  loading.value = true
-  store.clearError()
+  const showSkeleton = historyLogs.value.length === 0
+  if (showSkeleton) loading.value = true
+  error.value = null
   try {
-    const query = {
-      limit: 100,
-      ...(filter.value === 'all' ? {} : { type: filter.value }),
-      ...(pactIdFilter.value ? { pactId: pactIdFilter.value } : {}),
-    }
-    await store.fetchLogs(query, { allowEmpty: true })
+    historyLogs.value = await $fetch<LogEntry[]>('/api/logs', { query: buildQuery() })
+  } catch (e) {
+    error.value = extractApiErrorMessage(e)
   } finally {
     loading.value = false
   }
@@ -47,9 +55,9 @@ onMounted(loadLogs)
       </p>
     </header>
 
-    <UiPageAlert v-if="store.error" :message="store.error" @retry="loadLogs" />
+    <UiPageAlert v-if="error" :message="error" @retry="loadLogs" />
 
     <HistoryLogTypeFilter v-model="filter" class="mb-6" />
 
-    <HistoryLogTimeline :logs="store.logs" :loading="loading" />
+    <HistoryLogTimeline :logs="historyLogs" :loading="loading" />
 </template>

@@ -5,13 +5,12 @@ export function useDashboardPoll() {
   let timer: ReturnType<typeof setInterval> | null = null
 
   function poll() {
-    store.fetchLogs({ limit: 10 }).catch(() => {})
+    store.fetchLogs({ limit: 10 }, { background: true }).catch(() => {})
     store.fetchYieldSeries(undefined, { sync: true }).catch(() => {})
     store.fetchWallet({ sync: true }).catch(() => {})
   }
 
   onMounted(() => {
-    poll()
     timer = setInterval(poll, POLL_MS)
   })
 

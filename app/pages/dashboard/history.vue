@@ -25,7 +25,7 @@ async function loadLogs() {
       ...(filter.value === 'all' ? {} : { type: filter.value }),
       ...(pactIdFilter.value ? { pactId: pactIdFilter.value } : {}),
     }
-    await store.fetchLogs(query)
+    await store.fetchLogs(query, { allowEmpty: true })
   } finally {
     loading.value = false
   }

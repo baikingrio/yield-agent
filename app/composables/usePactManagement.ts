@@ -14,6 +14,37 @@ const MAX_POLL_ATTEMPTS = 75
 const EXECUTION_POLL_MS = 5000
 const MAX_EXECUTION_POLL_ATTEMPTS = 36
 
+function autoExecuteSessionKey(pactId: string): string {
+  return `yieldagent:pact-auto-exec:${pactId}`
+}
+
+function hasAutoExecuteSession(pactId: string): boolean {
+  if (!import.meta.client) return false
+  try {
+    return sessionStorage.getItem(autoExecuteSessionKey(pactId)) === '1'
+  } catch {
+    return false
+  }
+}
+
+function markAutoExecuteSession(pactId: string): void {
+  if (!import.meta.client) return
+  try {
+    sessionStorage.setItem(autoExecuteSessionKey(pactId), '1')
+  } catch {
+    // Ignore quota / privacy mode errors.
+  }
+}
+
+function clearAutoExecuteSession(pactId: string): void {
+  if (!import.meta.client) return
+  try {
+    sessionStorage.removeItem(autoExecuteSessionKey(pactId))
+  } catch {
+    // Ignore.
+  }
+}
+
 export function usePactManagement() {
   const route = useRoute()
   const router = useRouter()
@@ -177,12 +208,18 @@ export function usePactManagement() {
     await pollExecutionUntilDone(pactId)
   }
 
+  function agentFundingReady(): boolean {
+    const prep = store.preparation
+    return Boolean(prep?.funding?.status === 'ready' && prep.funding.availableUsdc > 0)
+  }
+
   async function tryAutoExecute(pactId: string) {
     const pact = store.pacts.find((p) => p.id === pactId)
     if (!pact || pact.submissionMode !== 'cobo' || pact.status !== 'active') return
     if (pact.firstExecutionCompleted && pact.firstExecutionTxHash?.trim()) return
-    if (autoExecuteAttempted.value && executeError.value) return
+    if (hasAutoExecuteSession(pactId) || autoExecuteAttempted.value) return
     if (executing.value) return
+    if (!agentFundingReady()) return
 
     await refreshGasStatus()
     if (gasStatus.value && !gasStatus.value.ready) {
@@ -190,10 +227,12 @@ export function usePactManagement() {
         ?? `Agent Wallet 需要至少 ${gasStatus.value.minEth} ${gasStatus.value.nativeTokenLabel}（${gasStatus.value.networkLabel} 当前 ${gasStatus.value.ethBalance} ETH）`
       actionBanner.value = { tone: 'error', message: executeError.value }
       autoExecuteAttempted.value = true
+      markAutoExecuteSession(pactId)
       return
     }
 
     autoExecuteAttempted.value = true
+    markAutoExecuteSession(pactId)
     executing.value = true
     executeError.value = ''
     try {
@@ -333,8 +372,6 @@ export function usePactManagement() {
 
     const pact = selectedPact.value
     if (pact) {
-      autoExecuteAttempted.value = false
-      executeError.value = ''
       if (pact.status === 'awaiting-approval' || pact.status === 'pending') {
         maybeStartPolling(pact)
       }
@@ -471,6 +508,7 @@ export function usePactManagement() {
       return
     }
 
+    clearAutoExecuteSession(selectedId.value)
     autoExecuteAttempted.value = false
     executing.value = true
     executeError.value = ''

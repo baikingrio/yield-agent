@@ -5,6 +5,7 @@ import type { LogEntry } from '../../../shared/types/app'
 const props = defineProps<{
   logs: LogEntry[]
   loading?: boolean
+  refreshing?: boolean
   variant?: 'default' | 'ledger'
 }>()
 
@@ -51,15 +52,24 @@ function statusClass(status: string) {
           Agent 动作、tx hash 与 Pact 拒绝记录
         </p>
       </div>
-      <NuxtLink
-        :to="DASHBOARD_HISTORY"
-        class="shrink-0 text-xs font-semibold text-primary no-underline hover:text-primary-active"
-      >
-        查看全部
-      </NuxtLink>
+      <div class="flex items-center gap-2">
+        <span
+          v-if="refreshing && logs.length > 0"
+          class="text-xs text-muted"
+          aria-live="polite"
+        >
+          更新中…
+        </span>
+        <NuxtLink
+          :to="DASHBOARD_HISTORY"
+          class="shrink-0 text-xs font-semibold text-primary no-underline hover:text-primary-active"
+        >
+          查看全部
+        </NuxtLink>
+      </div>
     </div>
 
-    <div v-if="loading && logs.length === 0" class="mt-4 h-32 animate-pulse rounded-lg bg-surface-elevated" :class="isLedger ? 'mx-5 mb-5' : ''" />
+    <div v-if="loading" class="mt-4 h-32 animate-pulse rounded-lg bg-surface-elevated" :class="isLedger ? 'mx-5 mb-5' : ''" />
 
     <p v-else-if="logs.length === 0" class="mt-4 text-sm text-muted" :class="isLedger ? 'px-5 pb-5' : ''">
       暂无执行记录。Pact 生效后的 Agent 动作与拒绝将出现在此。

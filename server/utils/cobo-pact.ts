@@ -119,6 +119,15 @@ function localStatusLabel(status: PactStatus): string {
   }
 }
 
+export function applyCoboPactRemoteProgress(
+  pact: Pact,
+  remote: { progress_tx_count?: number | null, activated_at?: string | null },
+): void {
+  if ((remote.progress_tx_count ?? 0) <= 0) return
+  pact.firstExecutionCompleted = true
+  pact.firstExecutionAt = pact.firstExecutionAt ?? remote.activated_at ?? new Date().toISOString()
+}
+
 export function applyCoboPactStatusToState(
   state: AppState,
   pactId: string,
@@ -197,11 +206,16 @@ export async function syncCoboPactStatus(
 export async function refreshCoboPactStatus(state: AppState, pactId: string) {
   const localPact = state.pacts.find((item) => item.id === pactId || item.coboPactId === pactId)
   const localPactId = localPact?.id ?? pactId
+  let remoteProgress: { progress_tx_count?: number | null, activated_at?: string | null } | null = null
 
   const pact = await syncCoboPactStatus(state, pactId, async (coboPactId) => {
     const pactsApi = createCoboPactsApi(state)
     const resp = await pactsApi.getPact(coboPactId)
     const result = resp.data.result
+    remoteProgress = {
+      progress_tx_count: result.progress_tx_count,
+      activated_at: result.activated_at,
+    }
     if (mapCoboPactStatus(result.status) === 'active' && result.api_key) {
       const { cachePactCredentialFromCobo } = await import('./pact-credentials')
       cachePactCredentialFromCobo(state, localPactId, coboPactId, result.api_key)
@@ -211,6 +225,9 @@ export async function refreshCoboPactStatus(state: AppState, pactId: string) {
       message: result.message,
     }
   })
+  if (remoteProgress) {
+    applyCoboPactRemoteProgress(pact, remoteProgress)
+  }
   return pact
 }
 

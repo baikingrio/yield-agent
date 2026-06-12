@@ -10,13 +10,21 @@ const store = useAppStore()
 const showCreated = ref(false)
 const initialLoading = ref(true)
 
+const logsTableLoading = computed(
+  () => initialLoading.value && store.logs.length === 0 && store.logsLoading,
+)
+
 async function loadDashboard() {
   store.clearError()
   store.loading = true
+  const hasCachedLogs = store.logs.length > 0
   try {
     await Promise.all([
       store.fetchWallet({ sync: false }),
-      store.fetchLogs({ limit: 10 }),
+      store.fetchLogs(
+        { limit: 10 },
+        hasCachedLogs ? { background: true } : undefined,
+      ),
       store.fetchYieldSeries(undefined, { sync: true }),
     ])
     await store.syncPortfolioFromCobo()
@@ -32,7 +40,11 @@ async function onRangeChange(range: YieldRange) {
 }
 
 onMounted(async () => {
+  if (store.logs.length > 0) {
+    initialLoading.value = false
+  }
   await loadDashboard()
+  initialLoading.value = false
   if (route.query.created === '1') {
     showCreated.value = true
     router.replace({ query: {} })
@@ -75,7 +87,8 @@ onMounted(async () => {
 
         <DashboardRecentLogsTable
           :logs="store.logs"
-          :loading="initialLoading"
+          :loading="logsTableLoading"
+          :refreshing="store.logsRefreshing"
           variant="ledger"
         />
       </div>

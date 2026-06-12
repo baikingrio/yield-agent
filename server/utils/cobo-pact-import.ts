@@ -1,6 +1,7 @@
 import type { InlinePolicyCreate, PactListResponse, PactPublicRead, PactSummary } from '@cobo/agentic-wallet'
 import type { AppState, NetworkId, Pact, Strategy } from '../../shared/types/app'
 import {
+  applyCoboPactRemoteProgress,
   applyCoboPactStatusToState,
   mapCoboPactStatus,
   resolveCoboPactSubmissionMessage,
@@ -154,6 +155,7 @@ export async function syncCoboPactsForAgentWallet(state: AppState): Promise<{
     const existing = findLocalPact(state, summary.id)
     if (existing) {
       applyCoboPactStatusToState(state, existing.id, summary.status)
+      applyCoboPactRemoteProgress(existing, summary)
       updated += 1
       continue
     }

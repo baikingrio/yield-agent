@@ -22,6 +22,8 @@ import type {
 } from '../../shared/types/app'
 
 import { extractApiErrorMessage } from '~/utils/api-error'
+import type { FetchLogsOptions } from '#shared/utils/log-fetch'
+import { shouldReplaceLogs } from '#shared/utils/log-fetch'
 
 function apiErrorMessage(err: unknown): string {
   return extractApiErrorMessage(err)
@@ -44,7 +46,10 @@ export const useAppStore = defineStore('app', () => {
   const strategyAgentReadiness = ref<StrategyAgentReadiness | null>(null)
   const strategyAgentPing = ref<HermesStrategyPingResult | null>(null)
   const loading = ref(false)
+  const logsLoading = ref(false)
+  const logsRefreshing = ref(false)
   const error = ref<string | null>(null)
+  let logsFetchGeneration = 0
 
   async function fetchWallet(options?: { sync?: boolean }) {
     try {
@@ -105,12 +110,35 @@ export const useAppStore = defineStore('app', () => {
     return selectedPact.value
   }
 
-  async function fetchLogs(params?: { type?: LogType; limit?: number; pactId?: string }) {
+  async function fetchLogs(
+    params?: { type?: LogType, limit?: number, pactId?: string },
+    options?: FetchLogsOptions,
+  ) {
+    const generation = ++logsFetchGeneration
+    const background = options?.background ?? (logs.value.length > 0 && !options?.allowEmpty)
+    if (background) {
+      logsRefreshing.value = true
+    } else {
+      logsLoading.value = true
+    }
+
     try {
-      logs.value = await $fetch<LogEntry[]>('/api/logs', { query: params })
+      const next = await $fetch<LogEntry[]>('/api/logs', { query: params })
+      if (generation !== logsFetchGeneration) return
+      if (shouldReplaceLogs(logs.value, next, { ...options, background })) {
+        logs.value = next
+      }
     } catch (e) {
+      if (generation !== logsFetchGeneration) return
       error.value = apiErrorMessage(e)
       throw e
+    } finally {
+      if (generation !== logsFetchGeneration) return
+      if (background) {
+        logsRefreshing.value = false
+      } else {
+        logsLoading.value = false
+      }
     }
   }
 
@@ -461,6 +489,8 @@ export const useAppStore = defineStore('app', () => {
     strategyAgentReadiness,
     strategyAgentPing,
     loading,
+    logsLoading,
+    logsRefreshing,
     error,
     fetchWallet,
     fetchStrategies,

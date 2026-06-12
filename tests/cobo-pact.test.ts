@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AppState, Pact } from '../shared/types/app'
 import {
+  applyCoboPactRemoteProgress,
   applyCoboPactStatusToState,
   mapCoboPactStatus,
   resolveCoboPactSubmissionMessage,
@@ -104,6 +105,18 @@ describe('syncCoboPactStatus', () => {
 
     expect(called).toBe(false)
     expect(pact.status).toBe('awaiting-approval')
+  })
+})
+
+describe('applyCoboPactRemoteProgress', () => {
+  it('marks first execution completed when Cobo reports progress transactions', () => {
+    const state = createStateWithPact('active')
+    const pact = state.pacts[0]!
+
+    applyCoboPactRemoteProgress(pact, { progress_tx_count: 2, activated_at: '2026-06-10T00:00:00Z' })
+
+    expect(pact.firstExecutionCompleted).toBe(true)
+    expect(pact.firstExecutionAt).toBe('2026-06-10T00:00:00Z')
   })
 })
 

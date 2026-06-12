@@ -8,6 +8,8 @@ export interface PresetDemoWalletConfig {
   enabled: boolean
   /** Required when preset mode is enabled — Cobo Agent Wallet UUID */
   coboWalletId: string | null
+  /** Optional pinned Agent Wallet EVM address (from Hermes `caw wallet get`) */
+  agentWalletAddress: string | null
   /** Optional display EOA; does not affect on-chain execution */
   eoaAddress: string | null
 }
@@ -24,6 +26,7 @@ export function getPresetDemoWalletConfig(env: EnvLike = process.env): PresetDem
   return {
     enabled: isPresetDemoEnabled(env),
     coboWalletId,
+    agentWalletAddress: env.PACTTRADER_DEMO_AGENT_WALLET_ADDRESS?.trim() || null,
     eoaAddress: env.PACTTRADER_DEMO_EOA_ADDRESS?.trim() || null,
   }
 }
@@ -47,6 +50,12 @@ export function applyPresetDemoWallet(
   prep.network = normalizeNetwork(prep.network)
   prep.demoMode = 'preset'
   prep.agentWallet.coboWalletId = config.coboWalletId
+  if (config.agentWalletAddress) {
+    prep.agentWallet.address = config.agentWalletAddress
+    prep.agentWallet.created = true
+    prep.steps.agent_wallet = 'completed'
+    state.wallet.address = config.agentWalletAddress
+  }
   prep.agentWallet.pairing = {
     status: 'paired',
     code: null,

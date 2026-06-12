@@ -1,6 +1,7 @@
 import type { AppState } from '../../shared/types/app'
 import { isPactScopedWalletAuthGap } from '../../shared/utils/cobo-auth-gaps'
 import { getNetworkChainConfig } from './cobo-config'
+import { isValidEvmAddress, normalizeEvmAddress } from './evm-address'
 import { createCoboWalletsApi, extractCoboErrorMessage, withCoboRetry } from './cobo-client'
 import { ensureCawCredentials } from './caw-credentials'
 import { markAgentWalletPreparing } from './wallet-preparation'
@@ -68,12 +69,43 @@ export async function getWalletStatusFromSdk(state: AppState, walletUuid: string
   return probe.status
 }
 
+function pickEvmAddress(
+  addresses: Array<{ address?: string; compatible_chains?: string[]; chain_type?: string; created_at?: string }>,
+  coboChainId: string,
+): string | null {
+  const candidates = addresses.filter((item) =>
+    isValidEvmAddress(item.address)
+    && (item.compatible_chains?.includes(coboChainId) || item.chain_type === 'ETH'),
+  )
+  if (candidates.length === 0) {
+    const fallback = addresses.find((item) => isValidEvmAddress(item.address))
+    return fallback?.address ? normalizeEvmAddress(fallback.address) : null
+  }
+
+  candidates.sort((a, b) => {
+    const aTime = a.created_at ? Date.parse(a.created_at) : Number.POSITIVE_INFINITY
+    const bTime = b.created_at ? Date.parse(b.created_at) : Number.POSITIVE_INFINITY
+    return aTime - bTime
+  })
+
+  return normalizeEvmAddress(candidates[0].address!)
+}
+
 export async function resolveEvmAddressFromSdk(
   state: AppState,
   walletUuid: string,
 ): Promise<string | null> {
   const networkConfig = getNetworkChainConfig(state.walletPreparation.network)
   const walletsApi = createCoboWalletsApi(state)
+
+  try {
+    const listResp = await withCoboRetry(() => walletsApi.listWalletAddresses(walletUuid))
+    const existing = pickEvmAddress(listResp.data.result ?? [], networkConfig.coboChainId)
+    if (existing) return existing
+  } catch {
+    // Fall through to create.
+  }
+
   try {
     const addrResp = await withCoboRetry(() => walletsApi.createWalletAddress(walletUuid, {
       chain_id: networkConfig.coboChainId,
@@ -81,16 +113,12 @@ export async function resolveEvmAddressFromSdk(
     const created = addrResp.data.result?.address
     if (created) return created
   } catch {
-    // Fall back to list.
+    // Fall back to a second list read after create may have raced.
   }
+
   try {
     const listResp = await withCoboRetry(() => walletsApi.listWalletAddresses(walletUuid))
-    const addresses = listResp.data.result ?? []
-    const match = addresses.find((item) =>
-      item.compatible_chains?.includes(networkConfig.coboChainId)
-      || item.chain_type === 'ETH',
-    )
-    return match?.address ?? addresses[0]?.address ?? null
+    return pickEvmAddress(listResp.data.result ?? [], networkConfig.coboChainId)
   } catch {
     return null
   }

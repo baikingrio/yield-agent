@@ -51,6 +51,20 @@ describe('PactTrader preset demo wallet', () => {
     expect(state.walletPreparation.demoMode).toBeUndefined()
   })
 
+  it('applies pinned agent wallet address when configured', () => {
+    const state = createInitialState()
+    const result = applyPresetDemoWallet(state, {
+      PACTTRADER_DEMO_MODE: 'preset',
+      PACTTRADER_DEMO_CAW_WALLET_ID: '9dacf436-5cd4-4ec4-a962-d9c92a2608c3',
+      PACTTRADER_DEMO_AGENT_WALLET_ADDRESS: '0x382a91e60038085bc07e6f1e32739dcfa816c5a1',
+    })
+
+    expect(result.applied).toBe(true)
+    expect(state.wallet.address).toBe('0x382a91e60038085bc07e6f1e32739dcfa816c5a1')
+    expect(state.walletPreparation.agentWallet.address).toBe('0x382a91e60038085bc07e6f1e32739dcfa816c5a1')
+    expect(state.walletPreparation.steps.agent_wallet).toBe('completed')
+  })
+
   it('applies structure from wallet UUID without placeholder addresses or balances', () => {
     const state = createInitialState()
     const result = applyPresetDemoWallet(state, {
@@ -79,6 +93,7 @@ describe('PactTrader preset demo wallet', () => {
     process.env.PACTTRADER_DEMO_MODE = 'preset'
     process.env.PACTTRADER_DEMO_CAW_WALLET_ID = 'e7495f9d-22bf-40f3-94d7-0733176b70ff'
     process.env.PACTTRADER_DEMO_EOA_ADDRESS = '0x911984b11dF9B7Ad75e4CaDC9BEfAb7bC7830936'
+    delete process.env.PACTTRADER_DEMO_AGENT_WALLET_ADDRESS
 
     const hydrated = await hydratePresetDemoWalletFromCobo(state)
 

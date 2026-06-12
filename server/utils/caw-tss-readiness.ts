@@ -1,4 +1,5 @@
 import type { AppState } from '../../shared/types/app'
+import { isPactScopedWalletAuthGap } from '../../shared/utils/cobo-auth-gaps'
 import {
   createCoboWalletsApi,
   extractCoboErrorMessage,
@@ -76,10 +77,7 @@ export async function checkTssReadiness(
       const normalized = raw.toLowerCase()
       const configuredMainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null
 
-      const isPactScopedStatusAuthGap = normalized.includes('api key pact authorization')
-        || (normalized.includes('agent wallet') && normalized.includes('提交 pact'))
-
-      if (isPactScopedStatusAuthGap) {
+      if (isPactScopedWalletAuthGap(raw)) {
         return {
           online: Boolean(configuredMainNodeId),
           nodeId: configuredMainNodeId,
@@ -117,12 +115,19 @@ export async function checkTssReadiness(
   }
 }
 
+const PACT_KEY_BLOCKER_MESSAGE =
+  '当前 AGENT_WALLET_API_KEY 是 Pact 子 Key，不能用于钱包/TSS 管理。请在 Hermes 运行 caw wallet current --show-api-key 获取 principal Key，更新 Vercel/.env.vercel 后重启；在此 Key 下 vault 无法完成初始化。'
+
 export function buildSdkPreparingMessage(
   walletStatus: string | null,
   tss: { online: boolean; nodeId: string | null; message: string },
   readError?: string | null,
 ): string {
   const configuredMainNodeId = process.env.AGENT_WALLET_MAIN_NODE_ID?.trim() ?? null
+
+  if (isPactScopedWalletAuthGap(readError) || isPactScopedWalletAuthGap(tss.message)) {
+    return PACT_KEY_BLOCKER_MESSAGE
+  }
 
   if (!walletStatus) {
     if (readError) {

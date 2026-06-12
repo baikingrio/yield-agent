@@ -90,7 +90,18 @@ export async function hydratePresetDemoWalletFromCobo(state: AppState): Promise<
     prep.agentWallet.address = address
     prep.steps.agent_wallet = 'completed'
     state.wallet.address = address
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '无法从 Cobo 读取 Agent Wallet'
+    prep.agentBootstrap = {
+      mode: 'sdk-create',
+      phase: 'bootstrapping',
+      sessionId: null,
+      walletStatus: null,
+      tssOnline: null,
+      message,
+    }
+    prep.steps.agent_wallet = 'in_progress'
+    touchPreparation(prep, state)
     return false
   }
 

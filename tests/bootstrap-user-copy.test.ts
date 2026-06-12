@@ -33,4 +33,15 @@ describe('mapBootstrapUserCopy', () => {
     expect(copy.showOpsChecklist).toBe(true)
     expect(copy.title).toContain('耗时较长')
   })
+
+  it('maps pact-scoped api key during bootstrapping to error copy', () => {
+    const copy = mapBootstrapUserCopy({
+      phase: 'bootstrapping',
+      tssOnline: true,
+      message: 'API key pact authorization is not authorized for this wallet',
+    })
+    expect(copy.title).toBe('API Key 类型错误')
+    expect(copy.severity).toBe('error')
+    expect(copy.showOpsChecklist).toBe(true)
+  })
 })

@@ -1,4 +1,5 @@
 import type { AgentBootstrapPhase } from '../types/app'
+import { isPactScopedWalletAuthGap } from './cobo-auth-gaps'
 
 export type BootstrapUserCopySeverity = 'info' | 'warning' | 'error'
 
@@ -65,6 +66,18 @@ export function mapBootstrapUserCopy(input: BootstrapUserCopyInput): BootstrapUs
       body: message ?? '请确认 Hermes 主机 caw node 在线，且 MAIN_NODE_ID 配置正确。',
       severity: 'warning',
       ctaLabel: '查看部署自检',
+      ctaHref: SETTINGS_HREF,
+      showOpsChecklist: true,
+      showTechnicalDetails: true,
+    }
+  }
+
+  if (phase === 'bootstrapping' && (isPactScopedWalletAuthGap(message) || messageIncludes(message, 'Pact 子 Key'))) {
+    return {
+      title: 'API Key 类型错误',
+      body: message ?? '当前 Key 是 Pact 子 Key，不能完成 vault 初始化。请换用 Hermes onboard 的 principal Key。',
+      severity: 'error',
+      ctaLabel: '打开部署自检',
       ctaHref: SETTINGS_HREF,
       showOpsChecklist: true,
       showTechnicalDetails: true,

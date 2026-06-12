@@ -1,4 +1,5 @@
 import type { AppState } from '../../shared/types/app'
+import { isPactScopedWalletAuthGap } from '../../shared/utils/cobo-auth-gaps'
 import { getNetworkChainConfig } from './cobo-config'
 import { createCoboWalletsApi, extractCoboErrorMessage, withCoboRetry } from './cobo-client'
 import { ensureCawCredentials } from './caw-credentials'
@@ -9,12 +10,6 @@ export interface WalletStatusProbe {
   status: string | null
   readError: string | null
   inferredFrom: 'wallet' | 'address' | 'tss' | null
-}
-
-function isPactScopedWalletAuthGap(message: string): boolean {
-  const normalized = message.toLowerCase()
-  return normalized.includes('api key pact authorization')
-    || (normalized.includes('agent wallet') && normalized.includes('提交 pact'))
 }
 
 export async function probeWalletStatusFromSdk(

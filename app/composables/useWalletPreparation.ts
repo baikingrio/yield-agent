@@ -121,8 +121,9 @@ export function useWalletPreparation() {
         store.fetchSettings(),
         store.fetchDeploymentCheck({ sync: false }).catch(() => null),
       ])
-      const needsBootstrapPoll = prep.value?.steps.agent_wallet === 'in_progress'
-        || Boolean(prep.value?.agentWallet.coboWalletId && !prep.value?.agentWallet.created)
+      const needsBootstrapPoll = prep.value?.demoMode !== 'preset'
+        && (prep.value?.steps.agent_wallet === 'in_progress'
+          || Boolean(prep.value?.agentWallet.coboWalletId && !prep.value?.agentWallet.created))
       const needsPairingPoll = Boolean(
         prep.value?.agentWallet.address
         && prep.value?.agentWallet.pairing?.status !== 'paired',

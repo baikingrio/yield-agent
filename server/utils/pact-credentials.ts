@@ -1,6 +1,7 @@
 import {
   deletePactCredential,
   getPactCredential,
+  getPactCredentialAsync,
   storePactCredential,
 } from '../db/repository'
 import type { AppState, Pact } from '../../shared/types/app'
@@ -13,6 +14,14 @@ export interface ExecutionCredentials {
   mode: ExecutionCredentialMode
 }
 
+function resolvePrincipalApiKey(state: AppState): string | null {
+  try {
+    return getCoboApiKey(state)
+  } catch {
+    return process.env.AGENT_WALLET_API_KEY?.trim() || null
+  }
+}
+
 export function resolveExecutionCredentials(state: AppState, pact: Pact): ExecutionCredentials | null {
   const pactKey = resolvePactExecutionApiKey(state, pact.id)
   if (pactKey) {
@@ -23,11 +32,8 @@ export function resolveExecutionCredentials(state: AppState, pact: Pact): Execut
     return null
   }
 
-  try {
-    return { apiKey: getCoboApiKey(state), mode: 'principal' }
-  } catch {
-    return null
-  }
+  const principal = resolvePrincipalApiKey(state)
+  return principal ? { apiKey: principal, mode: 'principal' } : null
 }
 
 export function executionCredentialErrorMessage(
@@ -87,16 +93,17 @@ export function revokeStoredPactCredential(pactId: string): void {
 }
 
 export async function resolveRedeemApiKey(state: AppState, pact: Pact): Promise<string | null> {
-  const creds = resolveExecutionCredentials(state, pact)
+  await getPactCredentialAsync(pact.id)
+
+  let creds = resolveExecutionCredentials(state, pact)
+  if (!creds) {
+    await refreshPactCredentialFromCobo(state, pact.id).catch(() => null)
+    creds = resolveExecutionCredentials(state, pact)
+  }
   if (creds) return creds.apiKey
 
-  if (pact.status === 'terminated' || pact.status === 'completed') {
-    try {
-      return getCoboApiKey(state)
-    } catch {
-      const env = process.env.AGENT_WALLET_API_KEY?.trim()
-      return env || null
-    }
+  if (pact.status === 'active' || pact.status === 'terminated' || pact.status === 'completed') {
+    return resolvePrincipalApiKey(state)
   }
 
   return null

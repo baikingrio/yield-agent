@@ -75,8 +75,18 @@ describe('buildCawDeploymentCheck', () => {
   it('flags ephemeral database on Vercel without DATABASE_PATH', () => {
     vi.stubEnv('VERCEL', '1')
     vi.stubEnv('DATABASE_PATH', '')
+    vi.stubEnv('DATABASE_URL', '')
     const check = buildCawDeploymentCheck(createState())
     expect(check.blockers).toContain('ephemeral_database')
+    expect(check.databaseBackend).toBe('ephemeral')
+  })
+
+  it('uses postgres backend when DATABASE_URL is configured on Vercel', () => {
+    vi.stubEnv('VERCEL', '1')
+    vi.stubEnv('DATABASE_URL', 'postgresql://example')
+    const check = buildCawDeploymentCheck(createState())
+    expect(check.blockers).not.toContain('ephemeral_database')
+    expect(check.databaseBackend).toBe('postgres')
   })
 
   it('includes env template placeholders without secrets', () => {

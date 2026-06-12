@@ -236,15 +236,31 @@ HERMES_STRATEGY_MODEL=       # 可选，留空使用 Hermes 默认配置
 
 Vercel 不能假设能访问 Hermes 主机的 `localhost`。生产 Demo 中，Hermes / TSS Node 应运行在可访问的远程主机或 tunnel 后面。
 
-### SQLite
+### SQLite（本地默认）
 
 ```text
+# 未设置 DATABASE_URL 时使用 SQLite
 # 本地默认 .data/yieldagent.db
-# Vercel 未设置时自动使用 /tmp/yieldagent.db（实例间不共享）
 # DATABASE_PATH=.data/yieldagent.db
 ```
 
-注意：Vercel `/tmp` 适合短期 Demo，但 serverless 实例之间不共享，可能导致 Pact credential、策略或钱包准备状态不稳定。生产化应迁移到外部持久数据库（Postgres / Turso / Supabase 等）。
+### Supabase Postgres（Vercel 推荐）
+
+Vercel serverless 实例之间不共享 `/tmp/yieldagent.db`。生产或公开 Demo 应配置 Supabase Postgres，使策略、Pact、审计日志与 `pact_credentials` 在多实例间一致。
+
+1. 在 Supabase Dashboard → **Project Settings → Database** 复制 **Transaction pooler** 连接串（端口 **6543**，需带 `?pgbouncer=true`）。
+2. 在 Supabase SQL Editor 或 CLI 执行 [`supabase/migrations/20260610120000_init_yieldagent.sql`](supabase/migrations/20260610120000_init_yieldagent.sql) 初始化表结构。
+3. 在 Vercel 设置环境变量：
+
+```text
+DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true
+```
+
+4. Redeploy 后在设置页「部署自检」确认 `databaseBackend` 为 `postgres`，且不再出现 `ephemeral_database` blocker。
+
+本地也可设置 `DATABASE_URL` 联调 Postgres；未设置时仍使用 `.data/yieldagent.db`。
+
+注意：Vercel `/tmp` SQLite 仅适合短期单机 Demo。未配置 `DATABASE_URL` 时可能导致 Pact credential、策略或钱包准备状态不稳定。
 
 ### 本地开发 Draft
 
@@ -261,8 +277,9 @@ Vercel 不能假设能访问 Hermes 主机的 `localhost`。生产 Demo 中，He
 2. 在 Vercel 配置 `AGENT_WALLET_API_KEY`、`AGENT_WALLET_MAIN_NODE_ID`、`AGENT_WALLET_TSS_RUNTIME=hermes-agent-host`。
 3. 配置 `HERMES_STRATEGY_MODE=api`、`HERMES_API_URL`、`HERMES_API_KEY`，确保 Vercel 可访问 Hermes API。
 4. Hackathon 公开链接建议配置 `PACTTRADER_DEMO_MODE=preset` 和 `PACTTRADER_DEMO_CAW_WALLET_ID`。
-5. Redeploy 后在设置页查看部署自检（`GET /api/caw/deployment-check`）。
-6. 进入 `/dashboard`，确认 preset wallet 地址与余额已从 Cobo 同步。
+5. 配置 `DATABASE_URL`（Supabase Transaction pooler）以实现多实例状态共享。
+6. Redeploy 后在设置页查看部署自检（`GET /api/caw/deployment-check`）。
+7. 进入 `/dashboard`，确认 preset wallet 地址与余额已从 Cobo 同步。
 
 常见问题：
 
@@ -272,7 +289,7 @@ Vercel 不能假设能访问 Hermes 主机的 `localhost`。生产 Demo 中，He
 | active Pact 执行缺凭证 | 点击同步 / 刷新 Pact 状态，确认 Cobo `getPact` 能返回 pact-scoped key；不要用 Agent 主 Key 执行 active Pact |
 | `src_addr: Field required` | contract call 必须显式传 Agent Wallet EVM 地址；确认 Cobo 地址同步成功 |
 | 长期 `preparing` | TSS 未参与 MPC；检查 `AGENT_WALLET_MAIN_NODE_ID` 与 Hermes 主机 `caw node status` |
-| Vercel 状态丢失 | `/tmp/yieldagent.db` 非持久；配置持久数据库 / 挂载或使用 preset wallet 并从 Cobo 回读状态 |
+| Vercel 状态丢失 | 配置 Supabase `DATABASE_URL`（Transaction pooler）；或使用 preset wallet 并从 Cobo 回读状态 |
 
 ## Demo 数据与 API
 

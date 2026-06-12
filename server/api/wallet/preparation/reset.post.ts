@@ -1,11 +1,11 @@
-import { flushCurrentState, getState } from '../../../utils/app-store'
+import { flushCurrentStateAsync, getState } from '../../../utils/app-store'
 import { resetWalletPreparation } from '../../../utils/wallet-preparation'
 
-export default defineEventHandler(() => {
+export default defineEventHandler(async () => {
   const state = getState()
   const hadCoboWallet = Boolean(state.walletPreparation.agentWallet.coboWalletId)
   const preparation = resetWalletPreparation(state)
-  flushCurrentState()
+  await flushCurrentStateAsync()
   return {
     preparation,
     warning: hadCoboWallet

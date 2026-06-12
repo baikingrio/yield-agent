@@ -1,4 +1,4 @@
-import { flushCurrentState, getState } from '../../../utils/app-store'
+import { flushCurrentStateAsync, getState } from '../../../utils/app-store'
 import { pollCoboAgentWalletStatus, syncFundingFromExistingBalance } from '../../../utils/cobo-preparation'
 import {
   getPresetDemoWalletConfig,
@@ -15,7 +15,7 @@ export default defineEventHandler(async () => {
     if (getPresetDemoWalletConfig().enabled) {
       await hydratePresetDemoWalletFromCobo(state)
       await syncFundingFromExistingBalance(state)
-      flushCurrentState()
+      await flushCurrentStateAsync()
       const prep = getWalletPreparation(state)
       const bootstrap = prep.agentBootstrap ?? {
         mode: 'sdk-create' as const,
@@ -34,7 +34,7 @@ export default defineEventHandler(async () => {
 
     const response = await pollCoboAgentWalletStatus(state)
     await syncFundingFromExistingBalance(state)
-    flushCurrentState()
+    await flushCurrentStateAsync()
     return {
       ...response,
       preparation: getWalletPreparation(state),

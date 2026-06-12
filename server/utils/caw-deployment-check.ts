@@ -3,6 +3,7 @@ import type {
   CawDeploymentBlocker,
   CawDeploymentCheck,
 } from '../../shared/types/app'
+import { getDatabaseBackendLabel } from '../db/repository'
 import { getCoboBasePath, getCoboEnvironment } from './cobo-config'
 
 export interface CawDeploymentProbe {
@@ -29,7 +30,9 @@ function preferEnvKey(): boolean {
 }
 
 function isEphemeralDatabase(): boolean {
-  return process.env.VERCEL === '1' && !process.env.DATABASE_PATH?.trim()
+  return process.env.VERCEL === '1'
+    && !process.env.DATABASE_URL?.trim()
+    && !process.env.DATABASE_PATH?.trim()
 }
 
 function buildEnvTemplate(mainNodeId: string | null): string {
@@ -41,7 +44,8 @@ function buildEnvTemplate(mainNodeId: string | null): string {
     'AGENT_WALLET_API_KEY=<Hermes: caw wallet current --show-api-key>',
     `AGENT_WALLET_MAIN_NODE_ID=${mainNodeId ?? '<Hermes: caw node status tss_node_id>'}`,
     'AGENT_WALLET_TSS_RUNTIME=hermes-agent-host',
-    '# DATABASE_PATH=<持久化 SQLite 路径，Vercel 强烈建议配置>',
+    'DATABASE_URL=<Supabase Transaction pooler 连接串，端口 6543，?pgbouncer=true>',
+    '# DATABASE_PATH=<仅本地 SQLite；Vercel 请改用 DATABASE_URL>',
   ]
   return lines.join('\n')
 }
@@ -67,7 +71,7 @@ function buildNextActions(blockers: CawDeploymentBlocker[]): string[] {
     actions.push('若超过 5 分钟仍为 preparing：先核对 Hermes TSS 与 API Key，再点击「继续初始化」（勿重复创建）')
   }
   if (blockers.includes('ephemeral_database')) {
-    actions.push('在 Vercel 配置持久化 DATABASE_PATH（如 Turso），避免实例重启后重复创建 Agent 钱包')
+    actions.push('在 Vercel 配置 Supabase DATABASE_URL（Transaction pooler），避免实例重启后状态丢失')
   }
   if (actions.length === 0) {
     actions.push('部署自检通过，可继续 Agent Wallet 初始化')
@@ -119,6 +123,7 @@ export function buildCawDeploymentCheck(
 
   return {
     runtime: detectRuntime(),
+    databaseBackend: getDatabaseBackendLabel(),
     apiKeyConfigured,
     apiKeySource: source,
     preferEnvKey: shouldPreferEnv,

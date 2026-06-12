@@ -9,6 +9,23 @@ const require = createRequire(import.meta.url)
 let database: DatabaseSync | null = null
 let sqliteUnavailable = false
 
+export type DatabaseBackend = 'sqlite' | 'postgres'
+
+export function getDatabaseBackend(): DatabaseBackend {
+  if (process.env.DATABASE_URL?.trim()) return 'postgres'
+  return 'sqlite'
+}
+
+export function isPostgresBackend(): boolean {
+  return getDatabaseBackend() === 'postgres'
+}
+
+export function isPersistentDatabase(): boolean {
+  if (isPostgresBackend()) return true
+  const path = getDatabasePath()
+  return path !== ':memory:'
+}
+
 function loadDatabaseSyncCtor(): (new (path: string) => DatabaseSync) | null {
   if (sqliteUnavailable) return null
   try {
@@ -32,6 +49,10 @@ export function getDatabasePath(): string {
 }
 
 export function getDatabase(): DatabaseSync {
+  if (isPostgresBackend()) {
+    throw new Error('getDatabase() is unavailable when DATABASE_URL is configured; use postgres client')
+  }
+
   if (database) return database
 
   const DatabaseSyncCtor = loadDatabaseSyncCtor()

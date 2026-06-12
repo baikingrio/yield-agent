@@ -171,6 +171,7 @@ export type CawDeploymentBlocker =
 
 export interface CawDeploymentCheck {
   runtime: 'hermes-agent-host' | 'local' | 'unknown'
+  databaseBackend: 'postgres' | 'sqlite' | 'ephemeral'
   apiKeyConfigured: boolean
   apiKeySource: 'settings' | 'env' | 'missing'
   preferEnvKey: boolean

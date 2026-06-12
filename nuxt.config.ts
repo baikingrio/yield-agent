@@ -33,6 +33,13 @@ export default defineNuxtConfig({
     resolve: {
       alias: devtoolsStubAliases,
     },
+    optimizeDeps: {
+      include: [
+        '@wagmi/vue',
+        '@wagmi/vue/chains',
+        '@wagmi/vue/connectors',
+      ],
+    },
   },
   devtools: { enabled: false },
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],

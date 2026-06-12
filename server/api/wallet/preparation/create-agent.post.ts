@@ -1,4 +1,4 @@
-import { flushCurrentState, getState } from '../../../utils/app-store'
+import { flushCurrentStateAsync, getState } from '../../../utils/app-store'
 import { createCoboAgentWallet } from '../../../utils/cobo-preparation'
 import { CoboNotConfiguredError } from '../../../utils/cobo-client'
 import { walletPreparationErrorMessage } from '../../../utils/wallet-preparation-errors'
@@ -17,7 +17,7 @@ export default defineEventHandler(async () => {
     }
 
     const prep = await createCoboAgentWallet(state)
-    flushCurrentState()
+    await flushCurrentStateAsync()
     const bootstrap = prep.agentBootstrap ?? null
     return { preparation: prep, bootstrap, done: prep.steps.agent_wallet === 'completed' }
   } catch (e) {

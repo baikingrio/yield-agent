@@ -47,4 +47,10 @@ describe('resolveRedeemApiKey', () => {
     const key = await resolveRedeemApiKey(makeState({ id: 'pact-1', status: 'terminated' }), makeState({ id: 'pact-1', status: 'terminated' }).pacts[0])
     expect(key).toBe('owner-key')
   })
+
+  it('falls back to owner api key for active pact when pact credential is missing', async () => {
+    const pact = makeState({ id: 'pact-2', status: 'active' }).pacts[0]
+    const key = await resolveRedeemApiKey(makeState({ id: 'pact-2', status: 'active' }), pact)
+    expect(key).toBe('owner-key')
+  })
 })

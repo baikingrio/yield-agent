@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { AppState, WalletPreparation } from '../../shared/types/app'
-import { saveStateToDatabase } from '../db/repository'
+import { isPostgresBackend } from '../db/client'
+import { saveStateToDatabase, saveStateToDatabaseAsync } from '../db/repository'
 
 const STATE_FILE = join(process.cwd(), '.data', 'app-session.json')
 
@@ -59,6 +60,23 @@ export function flushPersistAppState(state: AppState): void {
     persistTimer = null
   }
   writeAppState(state)
+}
+
+export async function flushPersistAppStateAsync(state: AppState): Promise<void> {
+  if (process.env.VITEST) return
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  try {
+    if (isPostgresBackend()) {
+      await saveStateToDatabaseAsync(state)
+    } else {
+      saveStateToDatabase(state)
+    }
+  } catch {
+    // Best-effort persistence; ignore write failures in dev.
+  }
 }
 
 export function clearPersistedSession(): void {

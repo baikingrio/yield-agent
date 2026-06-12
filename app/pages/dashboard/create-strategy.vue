@@ -25,6 +25,7 @@ const {
   selectedTemplateKey,
   customTemplateComingSoon,
   preparationReady,
+  availableUsdc,
   availableBalanceLabel,
   agentSplit,
   fundingSourceLabel,
@@ -92,7 +93,7 @@ const formDisabled = computed(() =>
           <p class="font-mono text-xs text-muted-strong">资金已就绪</p>
           <h2 class="mt-2 text-base font-semibold text-on-dark">Agent Wallet 已注入测试资金</h2>
           <p class="mt-2 text-sm leading-6 text-body">
-            Pact maxSpend 不能超过 Agent Wallet 当前可用余额。超出部分将在提交时被拒绝。
+            Pact maxSpend 不能超过 Agent Wallet 当前可用余额（{{ availableBalanceLabel }}）。超出部分将在提交时被拒绝。
           </p>
         </div>
         <dl class="grid gap-4 border-t border-hairline pt-4 sm:grid-cols-3 sm:border-t-0 sm:pt-0 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
@@ -101,8 +102,8 @@ const formDisabled = computed(() =>
             <dd class="mt-1 text-sm font-semibold text-on-dark">{{ fundingSourceLabel }}</dd>
           </div>
           <div>
-            <dt class="text-xs text-muted">资金状态</dt>
-            <dd class="mt-1 text-sm text-on-dark">{{ availableBalanceLabel }}</dd>
+            <dt class="text-xs text-muted">可用余额</dt>
+            <dd class="mt-1 font-mono text-sm font-semibold text-on-dark">{{ availableBalanceLabel }}</dd>
           </div>
           <div>
             <dt class="text-xs text-muted">Pact 将限制</dt>
@@ -172,7 +173,7 @@ const formDisabled = computed(() =>
         :nl-text="nlText"
         :nl-filled="nlFilled"
         :nl-parsing="nlParsing"
-        :available-balance-label="availableBalanceLabel"
+        :available-usdc="availableUsdc"
         :agent-split="agentSplit"
         @update:nl-open="nlOpen = $event"
         @update:nl-text="nlText = $event"

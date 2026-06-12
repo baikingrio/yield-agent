@@ -69,16 +69,30 @@ export function useCreateStrategy() {
     return 'EOA → Agent Wallet（测试网）'
   })
 
-  const availableBalanceLabel = computed(() => {
+  const availableUsdc = computed(() => {
     const prep = store.preparation
-    if (!prep?.ready) return '—'
-    return '已同步'
+    if (!prep?.ready) return null
+    const fromPrep = prep.funding.availableUsdc
+    if (fromPrep > 0) return fromPrep
+    const fromWallet = store.wallet?.totalAssetsUsdc
+    return Number.isFinite(fromWallet) ? fromWallet! : fromPrep
   })
+
+  const availableBalanceLabel = computed(() => {
+    const balance = availableUsdc.value
+    if (balance === null) return '—'
+    return `${balance.toLocaleString('zh-CN', { maximumFractionDigits: 6 })} USDC`
+  })
+
+  function maxSpendOverBalanceMessage(available: number): string {
+    const formatted = available.toLocaleString('zh-CN', { maximumFractionDigits: 6 })
+    return `不能超过 Agent Wallet 当前可用余额（${formatted} USDC）`
+  }
 
   const previewLines = computed(() => [
     { label: '意图', value: intentSummary.value },
     { label: '资金来源', value: fundingSourceLabel.value },
-    { label: '资金状态', value: availableBalanceLabel.value },
+    { label: '可用余额', value: availableBalanceLabel.value },
     { label: '支出上限', value: `${form.maxSpend || '—'} ${form.asset}` },
     { label: '网络', value: NETWORK_LABELS[form.network] },
     {
@@ -107,9 +121,9 @@ export function useCreateStrategy() {
     if (spend === null || spend < MIN_MAX_SPEND_USDC || spend > MAX_MAX_SPEND_USDC) {
       next.maxSpend = spendRangeMessage
     } else if (store.preparation?.ready) {
-      const available = store.preparation.funding.availableUsdc
+      const available = availableUsdc.value ?? store.preparation.funding.availableUsdc
       if (spend > available) {
-        next.maxSpend = '不能超过 Agent Wallet 当前可用余额'
+        next.maxSpend = maxSpendOverBalanceMessage(available)
       }
     }
     if (fee === null || fee < 0 || fee > 30) {
@@ -213,7 +227,9 @@ export function useCreateStrategy() {
   onMounted(async () => {
     try {
       await Promise.all([store.fetchPreparation(), store.fetchSettings()])
-      if (!store.preparation?.ready) {
+      if (store.preparation?.ready) {
+        await store.fetchWallet({ sync: true })
+      } else {
         await store.fetchWallet({ sync: false })
       }
     } catch { /* page shows gate */ }
@@ -245,6 +261,7 @@ export function useCreateStrategy() {
     selectedTemplateKey,
     customTemplateComingSoon,
     preparationReady,
+    availableUsdc,
     availableBalanceLabel,
     fundingSourceLabel,
     isFormValid,

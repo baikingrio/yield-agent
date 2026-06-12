@@ -9,9 +9,15 @@ const props = defineProps<{
   nlText: string
   nlFilled: boolean
   nlParsing?: boolean
-  availableBalanceLabel: string
+  availableUsdc: number | null
   agentSplit: string
 }>()
+
+const formattedAvailableUsdc = computed(() => {
+  const balance = props.availableUsdc
+  if (balance === null || balance === undefined) return null
+  return balance.toLocaleString('zh-CN', { maximumFractionDigits: 6 })
+})
 
 const emit = defineEmits<{
   'update:nlOpen': [boolean]
@@ -95,7 +101,8 @@ const monoControlClass = `${controlClass} font-mono`
         策略配置
       </h2>
       <p class="mt-2 max-w-prose text-sm leading-6 text-body">
-        填写后将同步到右侧 Pact 预览。支出上限不能超过 Agent Wallet 可用余额。
+        填写后将同步到右侧 Pact 预览。支出上限不能超过 Agent Wallet 可用余额
+        <template v-if="formattedAvailableUsdc !== null">（当前 {{ formattedAvailableUsdc }} USDC）</template>。
       </p>
 
       <fieldset :disabled="props.disabled" class="mt-6 disabled:opacity-70">
@@ -188,7 +195,12 @@ const monoControlClass = `${controlClass} font-mono`
               {{ props.errors.maxSpend }}
             </p>
             <p v-else id="max-spend-hint" class="mt-1 text-xs text-muted">
-              支出上限不能超过 Agent Wallet 当前可用余额
+              <template v-if="formattedAvailableUsdc !== null">
+                Agent Wallet 当前可用余额：<span class="font-mono text-body">{{ formattedAvailableUsdc }} USDC</span>
+              </template>
+              <template v-else>
+                支出上限不能超过 Agent Wallet 当前可用余额
+              </template>
             </p>
           </div>
         </section>
